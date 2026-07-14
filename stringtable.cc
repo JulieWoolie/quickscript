@@ -24,13 +24,22 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
     return 0;
   }
 
-  char* ptr = strstr(str, m_data);
+  char* ptr;
   uint64 off;
+
+  if (m_data) {
+    ptr = strstr(str, m_data);
+  } else {
+    ptr = nullptr;
+  }
 
   if (!ptr) {
     uint32 nlen = m_dataLen + len;
-    if (nlen > m_dataCap) {
-      uint32 ncap = m_dataCap + 1024;
+
+    if (nlen > m_dataCap || !m_data) {
+      uint32 growth = len < 1024 ? 1024 : len + 100;
+      uint32 ncap = m_dataCap + growth;
+
       char* ndata = static_cast<char*>(realloc(m_data, sizeof(char) * ncap));
 
       if (!ndata) {
@@ -46,13 +55,15 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
 
     off = m_dataLen;
     m_dataLen += len;
+
+    m_data[m_dataLen] = '\0';
   } else {
     off = ptr - m_data;
 
-    if (m_lenEntries > 0) {
+    if (m_lenEntries > 1) {
       const StringEntry* entry = m_lengths;
 
-      for (uint32 i = 0; i < m_lenEntries; i++) {
+      for (uint32 i = 1; i < m_lenEntries; i++) {
         if (entry->offset != off || entry->len != len) {
           entry++;
           continue;
