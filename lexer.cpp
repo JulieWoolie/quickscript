@@ -159,8 +159,9 @@ conststring tokentype_name(tokentype ttype) {
   }
 }
 
-Lexer::Lexer(const std::string& input) {
+Lexer::Lexer(const std::string& input, TokenList* tokens) {
   m_input = input;
+  m_tokens = tokens;
 
   idx = -1;
   line = 0;
@@ -562,7 +563,7 @@ Token* Lexer::eoftoken() {
 }
 
 Token* Lexer::maketoken(tokentype ttype) {
-  Token* t = new Token();
+  Token* t = m_tokens->newToken();
 
   t->start = tokenStart;
   t->end = recordLocation();
@@ -963,4 +964,50 @@ tokentype keywordFromString(const std::string& id) {
     default:
       return TT_UNKNOWN;
   }
+}
+
+uint32 TokenList::size() const {
+  return items;
+}
+
+Token* TokenList::get(uint32 idx) {
+  if (idx > items) {
+    return nullptr;
+  }
+  return m_dataStart + idx;
+}
+
+Token* TokenList::newToken() {
+  uint32 nidx = items;
+
+  if (nidx >= capacity) {
+    uint32 ncap = capacity + 100;
+    Token* ndata = static_cast<Token *>(realloc(m_dataStart, sizeof(Token) * ncap));
+
+    if (!ndata) {
+      throw std::runtime_error("Failed to allocate more space for tokens");
+    }
+
+    m_dataStart = ndata;
+    capacity = ncap;
+  }
+
+  items++;
+
+  Token* tok = m_dataStart + nidx;
+
+  tok->ttype = TT_UNKNOWN;
+
+  tok->start.line = 0;
+  tok->start.index = 0;
+  tok->start.column = 0;
+
+  tok->end.line = 0;
+  tok->end.index = 0;
+  tok->end.column = 0;
+
+  tok->valueStart = -1;
+  tok->valueEnd = -1;
+
+  return tok;
 }

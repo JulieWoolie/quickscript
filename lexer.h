@@ -121,6 +121,21 @@ conststring tokentype_name(tokentype ttype);
 
 tokentype keywordFromString(const std::string& id);
 
+class TokenList {
+  Token* m_dataStart = nullptr;
+  uint32 capacity = 0;
+  uint32 items = 0;
+
+  public:
+    TokenList() = default;
+
+    uint32 size() const;
+
+    Token* get(uint32 idx);
+
+    Token* newToken();
+};
+
 class Lexer {
   private:
     int32 idx = EOF;
@@ -130,6 +145,7 @@ class Lexer {
     int8 currentChar = 0;
 
     std::string m_input;
+    TokenList* m_tokens;
 
     Token* peekedToken = nullptr;
     Token* eofToken = nullptr;
@@ -137,7 +153,7 @@ class Lexer {
     Location tokenStart;
 
   public:
-    Lexer(const std::string& input);
+    Lexer(const std::string& input, TokenList* m_tokens);
 
     int8 peek(int32 ahead);
     int8 peek();
