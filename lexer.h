@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "common.h"
+#include "stringtable.h"
 #include "token.h"
 
 #define COMMENT_CHAR '/'
@@ -11,7 +12,7 @@
 #define LF '\n'
 #define CR '\r'
 
-tokentype keywordFromString(const std::string& id);
+tokentype keywordFromString(const int8* id, uint32 len);
 
 class Lexer {
   private:
@@ -24,13 +25,19 @@ class Lexer {
     std::string m_input;
     TokenList* m_tokens;
 
+    StringTable* m_table;
+
     Token* peekedToken = nullptr;
     Token* eofToken = nullptr;
 
     Location tokenStart;
 
+    int8* readbuf = nullptr;
+    uint32 readbufCap = 0;
+    uint32 readbufLen = 0;
+
   public:
-    Lexer(const std::string& input, TokenList* m_tokens);
+    Lexer(const std::string& input, TokenList* m_tokens, StringTable* table);
 
     int8 peek(int32 ahead);
     int8 peek();
@@ -56,6 +63,7 @@ class Lexer {
     Token* eoftoken();
 
     Token* maketoken(tokentype ttype);
+    Token* maketokenv(tokentype ttype);
 
     Token* readIdOrKeyword();
     Token* readQuotedString();
@@ -66,6 +74,11 @@ class Lexer {
     Token* readBinaryLiteral();
 
     void readHexEscape();
+
+    void clearReadBuf();
+    void appendToReadBuf(int8 ch);
+    void appendToReadBuf();
+    void ensureReadBufWriteable(uint32 characters);
 };
 
 

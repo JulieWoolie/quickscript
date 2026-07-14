@@ -2,9 +2,10 @@
 
 #include <utility>
 
-Lexer::Lexer(const std::string& input, TokenList* tokens) {
+Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table) {
   m_input = input;
   m_tokens = tokens;
+  m_table = table;
 
   idx = -1;
   line = 0;
@@ -413,15 +414,24 @@ Token* Lexer::maketoken(tokentype ttype) {
 
   t->ttype = ttype;
 
-  t->valueStart = -1;
-  t->valueEnd = -1;
+  t->valueId = EMPTY_STRING;
 
   return t;
 }
+
+Token* Lexer::maketokenv(const tokentype ttype) {
+  Token* t = maketoken(ttype);
+  t->valueId = m_table->allocate(readbuf, readbufLen);
+  return t;
+}
+
 Token* Lexer::readIdOrKeyword() {
   int32 start = idx;
 
+  clearReadBuf();
+
   while (isIdentifierPart(currentChar)) {
+    appendToReadBuf();
     next();
   }
 
@@ -430,18 +440,13 @@ Token* Lexer::readIdOrKeyword() {
     throw std::runtime_error("Invalid Identifier/keyword");
   }
 
-  std::string sub = m_input.substr(start, end - start);
-  tokentype keyw = keywordFromString(sub);
+  tokentype keyw = keywordFromString(readbuf, readbufLen);
 
   if (keyw != TT_UNKNOWN) {
     return maketoken(keyw);
   }
 
-  Token* t = maketoken(TT_ID);
-  t->valueStart = start;
-  t->valueEnd = end;
-
-  return t;
+  return maketokenv(TT_ID);
 }
 
 bool isHexChar(int8 ch) {
@@ -450,21 +455,96 @@ bool isHexChar(int8 ch) {
       || (ch >= 'A' && ch <= 'F');
 }
 
-void Lexer::readHexEscape() {
-  int32 start = idx;
-  int32 end = idx;
-  int32 len = 0;
+#define TEN ((uint8) 10)
 
-  while (isHexChar(currentChar) && len < 4) {
-    next();
-    len++;
+uint8 charHexValue(const int8 ch) {
+  if (ch >= '0' && ch <= '9') {
+    return ch - '0';
+  }
+  if (ch >= 'a' && ch <= 'f') {
+    return TEN + (ch - 'a');
+  }
+  return TEN + (ch - 'A');
+}
+
+uint16 hexValue(const int8* buf) {
+  return (charHexValue(buf[0]) << 12)
+       | (charHexValue(buf[1]) << 8)
+       | (charHexValue(buf[2]) << 4)
+       | charHexValue(buf[3]);
+}
+
+uint32 utf8Encode(uint16 codepoint, int8 *out) {
+  if (codepoint <= 0x7F) {
+    out[0] = static_cast<int8>(codepoint);
+    return 1;
+  }
+  if (codepoint <= 0x7FF) {
+    out[0] = 0xC0 | (codepoint >> 6);
+    out[1] = 0x80 | (codepoint & 0x3F);
+    return 2;
   }
 
-  end = idx;
+  out[0] = 0xE0 | (codepoint >> 12);
+  out[1] = 0x80 | ((codepoint >> 6) & 0x3F);
+  out[2] = 0x80 | (codepoint & 0x3F);
+  return 3;
+}
+
+void Lexer::readHexEscape() {
+  int32 len = 0;
+  int8 chars[4];
+
+  while (isHexChar(currentChar) && len < 4) {
+    chars[len++] = currentChar;
+    next();
+  }
 
   if (len != 4) {
     throw std::runtime_error("Invalid unicode escape");
   }
+
+  uint16 hexval = hexValue(chars);
+
+  ensureReadBufWriteable(3);
+  uint32 written = utf8Encode(hexval, readbuf + readbufLen);
+
+  readbufLen += written;
+  readbuf[readbufLen] = '\0';
+}
+
+void Lexer::clearReadBuf() {
+  readbufLen = 0;
+}
+
+void Lexer::appendToReadBuf() {
+  ensureReadBufWriteable(1);
+  readbuf[readbufLen++] = currentChar;
+  readbuf[readbufLen] = '\0';
+}
+
+void Lexer::appendToReadBuf(int8 ch) {
+  ensureReadBufWriteable(1);
+  readbuf[readbufLen++] = ch;
+  readbuf[readbufLen] = '\0';
+}
+
+void Lexer::ensureReadBufWriteable(uint32 characters) {
+  uint32 nlen = readbufLen + characters + 1;
+
+  if (nlen <= readbufCap) {
+    return;
+  }
+
+  uint32 ncap = readbufCap + 128;
+  int8* nbuf = static_cast<int8*>(malloc(sizeof(int8) * ncap));
+
+  if (!nbuf) {
+    throw std::runtime_error("Failed to allocate bigger readbuf");
+  }
+
+  readbuf = nbuf;
+  readbufCap = ncap;
 }
 
 Token* Lexer::readQuotedString() {
@@ -474,6 +554,8 @@ Token* Lexer::readQuotedString() {
   bool escaped = false;
   const int32 start = idx;
   int32 chlen = 0;
+
+  clearReadBuf();
 
   while (true) {
     if (currentChar == EOF) {
@@ -486,6 +568,7 @@ Token* Lexer::readQuotedString() {
     if (currentChar == quote) {
       if (escaped) {
         escaped = false;
+        appendToReadBuf();
         next();
         chlen++;
         continue;
@@ -500,6 +583,7 @@ Token* Lexer::readQuotedString() {
       if (escaped) {
         chlen++;
         escaped = false;
+        appendToReadBuf('\\');
       } else {
         escaped = true;
       }
@@ -515,11 +599,13 @@ Token* Lexer::readQuotedString() {
       switch (ch) {
         case 't':
         case 'T':
+          appendToReadBuf('\t');
         case 'r':
         case 'R':
+          appendToReadBuf('\r');
         case 'n':
         case 'N':
-          // All good, skip
+          appendToReadBuf('\n');
           break;
 
         case 'u':
@@ -535,11 +621,9 @@ Token* Lexer::readQuotedString() {
       continue;
     }
 
+    appendToReadBuf();
     next();
-    chlen++;
   }
-
-  const int32 end = idx;
 
   if (currentChar == quote) {
     next();
@@ -556,11 +640,7 @@ Token* Lexer::readQuotedString() {
     }
   }
 
-  Token* tok = maketoken(ttype);
-  tok->valueStart = start;
-  tok->valueEnd = end;
-
-  return tok;
+  return maketokenv(ttype);
 }
 
 Token* Lexer::readNumberLiteral() {
@@ -569,15 +649,20 @@ Token* Lexer::readNumberLiteral() {
   int32 start = idx;
   int32 end = start;
 
+  clearReadBuf();
+
   while (isNumeric(currentChar)) {
+    appendToReadBuf();
     next();
   }
 
   if (currentChar == '.' && isNumeric(peek())) {
     next();
+    appendToReadBuf('.');
     ttype = TT_FLOAT_LITERAL;
 
     while (isNumeric(currentChar)) {
+      appendToReadBuf();
       next();
     }
   }
@@ -589,12 +674,16 @@ Token* Lexer::readNumberLiteral() {
     }
 
     if (isNumeric(n)) {
+      appendToReadBuf('e');
       next();
+
       if (currentChar == '+' || currentChar == '-') {
+        appendToReadBuf();
         next();
       }
 
       while (isNumeric(currentChar)) {
+        appendToReadBuf();
         next();
       }
     }
@@ -606,88 +695,37 @@ Token* Lexer::readNumberLiteral() {
     throw std::runtime_error("Invalid number");
   }
 
-  Token* tok = maketoken(ttype);
-  tok->valueStart = start;
-  tok->valueEnd = end;
-
-  return tok;
+  return maketokenv(ttype);
 }
 
-Token* Lexer::readHexLiteral() {
-  next(); // Skip 0
-  next(); // Skip x
-
-  int32 start = idx;
-
-  while (isHexChar(currentChar)) {
-    next();
+#define SPECIAL_NUMBER_READER_METHOD(name, testMethod, errormsg, tt) Token* Lexer::name() { \
+  next();\
+  next();\
+  clearReadBuf();\
+  while(testMethod(currentChar)) {\
+    appendToReadBuf();\
+    next();\
+  }\
+  if (readbufLen == 0) {\
+    throw std::runtime_error(errormsg);\
+  }\
+  return maketokenv(tt);\
   }
-
-  int32 end = idx;
-
-  if (start == end) {
-    throw std::runtime_error("Invalid hex sequence");
-  }
-
-  Token* tok = maketoken(TT_HEX_LITERAL);
-  tok->valueStart = start;
-  tok->valueEnd = end;
-
-  return tok;
-}
 
 bool isOctoChar(int8 ch) {
   return ch >= '0' && ch <= '7';
 }
 
-Token* Lexer::readOctoLiteral() {
-  next(); // Skip 0
-  next(); // Skip o
-
-  int32 start = idx;
-
-  while (isOctoChar(currentChar)) {
-    next();
-  }
-
-  int32 end = idx;
-
-  if (start == end) {
-    throw std::runtime_error("Invalid oct sequence");
-  }
-
-  Token* tok = maketoken(TT_OCT_LITERAL);
-  tok->valueStart = start;
-  tok->valueEnd = end;
-
-  return tok;
+bool isBinaryChar(int8 ch) {
+  return ch == '0' || ch == '1';
 }
 
-Token* Lexer::readBinaryLiteral() {
-  next(); // Skip 0
-  next(); // Skip b
+SPECIAL_NUMBER_READER_METHOD(readHexLiteral, isHexChar, "Invalid hex sequence", TT_HEX_LITERAL)
+SPECIAL_NUMBER_READER_METHOD(readOctoLiteral, isOctoChar, "Invalid oct sequence", TT_OCT_LITERAL)
+SPECIAL_NUMBER_READER_METHOD(readBinaryLiteral, isBinaryChar, "Invalid binary sequence", TT_BIN_LITERAL)
 
-  int32 start = idx;
-
-  while (currentChar == '0' || currentChar == '1') {
-    next();
-  }
-
-  int32 end = idx;
-
-  if (start == end) {
-    throw std::runtime_error("Invalid binary sequence");
-  }
-
-  Token* tok = maketoken(TT_BIN_LITERAL);
-  tok->valueStart = start;
-  tok->valueEnd = end;
-
-  return tok;
-}
-
-tokentype keywordFromString(const std::string& id) {
-  switch (id.length()) {
+tokentype keywordFromString(const int8* id, const uint32 len) {
+  switch (len) {
     case 2:
       if (id[0] == 'i'
        && id[1] == 'f'

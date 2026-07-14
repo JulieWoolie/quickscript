@@ -2,6 +2,7 @@
 #define QUICKSCRIPT_TOKEN_H
 
 #include "common.h"
+#include "stringtable.h"
 
 // ======= Token Types (TT) =======
 
@@ -106,8 +107,7 @@ struct Token {
   Location start = {};
   Location end = {};
 
-  int32 valueStart = -1;
-  int32 valueEnd = -1;
+  stringid valueId = EMPTY_STRING;
 };
 
 conststring tokentype_name(tokentype ttype);

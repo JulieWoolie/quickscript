@@ -200,8 +200,7 @@ Token* TokenList::newToken() {
   tok->end.index = 0;
   tok->end.column = 0;
 
-  tok->valueStart = -1;
-  tok->valueEnd = -1;
+  tok->valueId = EMPTY_STRING;
 
   return tok;
 }
