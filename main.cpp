@@ -23,12 +23,19 @@ int32 main(int32 argc, cstring argv[]) {
 
   std::string file_contents { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 
-  Lexer l(file_contents);
-  CompilerErrors errors(&file_contents, fname);
+  TokenList tokens = TokenList();
 
-  Token* first = l.nextToken();
+  Lexer l = Lexer(file_contents, &tokens);
+  CompilerErrors errors = CompilerErrors(&file_contents, fname);
 
-  errors.error(first->start, "Something happened here! int=%i ttype=%s", 34, tokentype_name(first->ttype));
+  while (true) {
+    Token* tok = l.nextToken();
+    if (tok->ttype == TT_EOF) {
+      break;
+    }
+
+    errors.info(tok->start, "Token = %s", tokentype_name(tok->ttype));
+  }
 
   return EXIT_SUCCESS;
 }
