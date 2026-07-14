@@ -22,6 +22,13 @@ Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table) {
   tokenStart.line = 0;
 }
 
+void Lexer::lex() {
+  Token* t = nextToken();
+  while (t->ttype != TT_EOF) {
+    t = nextToken();
+  }
+}
+
 void Lexer::advanceLineTracker() {
   line++;
   col = 0;

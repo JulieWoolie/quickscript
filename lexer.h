@@ -39,6 +39,8 @@ class Lexer {
   public:
     Lexer(const std::string& input, TokenList* m_tokens, StringTable* table);
 
+    void lex();
+
     int8 peek(int32 ahead);
     int8 peek();
 
