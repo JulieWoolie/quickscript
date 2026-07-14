@@ -15,4 +15,5 @@ add_executable(quickscript main.cpp
         stringtable.h
         stringtable.cc
         parser.h
-        parser.cc)
+        parser.cc
+        allocator.h)

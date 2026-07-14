@@ -1,6 +1,7 @@
 #ifndef QUICKSCRIPT_PARSER_H
 #define QUICKSCRIPT_PARSER_H
 
+#include "allocator.h"
 #include "errors.h"
 #include "syntaxtree.h"
 #include "token.h"
@@ -9,14 +10,14 @@
 
 class Parser {
   TokenList* m_tokens;
-  NodePool* m_pool = nullptr;
+  NoFreeAllocator* m_pool = nullptr;
   CompilerErrors* m_errors = nullptr;
   uint32 m_tokenCursor = 0;
 
   StringTable* m_nameTable;
 
   public:
-    Parser(TokenList* tokens, NodePool* pool, CompilerErrors* errors, StringTable* table);
+    Parser(TokenList* tokens, NoFreeAllocator* pool, CompilerErrors* errors, StringTable* table);
 
     Token* gettoken(uint32 idx) const;
 
@@ -33,48 +34,48 @@ class Parser {
 
     Token* expect(tokentype tt);
 
-    NodeRef<ScriptFileStatement> parse();
+    ScriptFileStatement* parse();
 
     // statements
 
-    NodeRef<Statement> statement();
+    Statement* statement();
 
-    NodeRef<FunctionDeclStatement> funcDecl();
+    FunctionDeclStatement* funcDecl();
 
-    NodeRef<Block> block();
+    Block* block();
 
-    NodeRef<ControlFlowStatement> controlFlow();
+    ControlFlowStatement* controlFlow();
 
     // Expressions
 
-    NodeRef<Expr> expr();
-    NodeRef<Expr> ternaryExpr();
-    NodeRef<Expr> assignExpr();
-    NodeRef<Expr> logicalOrExpr();
-    NodeRef<Expr> logicalAndExpr();
-    NodeRef<Expr> bitwiseOrExpr();
-    NodeRef<Expr> bitwiseAndExpr();
-    NodeRef<Expr> bitwiseXorExpr();
-    NodeRef<Expr> equalityExpr();
-    NodeRef<Expr> relationalExpr();
-    NodeRef<Expr> shiftExpr();
-    NodeRef<Expr> additiveExpr();
-    NodeRef<Expr> multiplicativeExpr();
-    NodeRef<Expr> exponentialExpr();
-    NodeRef<Expr> unaryExpr();
-    NodeRef<Expr> memberExpr(bool allowCall);
-    NodeRef<Expr> memberExprTail(bool allowCall, NodeRef<Expr> target);
-    NodeRef<Expr> propertyAccess(NodeRef<Expr> target);
-    NodeRef<Expr> callExpr(NodeRef<Expr> target);
-    NodeRef<Expr> primaryExpr();
+    Expr* expr();
+    Expr* ternaryExpr();
+    Expr* assignExpr();
+    Expr* logicalOrExpr();
+    Expr* logicalAndExpr();
+    Expr* bitwiseOrExpr();
+    Expr* bitwiseAndExpr();
+    Expr* bitwiseXorExpr();
+    Expr* equalityExpr();
+    Expr* relationalExpr();
+    Expr* shiftExpr();
+    Expr* additiveExpr();
+    Expr* multiplicativeExpr();
+    Expr* exponentialExpr();
+    Expr* unaryExpr();
+    Expr* memberExpr(bool allowCall);
+    Expr* memberExprTail(bool allowCall, Expr *target);
+    Expr* propertyAccess(Expr* target);
+    Expr* callExpr(Expr* target);
+    Expr* primaryExpr();
 
-    NodeRef<Expr> parenthesizedExpr();
+    Expr* parenthesizedExpr();
 
-    NodeRef<IntLiteral> intLiteral() const;
-    NodeRef<BooleanLiteral> boolLiteral() const;
-    NodeRef<FloatLiteral> floatLiteral();
-    NodeRef<StringLiteral> stringLiteral();
-    NodeRef<Identifier> id();
+    IntLiteral* intLiteral();
+    BooleanLiteral* boolLiteral();
+    FloatLiteral* floatLiteral();
+    StringLiteral* stringLiteral();
+    Identifier* id();
 };
 
 #endif //QUICKSCRIPT_PARSER_H

@@ -8,7 +8,7 @@
 
 #define EMPLACE(v) m_pool->emplace(v)
 
-Parser::Parser(TokenList *tokens, NodePool *pool, CompilerErrors *errors, StringTable* table) {
+Parser::Parser(TokenList *tokens, NoFreeAllocator *pool, CompilerErrors *errors, StringTable* table) {
   m_tokens = tokens;
   m_pool = pool;
   m_errors = errors;
@@ -70,9 +70,9 @@ Token* Parser::expect(const tokentype tt) {
 }
 
 #define RECURSIVE_FUNC(name, binop, ttype, calls) \
-  NodeRef<Expr> Parser::name() {\
+  Expr* Parser::name() {\
     Location l = peek()->start;\
-    NodeRef<Expr> expr = calls();\
+    Expr* expr = calls();\
     while (is(ttype)) {\
       skip();\
       \
@@ -92,13 +92,13 @@ Token* Parser::expect(const tokentype tt) {
     bin.op = bop;\
     break;
 
-NodeRef<Expr> Parser::expr() {
+Expr* Parser::expr() {
   return assignExpr();
 }
 
-NodeRef<Expr> Parser::ternaryExpr() {
+Expr* Parser::ternaryExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> expr = logicalOrExpr();
+  Expr* expr = logicalOrExpr();
 
   if (!is(TT_QUESTION)) {
     return expr;
@@ -108,9 +108,9 @@ NodeRef<Expr> Parser::ternaryExpr() {
   tern.location = l;
   tern.condition = expr;
 
-  NodeRef<Expr> left = assignExpr();
+  Expr* left = assignExpr();
   expect(TT_COLON);
-  NodeRef<Expr> right = assignExpr();
+  Expr* right = assignExpr();
 
   tern.left = left;
   tern.right = right;
@@ -153,9 +153,9 @@ binaryop mapTokenToOp(tokentype tt) {
   }
 }
 
-NodeRef<Expr> Parser::assignExpr() {
+Expr* Parser::assignExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> expr = ternaryExpr();
+  Expr* expr = ternaryExpr();
 
   Token* t = peek();
   binaryop op = mapTokenToOp(t->ttype);
@@ -175,15 +175,15 @@ NodeRef<Expr> Parser::assignExpr() {
   return EMPLACE(assign);
 }
 
-RECURSIVE_FUNC(logicalOrExpr, BOP_LOG_OR, TT_DWALL, bitwiseOrExpr)
+RECURSIVE_FUNC(logicalOrExpr, BOP_LOG_OR, TT_DWALL, logicalAndExpr)
 RECURSIVE_FUNC(logicalAndExpr, BOP_LOG_AND, TT_LOGICAL_AND, bitwiseOrExpr)
 RECURSIVE_FUNC(bitwiseOrExpr, BOP_BIT_OR, TT_WALL, bitwiseAndExpr)
 RECURSIVE_FUNC(bitwiseAndExpr, BOP_BIT_AND, TT_BIT_AND, bitwiseXorExpr)
 RECURSIVE_FUNC(bitwiseXorExpr, BOP_XOR, TT_XOR, equalityExpr)
 
-NodeRef<Expr> Parser::equalityExpr() {
+Expr* Parser::equalityExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> prev = relationalExpr();
+  Expr* prev = relationalExpr();
 
   Token* p = peek();
   tokentype ttype = p->ttype;
@@ -210,9 +210,9 @@ NodeRef<Expr> Parser::equalityExpr() {
   return prev;
 }
 
-NodeRef<Expr> Parser::relationalExpr() {
+Expr* Parser::relationalExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> prev = shiftExpr();
+  Expr* prev = shiftExpr();
 
   Token* p = peek();
   tokentype ttype = p->ttype;
@@ -241,9 +241,9 @@ NodeRef<Expr> Parser::relationalExpr() {
   return prev;
 }
 
-NodeRef<Expr> Parser::shiftExpr() {
+Expr* Parser::shiftExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> prev = additiveExpr();
+  Expr* prev = additiveExpr();
 
   Token* p = peek();
   tokentype ttype = p->ttype;
@@ -277,9 +277,9 @@ NodeRef<Expr> Parser::shiftExpr() {
   return prev;
 }
 
-NodeRef<Expr> Parser::additiveExpr() {
+Expr* Parser::additiveExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> prev = multiplicativeExpr();
+  Expr* prev = multiplicativeExpr();
 
   Token* p = peek();
   tokentype ttype = p->ttype;
@@ -310,9 +310,9 @@ NodeRef<Expr> Parser::additiveExpr() {
   return prev;
 }
 
-NodeRef<Expr> Parser::multiplicativeExpr() {
+Expr* Parser::multiplicativeExpr() {
   Location l = peek()->start;
-  NodeRef<Expr> prev = exponentialExpr();
+  Expr* prev = exponentialExpr();
 
   Token* p = peek();
   tokentype ttype = p->ttype;
@@ -348,7 +348,7 @@ NodeRef<Expr> Parser::multiplicativeExpr() {
 
 RECURSIVE_FUNC(exponentialExpr, BOP_POW, TT_POW, unaryExpr)
 
-NodeRef<Expr> Parser::unaryExpr() {
+Expr* Parser::unaryExpr() {
   Token* p = peek();
 
   UnaryExpr u;
@@ -375,14 +375,15 @@ NodeRef<Expr> Parser::unaryExpr() {
       break;
 
     default:
-      u.target = memberExpr(true);
+      Expr* target = memberExpr(true);
 
       if (!is(TT_INC) || is(TT_DEC)) {
-        return EMPLACE(u);
+        return target;
       }
 
       tokentype tt = next()->ttype;
       u.op = tt == TT_DEC ? UOP_POSTDEC : UOP_PREDEC;
+      u.target = target;
 
       return EMPLACE(u);
   }
@@ -393,13 +394,13 @@ NodeRef<Expr> Parser::unaryExpr() {
   return EMPLACE(u);
 }
 
-NodeRef<Expr> Parser::memberExpr(const bool allowCall) {
-  NodeRef<Expr> expr = primaryExpr();
+Expr* Parser::memberExpr(const bool allowCall) {
+  Expr* expr = primaryExpr();
   return memberExprTail(allowCall, expr);
 }
 
-NodeRef<Expr> Parser::memberExprTail(const bool allowCall, const NodeRef<Expr> target) {
-  NodeRef<Expr> expr = target;
+Expr* Parser::memberExprTail(const bool allowCall, Expr* target) {
+  Expr* expr = target;
 
   while (true) {
     if (is(TT_DOT)) {
@@ -419,20 +420,20 @@ NodeRef<Expr> Parser::memberExprTail(const bool allowCall, const NodeRef<Expr> t
   return expr;
 }
 
-NodeRef<Expr> Parser::propertyAccess(NodeRef<Expr> target) {
+Expr* Parser::propertyAccess(Expr* target) {
   Token* t = expect(TT_DOT);
 
   PropertyAccessExpr expr;
   expr.location = t->start;
   expr.target = target;
 
-  NodeRef<Identifier> propId = id();
+  Identifier* propId = id();
   expr.property = propId;
 
   return EMPLACE(expr);
 }
 
-NodeRef<Expr> Parser::callExpr(NodeRef<Expr> target) {
+Expr* Parser::callExpr(Expr* target) {
   Token* start = expect(TT_LBRACKET);
 
   CallExpr call;
@@ -441,7 +442,7 @@ NodeRef<Expr> Parser::callExpr(NodeRef<Expr> target) {
 
   Token* p = peek();
   while (p->ttype != TT_RBRACKET && p->ttype != TT_EOF) {
-    NodeRef<Expr> arg = expr();
+    Expr* arg = expr();
     call.arguments.push_back(arg);
 
     if (is(TT_COMMA)) {
@@ -460,7 +461,7 @@ NodeRef<Expr> Parser::callExpr(NodeRef<Expr> target) {
   return EMPLACE(call);
 }
 
-NodeRef<Expr> Parser::primaryExpr() {
+Expr* Parser::primaryExpr() {
   Token* p = peek();
 
   switch (p->ttype) {
@@ -487,13 +488,13 @@ NodeRef<Expr> Parser::primaryExpr() {
 
     default:
       FATAL(p->start, "This token was not expected here");
-      return UNSET_REF;
+      return nullptr;
   }
 }
 
-NodeRef<Expr> Parser::parenthesizedExpr() {
+Expr* Parser::parenthesizedExpr() {
   expect(TT_LBRACKET);
-  NodeRef<Expr> res = expr();
+  Expr* res = expr();
   expect(TT_RBRACKET);
   return res;
 }
@@ -537,8 +538,8 @@ int64 hexTo64(cstring str, uint32 len) {
   return res;
 }
 
-NodeRef<IntLiteral> Parser::intLiteral() const {
-  Token* p = peek();
+IntLiteral* Parser::intLiteral() {
+  Token* p = next();
 
   uint32 buflen = 128;
   char numtxt[buflen];
@@ -567,16 +568,16 @@ NodeRef<IntLiteral> Parser::intLiteral() const {
       return m_pool->emplace(lit);
     default:
       FATAL(p->start, "Expected integer literal, found %s", tokentype_name(p->ttype));
-      return UNSET_REF;
+      return nullptr;
   }
 }
 
-NodeRef<BooleanLiteral> Parser::boolLiteral() const {
-  Token* t = peek();
+BooleanLiteral* Parser::boolLiteral() {
+  Token* t = next();
 
   if (t->ttype != TT_KEYW_TRUE && t->ttype != TT_KEYW_FALSE) {
     FATAL(t->start, "Expected either 'true' or 'false', found '%s", tokentype_name(t->ttype));
-    return UNSET_REF;
+    return nullptr;
   }
 
   BooleanLiteral lit;
@@ -586,7 +587,7 @@ NodeRef<BooleanLiteral> Parser::boolLiteral() const {
   return EMPLACE(lit);
 }
 
-NodeRef<FloatLiteral> Parser::floatLiteral() {
+FloatLiteral* Parser::floatLiteral() {
   const Token* t = expect(TT_FLOAT_LITERAL);
 
   char content[256];
@@ -601,20 +602,20 @@ NodeRef<FloatLiteral> Parser::floatLiteral() {
   return EMPLACE(lit);
 }
 
-NodeRef<StringLiteral> Parser::stringLiteral() {
+StringLiteral* Parser::stringLiteral() {
   const Token* t = expect(TT_STRING_LITERAL);
-  auto [id, ref] = m_pool->make<StringLiteral>();
+  StringLiteral* id = m_pool->make<StringLiteral>();
   id->location = t->start;
   id->value = t->valueId;
-  return ref;
+  return id;
 }
 
-NodeRef<Identifier> Parser::id() {
+Identifier* Parser::id() {
   const Token* t = expect(TT_ID);
-  auto [id, ref] = m_pool->make<Identifier>();
+  Identifier* id = m_pool->make<Identifier>();
   id->location = t->start;
   id->value = t->valueId;
-  return ref;
+  return id;
 }
 
 

@@ -7,18 +7,17 @@
 #include "stringtable.h"
 #include "token.h"
 
-template<typename T>
-using NodeRef = uint64;
-
-typedef uint64 nodeid;
-
-#define UNSET_REF 0xffffffffU
-
 struct Node {
   Location location;
+
+  virtual ~Node() = default;
+  virtual conststring nodeType() = 0;
 };
 
-#define AST_TYPE(name, supertype, body) struct name: supertype {body};
+#define AST_TYPE(name, supertype, body) struct name: supertype {\
+  body\
+  conststring nodeType() override {return #name;}\
+};
 
 // ========================
 // ===== Expressions ======
@@ -33,13 +32,13 @@ AST_TYPE(Identifier, Expr,
 )
 
 AST_TYPE(CallExpr, Expr,
-  NodeRef<Expr> target = UNSET_REF;
-  std::vector<NodeRef<Expr>> arguments;
+  Expr* target = nullptr;
+  std::vector<Expr*> arguments;
 )
 
 AST_TYPE(PropertyAccessExpr, Expr,
-  NodeRef<Identifier> property = UNSET_REF;
-  NodeRef<Expr> target = UNSET_REF;
+  Identifier* property = nullptr;
+  Expr* target = nullptr;
 )
 
 AST_TYPE(BooleanLiteral, Expr,
@@ -109,8 +108,8 @@ typedef uint8 binaryop;
 // ---
 
 AST_TYPE(BinaryExpr, Expr,
-  NodeRef<Expr> lhs = UNSET_REF;
-  NodeRef<Expr> rhs = UNSET_REF;
+  Expr* lhs = nullptr;
+  Expr* rhs = nullptr;
   binaryop op = BOP_NIL;
 )
 
@@ -127,14 +126,14 @@ AST_TYPE(BinaryExpr, Expr,
 typedef uint8 unaryop;
 
 AST_TYPE(UnaryExpr, Expr,
-  NodeRef<Expr> target = UNSET_REF;
+  Expr* target = nullptr;
   unaryop op = UOP_NIL;
 )
 
 AST_TYPE(TernaryExpr, Expr,
-  NodeRef<Expr> condition = UNSET_REF;
-  NodeRef<Expr> left = UNSET_REF;
-  NodeRef<Expr> right = UNSET_REF;
+  Expr* condition = nullptr;
+  Expr* left = nullptr;
+  Expr* right = nullptr;
 )
 
 // ========================
@@ -146,9 +145,9 @@ struct Statement: Node {
 };
 
 AST_TYPE(IfStatement, Statement,
-  NodeRef<Expr> condition = UNSET_REF;
-  NodeRef<Statement> body = UNSET_REF;
-  NodeRef<Statement> elseBody = UNSET_REF;
+  Expr* condition = nullptr;
+  Statement* body = nullptr;
+  Statement* elseBody = nullptr;
 )
 
 #define CFT_CONTINUE 0
@@ -157,16 +156,16 @@ AST_TYPE(IfStatement, Statement,
 typedef uint8 controlflowtype;
 
 AST_TYPE(ControlFlowStatement, Statement,
-  NodeRef<Identifier> label = UNSET_REF;
+  Identifier* label = nullptr;
   controlflowtype type = CFT_CONTINUE;
 )
 
 AST_TYPE(ReturnStatement, Statement,
-  NodeRef<Expr> value = UNSET_REF;
+  Expr* value = nullptr;
 )
 
 AST_TYPE(Block, Statement,
-  std::vector<nodeid> statements;
+  std::vector<Statement*> statements;
 )
 
 AST_TYPE(ScriptFileStatement, Block,
@@ -174,97 +173,8 @@ AST_TYPE(ScriptFileStatement, Block,
 )
 
 AST_TYPE(FunctionDeclStatement, Statement,
-  NodeRef<Identifier> name = UNSET_REF;
-  NodeRef<Block> functionBody = UNSET_REF;
+  Identifier* name = nullptr;
+  Block* functionBody = nullptr;
 )
-
-// === Pool ===
-
-template<typename T>
-struct NodeAndRef {
-  T* value = nullptr;
-  NodeRef<T> ref = 0;
-};
-
-class NodePool {
-  private:
-    uint8* m_data = nullptr;
-    uint64 capacity = 0;
-    uint64 cursor = 0;
-
-  public:
-    template<typename T>
-    NodeRef<T> emplace(T node);
-
-    template<typename T>
-    NodeAndRef<T> make();
-
-    template<typename T>
-    T* get(NodeRef<T> ref);
-
-  private:
-    uint64 allocspace(uint64 sz);
-};
-
-template<typename T>
-NodeRef<T> NodePool::emplace(T node) {
-  uint64 sz = sizeof(T);
-  uint64 idx = allocspace(sz);
-
-  uint8* dstart = m_data + idx;
-  T* typedPtr = (T*) dstart;
-
-  *typedPtr = node;
-
-  return idx;
-}
-
-template<typename T>
-NodeAndRef<T> NodePool::make() {
-  uint64 sz = sizeof(T);
-  uint64 idx = allocspace(sz);
-
-  uint8* ptr = m_data + idx;
-  T* typed = (T*) ptr;
-
-  new (typed) T();
-
-  NodeAndRef nr = NodeAndRef<T>();
-  nr.value = typed;
-  nr.ref = idx;
-
-  return nr;
-}
-
-template<typename T>
-T* NodePool::get(NodeRef<T> ref) {
-  if (ref >= cursor) {
-    return nullptr;
-  }
-
-  uint8* dstart = m_data + ref;
-  return (T*) dstart;
-}
-
-inline uint64 NodePool::allocspace(const uint64 sz) {
-  uint64 nsize = cursor + sz;
-
-  if (nsize > capacity) {
-    uint64 ncap = capacity + 1024;
-    uint8* ndata = static_cast<uint8 *>(realloc(m_data, ncap));
-
-    if (!ndata) {
-      throw std::runtime_error("Error expanding node pool");
-    }
-
-    m_data = ndata;
-    capacity = ncap;
-  }
-
-  uint64 ref = cursor;
-  cursor += sz;
-
-  return ref;
-}
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H
