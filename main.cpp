@@ -6,6 +6,8 @@
 #include "common.h"
 #include "errors.h"
 #include "lexer.h"
+#include "syntaxtree.h"
+#include "parser.h"
 
 int32 main(int32 argc, cstring argv[]) {
   if (argc < 2) {
@@ -27,28 +29,20 @@ int32 main(int32 argc, cstring argv[]) {
   StringTable table = StringTable();
 
   Lexer l = Lexer(file_contents, &tokens, &table);
+  l.lex();
+
   CompilerErrors errors = CompilerErrors(&file_contents, fname);
+  NodePool pool = NodePool();
 
-  while (true) {
-    Token* tok = l.nextToken();
-    if (tok->ttype == TT_EOF) {
-      break;
-    }
+  Parser p = Parser(&tokens, &pool, &errors, &table);
 
-    errors.info(tok->start, "Token = %s value=%i", tokentype_name(tok->ttype), tok->valueId);
+  NodeRef<Identifier> idref = p.id();
+  Identifier* ptr = pool.get<Identifier>(idref);
 
-    if (tok->valueId == EMPTY_STRING) {
-      continue;
-    }
+  char idval[512];
+  table.getchars(ptr->value, idval, 512);
 
-    uint32 len = table.getlen(tok->valueId);
-    char content[len + 1];
-
-    table.getchars(tok->valueId, content, len);
-    content[len] = '\0';
-
-    printf("token content: '%s'\n", content);
-  }
+  printf("id: loc=%i valId=%i val='%s'\n", ptr->location.index, ptr->value, idval);
 
   return EXIT_SUCCESS;
 }
