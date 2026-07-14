@@ -9,4 +9,6 @@ add_executable(quickscript main.cpp
         lexer.cpp
         parser.h
         errors.h
-        errors.cc)
+        errors.cc
+        token.h
+        token.cc)
