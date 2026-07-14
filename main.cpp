@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 
+#include "allocator.h"
 #include "common.h"
 #include "errors.h"
 #include "lexer.h"
@@ -32,17 +33,13 @@ int32 main(int32 argc, cstring argv[]) {
   l.lex();
 
   CompilerErrors errors = CompilerErrors(&file_contents, fname);
-  NodePool pool = NodePool();
+  NoFreeAllocator pool = NoFreeAllocator();
 
   Parser p = Parser(&tokens, &pool, &errors, &table);
 
-  NodeRef<Identifier> idref = p.id();
-  Identifier* ptr = pool.get<Identifier>(idref);
+  Expr* expr = p.expr();
 
-  char idval[512];
-  table.getchars(ptr->value, idval, 512);
-
-  printf("id: loc=%i valId=%i val='%s'\n", ptr->location.index, ptr->value, idval);
+  printf("expr type: %s\n", expr->nodeType());
 
   return EXIT_SUCCESS;
 }
