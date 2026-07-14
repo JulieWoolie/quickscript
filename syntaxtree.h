@@ -44,6 +44,14 @@ AST_TYPE(StringLiteral, Expr,
   stringid value = EMPTY_STRING;
 )
 
+AST_TYPE(IntLiteral, Expr,
+  int64 value = 0;
+)
+
+AST_TYPE(FloatLiteral, Expr,
+  float64 value = 0.0;
+)
+
 // --- Binary Operations ---
 
 #define BOP_ASSIGN_FLAG  0b100000
@@ -149,9 +157,13 @@ AST_TYPE(FunctionDeclStatement, Statement,
   NodeRef<Block> functionBody = UNSET_REF;
 )
 
-#endif //QUICKSCRIPT_SYNTAXTREE_H
-
 // === Pool ===
+
+template<typename T>
+struct NodeAndRef {
+  T* value = nullptr;
+  NodeRef<T> ref = 0;
+};
 
 class NodePool {
   private:
@@ -162,6 +174,9 @@ class NodePool {
   public:
     template<typename T>
     NodeRef<T> emplace(T node);
+
+    template<typename T>
+    NodeAndRef<T> make();
 
     template<typename T>
     T* get(NodeRef<T> ref);
@@ -184,6 +199,23 @@ NodeRef<T> NodePool::emplace(T node) {
 }
 
 template<typename T>
+NodeAndRef<T> NodePool::make() {
+  uint64 sz = sizeof(T);
+  uint64 idx = allocspace(sz);
+
+  uint8* ptr = m_data + idx;
+  T* typed = (T*) ptr;
+
+  new (typed) T();
+
+  NodeAndRef nr = NodeAndRef<T>();
+  nr.value = typed;
+  nr.ref = idx;
+
+  return nr;
+}
+
+template<typename T>
 T* NodePool::get(NodeRef<T> ref) {
   if (ref >= cursor) {
     return nullptr;
@@ -193,7 +225,7 @@ T* NodePool::get(NodeRef<T> ref) {
   return (T*) dstart;
 }
 
-uint64 NodePool::allocspace(const uint64 sz) {
+inline uint64 NodePool::allocspace(const uint64 sz) {
   uint64 nsize = cursor + sz;
 
   if (nsize > capacity) {
@@ -213,3 +245,5 @@ uint64 NodePool::allocspace(const uint64 sz) {
 
   return ref;
 }
+
+#endif //QUICKSCRIPT_SYNTAXTREE_H
