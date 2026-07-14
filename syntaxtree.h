@@ -1,14 +1,12 @@
 #ifndef QUICKSCRIPT_SYNTAXTREE_H
 #define QUICKSCRIPT_SYNTAXTREE_H
 
-#include <string>
 #include <vector>
 
 #include "common.h"
 #include "stringtable.h"
 #include "token.h"
 
-// === Pool ===
 template<typename T>
 using NodeRef = uint64;
 
@@ -16,45 +14,11 @@ typedef uint64 nodeid;
 
 #define UNSET_REF 0xffffffffU
 
-template<typename T>
-struct NodeAndRef {
-  T* node;
-  NodeRef<T> ref;
-
-  T* operator-> () {
-    return node;
-  }
-};
-
-class NodePool {
-  private:
-    uint8* m_data = nullptr;
-    uint64 capacity = 0;
-    uint64 cursor = 0;
-
-  public:
-    template<typename T>
-    NodeRef<T> emplace(T node);
-
-    template<typename T>
-    NodeAndRef<T> make();
-
-    template<typename T>
-    T* get(NodeRef<T> ref);
-
-  private:
-    uint64 allocspace(uint64 sz);
-};
-
 struct Node {
-  virtual ~Node() = default;
   Location location;
-
-  virtual void visit();
-  virtual conststring nodeTypeName();
 };
 
-#define AST_TYPE(name, supertype, body) struct name: supertype {body void visit() override {} conststring nodeTypeName() override { return #name; }};
+#define AST_TYPE(name, supertype, body) struct name: supertype {body};
 
 // ========================
 // ===== Expressions ======
@@ -75,6 +39,7 @@ AST_TYPE(BooleanLiteral, Expr,
 AST_TYPE(CharLiteral, Expr,
   uint16 value = 0;
 )
+
 AST_TYPE(StringLiteral, Expr,
   stringid value = EMPTY_STRING;
 )
@@ -185,3 +150,66 @@ AST_TYPE(FunctionDeclStatement, Statement,
 )
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H
+
+// === Pool ===
+
+class NodePool {
+  private:
+    uint8* m_data = nullptr;
+    uint64 capacity = 0;
+    uint64 cursor = 0;
+
+  public:
+    template<typename T>
+    NodeRef<T> emplace(T node);
+
+    template<typename T>
+    T* get(NodeRef<T> ref);
+
+  private:
+    uint64 allocspace(uint64 sz);
+};
+
+template<typename T>
+NodeRef<T> NodePool::emplace(T node) {
+  uint64 sz = sizeof(T);
+  uint64 idx = allocspace(sz);
+
+  uint8* dstart = m_data + idx;
+  T* typedPtr = (T*) dstart;
+
+  *typedPtr = node;
+
+  return idx;
+}
+
+template<typename T>
+T* NodePool::get(NodeRef<T> ref) {
+  if (ref >= cursor) {
+    return nullptr;
+  }
+
+  uint8* dstart = m_data + ref;
+  return (T*) dstart;
+}
+
+uint64 NodePool::allocspace(const uint64 sz) {
+  uint64 nsize = cursor + sz;
+
+  if (nsize > capacity) {
+    uint64 ncap = capacity + 1024;
+    uint8* ndata = static_cast<uint8 *>(realloc(m_data, ncap));
+
+    if (!ndata) {
+      throw std::runtime_error("Error expanding node pool");
+    }
+
+    m_data = ndata;
+    capacity = ncap;
+  }
+
+  uint64 ref = cursor;
+  cursor += sz;
+
+  return ref;
+}
