@@ -75,6 +75,9 @@ AST_TYPE(BooleanLiteral, Expr,
 AST_TYPE(CharLiteral, Expr,
   uint16 value = 0;
 )
+AST_TYPE(StringLiteral, Expr,
+  stringid value = EMPTY_STRING;
+)
 
 // --- Binary Operations ---
 
