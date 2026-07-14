@@ -11,4 +11,9 @@ add_executable(quickscript main.cpp
         errors.h
         errors.cc
         token.h
-        token.cc)
+        token.cc
+        syntaxtree.h
+        syntaxtree.cc
+        parser.cc
+        stringtable.h
+        stringtable.cc)
