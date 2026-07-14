@@ -1,5 +1,5 @@
 
-function main(args: string[]): int32 {
+int32 main(string[] args) {
   print("Hello, world!")
   return 0
 }
