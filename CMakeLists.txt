@@ -7,13 +7,11 @@ add_executable(quickscript main.cpp
         common.h
         lexer.h
         lexer.cpp
-        parser.h
         errors.h
         errors.cc
         token.h
         token.cc
         syntaxtree.h
         syntaxtree.cc
-        parser.cc
         stringtable.h
         stringtable.cc)
