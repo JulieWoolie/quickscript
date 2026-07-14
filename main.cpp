@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "common.h"
+#include "errors.h"
 #include "lexer.h"
 
 int32 main(int32 argc, cstring argv[]) {
@@ -23,6 +24,11 @@ int32 main(int32 argc, cstring argv[]) {
   std::string file_contents { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 
   Lexer l(file_contents);
+  CompilerErrors errors(&file_contents, fname);
+
+  Token* first = l.nextToken();
+
+  errors.error(first->start, "Something happened here! int=%i ttype=%s", 34, tokentype_name(first->ttype));
 
   return EXIT_SUCCESS;
 }
