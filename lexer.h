@@ -152,6 +152,8 @@ class Lexer {
   private:
     int8 getchar(int32 idx);
 
+    void advanceLineTracker();
+
     void skipEmptyContent();
     void skipLineComment();
     void skipBlockComment();

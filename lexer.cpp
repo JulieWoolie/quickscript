@@ -162,11 +162,12 @@ conststring tokentype_name(tokentype ttype) {
 Lexer::Lexer(const std::string& input) {
   m_input = input;
 
-  idx = 0;
-  line = 1;
+  idx = -1;
+  line = 0;
   col = 0;
 
-  currentChar = getchar(0);
+  advanceLineTracker();
+  next();
 
   peekedToken = nullptr;
   eofToken = nullptr;
@@ -174,6 +175,11 @@ Lexer::Lexer(const std::string& input) {
   tokenStart.index = 0;
   tokenStart.column = 0;
   tokenStart.line = 0;
+}
+
+void Lexer::advanceLineTracker() {
+  line++;
+  col = 0;
 }
 
 int8 Lexer::peek(const int32 ahead) {
@@ -196,8 +202,7 @@ int8 Lexer::next() {
   int8 nch = getchar(ncur);
 
   if (nch == LF || nch == CR) {
-    line++;
-    col = 0;
+    advanceLineTracker();
 
     if (nch == CR && getchar(ncur + 1) == LF) {
       ncur++;
