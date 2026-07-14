@@ -64,6 +64,9 @@
 #define TT_LAMBDA_ARROW         3035
 #define TT_POW                  3036
 #define TT_POW_ASSIGN           3037
+#define TT_DWALL                3038
+#define TT_DWALL_ASSIGN         3039
+#define TT_QUESTION             3040
 
 // Literals
 #define TT_HEX_LITERAL          4000

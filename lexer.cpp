@@ -27,6 +27,17 @@ void Lexer::lex() {
   while (t->ttype != TT_EOF) {
     t = nextToken();
   }
+
+  Token* last = m_tokens->get(m_tokens->size() - 1);
+  if (last->ttype == EOF) {
+    return;
+  }
+
+  Token* eof = m_tokens->newToken();
+  eof->start = last->end;
+  eof->end = last->end;
+  eof->ttype = TT_EOF;
+  eof->valueId = EMPTY_STRING;
 }
 
 void Lexer::advanceLineTracker() {
@@ -211,6 +222,9 @@ Token * Lexer::readToken() {
     case ',':
       next();
       return maketoken(TT_COMMA);
+    case '?':
+      next();
+      return maketoken(TT_QUESTION);
 
     case '!':
       next();
@@ -263,6 +277,14 @@ Token * Lexer::readToken() {
       if (currentChar == '=') {
         next();
         return maketoken(TT_WALL_ASSIGN);
+      }
+      if (currentChar == '|') {
+        next();
+        if (currentChar == '=') {
+          next();
+          return maketoken(TT_DWALL_ASSIGN);
+        }
+        return maketoken(TT_DWALL);
       }
       return maketoken(TT_WALL);
     case '*':

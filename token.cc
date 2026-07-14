@@ -107,6 +107,12 @@ conststring tokentype_name(tokentype ttype) {
       return "'**'";
     case TT_POW_ASSIGN:
       return "'**='";
+    case TT_DWALL:
+      return "'||'";
+    case TT_DWALL_ASSIGN:
+      return "'||='";
+    case TT_QUESTION:
+      return "'?'";
 
     case TT_HEX_LITERAL:
       return "HEX_LITERAL";
