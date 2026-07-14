@@ -24,8 +24,9 @@ int32 main(int32 argc, cstring argv[]) {
   std::string file_contents { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 
   TokenList tokens = TokenList();
+  StringTable table = StringTable();
 
-  Lexer l = Lexer(file_contents, &tokens);
+  Lexer l = Lexer(file_contents, &tokens, &table);
   CompilerErrors errors = CompilerErrors(&file_contents, fname);
 
   while (true) {
@@ -34,7 +35,19 @@ int32 main(int32 argc, cstring argv[]) {
       break;
     }
 
-    errors.info(tok->start, "Token = %s", tokentype_name(tok->ttype));
+    errors.info(tok->start, "Token = %s value=%i", tokentype_name(tok->ttype), tok->valueId);
+
+    if (tok->valueId == EMPTY_STRING) {
+      continue;
+    }
+
+    uint32 len = table.getlen(tok->valueId);
+    char content[len + 1];
+
+    table.getchars(tok->valueId, content, len);
+    content[len] = '\0';
+
+    printf("token content: '%s'\n", content);
   }
 
   return EXIT_SUCCESS;
