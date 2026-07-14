@@ -111,3 +111,30 @@ std::string_view StringTable::getview(const stringid id) const {
   StringEntry entry = m_lengths[id];
   return {m_data + entry.offset, entry.len};
 }
+
+int32 StringTable::getlen(const stringid id) const {
+  if (id >= m_lenEntries) {
+    return -1;
+  }
+  if (id == 0) {
+    return 0;
+  }
+  return m_lengths[id].len;
+}
+
+int32 StringTable::getchars(const stringid id, char *out, const uint32 maxout) const {
+  if (id >= m_lenEntries || maxout == 0) {
+    return -1;
+  }
+  if (id == 0) {
+    out[0] = '\0';
+    return 0;
+  }
+
+  auto [offset, len] = m_lengths[id];
+  int32 chars = len < maxout ? len : maxout;
+
+  memcpy(out, m_data + offset, chars);
+
+  return chars;
+}
