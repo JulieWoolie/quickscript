@@ -132,9 +132,17 @@ int32 StringTable::getchars(const stringid id, char *out, const uint32 maxout) c
   }
 
   auto [offset, len] = m_lengths[id];
-  int32 chars = len < maxout ? len : maxout;
+  uint32 copied = 0;
 
-  memcpy(out, m_data + offset, chars);
+  if (len < maxout) {
+    memcpy(out, m_data + offset, len);
+    out[len] = '\0';
+    copied = len;
+  } else {
+    memcpy(out, m_data + offset, maxout - 1);
+    out[maxout - 1] = '\0';
+    copied = maxout;
+  }
 
-  return chars;
+  return copied;
 }
