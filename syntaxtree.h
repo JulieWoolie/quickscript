@@ -7,17 +7,122 @@
 #include "stringtable.h"
 #include "token.h"
 
+// ========================
+// ======== Visitor =======
+// ========================
+
+struct TypeNameExpr;
+struct ArrayTypeExpr;
+struct PrimitiveTypeExpr;
+struct Identifier;
+struct CallExpr;
+struct PropertyAccessExpr;
+struct BooleanLiteral;
+struct CharLiteral;
+struct StringLiteral;
+struct IntLiteral;
+struct FloatLiteral;
+struct BinaryExpr;
+struct UnaryExpr;
+struct TernaryExpr;
+struct Block;
+struct IfStatement;
+struct ForStatement;
+struct LexicalDeclaration;
+struct DoWhileStatement;
+struct WhileStatement;
+struct ControlFlowStatement;
+struct ReturnStatement;
+struct ScriptFileStatement;
+struct FunctionParam;
+struct FunctionDeclStatement;
+
+struct Visitor {
+  virtual ~Visitor() = default;
+
+  virtual void acceptTypeNameExpr(TypeNameExpr* v) = 0;
+  virtual void acceptArrayTypeExpr(ArrayTypeExpr* v) = 0;
+  virtual void acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) = 0;
+
+  virtual void acceptIdentifier(Identifier* v) = 0;
+  virtual void acceptCallExpr(CallExpr* v) = 0;
+  virtual void acceptPropertyAccessExpr(PropertyAccessExpr* v) = 0;
+  virtual void acceptBooleanLiteral(BooleanLiteral* v) = 0;
+  virtual void acceptCharLiteral(CharLiteral* v) = 0;
+  virtual void acceptStringLiteral(StringLiteral* v) = 0;
+  virtual void acceptIntLiteral(IntLiteral* v) = 0;
+  virtual void acceptFloatLiteral(FloatLiteral* v) = 0;
+  virtual void acceptBinaryExpr(BinaryExpr* v) = 0;
+  virtual void acceptUnaryExpr(UnaryExpr* v) = 0;
+  virtual void acceptTernaryExpr(TernaryExpr* v) = 0;
+
+  virtual void acceptBlock(Block* v) = 0;
+  virtual void acceptIfStatement(IfStatement* v) = 0;
+  virtual void acceptForStatement(ForStatement* v) = 0;
+  virtual void acceptLexicalDeclaration(LexicalDeclaration* v) = 0;
+  virtual void acceptDoWhileStatement(DoWhileStatement* v) = 0;
+  virtual void acceptWhileStatement(WhileStatement* v) = 0;
+  virtual void acceptControlFlowStatement(ControlFlowStatement* v) = 0;
+  virtual void acceptReturnStatement(ReturnStatement* v) = 0;
+  virtual void acceptScriptFileStatement(ScriptFileStatement* v) = 0;
+  virtual void acceptFunctionParam(FunctionParam* v) = 0;
+  virtual void acceptFunctionDeclStatement(FunctionDeclStatement* v) = 0;
+};
+
+// ================================
+// ======== Node super type =======
+// ================================
+
 struct Node {
   Location location;
 
   virtual ~Node() = default;
+
   virtual conststring nodeType() = 0;
+  virtual void acceptVisit(Visitor* v) = 0;
 };
 
 #define AST_TYPE(name, supertype, body) struct name: supertype {\
   body\
   conststring nodeType() override {return #name;}\
+  void acceptVisit(Visitor* v) override { v->accept##name(this); }\
 };
+
+// ==============================
+// ====== Type Expressions ======
+// ==============================
+
+struct TypeExpr: Node {
+
+};
+
+#define PT_NIL      0
+#define PT_BOOL     1
+#define PT_UINT8    2
+#define PT_INT8     3
+#define PT_UINT16   4
+#define PT_INT16    5
+#define PT_UINT32   6
+#define PT_INT32    7
+#define PT_UINT64   8
+#define PT_INT64    9
+#define PT_FLOAT32  10
+#define PT_FLOAT64  11
+#define PT_STRING   12
+
+typedef uint8 primitivetype;
+
+AST_TYPE(PrimitiveTypeExpr, TypeExpr,
+  primitivetype primType = PT_NIL;
+)
+
+AST_TYPE(TypeNameExpr, TypeExpr,
+  stringid typeName = EMPTY_STRING;
+)
+
+AST_TYPE(ArrayTypeExpr, TypeExpr,
+  TypeExpr* componentType = nullptr;
+)
 
 // ========================
 // ===== Expressions ======
@@ -46,7 +151,7 @@ AST_TYPE(BooleanLiteral, Expr,
 )
 
 AST_TYPE(CharLiteral, Expr,
-  uint16 value = 0;
+  stringid value = EMPTY_STRING;
 )
 
 AST_TYPE(StringLiteral, Expr,
@@ -105,6 +210,8 @@ AST_TYPE(FloatLiteral, Expr,
 
 typedef uint8 binaryop;
 
+conststring binaryop_name(binaryop op);
+
 // ---
 
 AST_TYPE(BinaryExpr, Expr,
@@ -125,6 +232,8 @@ AST_TYPE(BinaryExpr, Expr,
 
 typedef uint8 unaryop;
 
+conststring unaryop_name(unaryop op);
+
 AST_TYPE(UnaryExpr, Expr,
   Expr* target = nullptr;
   unaryop op = UOP_NIL;
@@ -144,10 +253,36 @@ struct Statement: Node {
 
 };
 
+AST_TYPE(Block, Statement,
+  std::vector<Statement*> statements;
+)
+
 AST_TYPE(IfStatement, Statement,
   Expr* condition = nullptr;
   Statement* body = nullptr;
   Statement* elseBody = nullptr;
+)
+
+AST_TYPE(ForStatement, Statement,
+  Statement* first = nullptr;
+  Expr* second = nullptr;
+  Expr* third = nullptr;
+)
+
+AST_TYPE(LexicalDeclaration, Statement,
+  TypeExpr* typeExpr = nullptr;
+  Identifier* variableName = nullptr;
+  Expr* value = nullptr;
+)
+
+AST_TYPE(DoWhileStatement, Statement,
+  Block* body = nullptr;
+  Expr* condition = nullptr;
+)
+
+AST_TYPE(WhileStatement, Statement,
+  Block* body = nullptr;
+  Expr* condition = nullptr;
 )
 
 #define CFT_CONTINUE 0
@@ -164,17 +299,20 @@ AST_TYPE(ReturnStatement, Statement,
   Expr* value = nullptr;
 )
 
-AST_TYPE(Block, Statement,
-  std::vector<Statement*> statements;
-)
-
 AST_TYPE(ScriptFileStatement, Block,
 
 )
 
+AST_TYPE(FunctionParam, Statement,
+  TypeExpr* paramType = nullptr;
+  Identifier* name = nullptr;
+)
+
 AST_TYPE(FunctionDeclStatement, Statement,
   Identifier* name = nullptr;
+  std::vector<FunctionParam*> arguments;
   Block* functionBody = nullptr;
+  TypeExpr* returnType = nullptr;
 )
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H

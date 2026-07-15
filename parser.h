@@ -46,6 +46,28 @@ class Parser {
 
     ControlFlowStatement* controlFlow();
 
+    IfStatement* ifStatement();
+
+    ForStatement* forStatement();
+
+    DoWhileStatement* doWhileStatement();
+
+    WhileStatement* whileStatement();
+
+    LexicalDeclaration* lexDecl();
+
+    // Type expressions
+
+    TypeExpr* typeExpr();
+
+    TypeExpr* arrayType();
+
+    TypeExpr* primaryTypeExpr();
+
+    TypeExpr* typeName();
+
+    PrimitiveTypeExpr* primitiveType();
+
     // Expressions
 
     Expr* expr();
@@ -71,6 +93,7 @@ class Parser {
 
     Expr* parenthesizedExpr();
 
+    CharLiteral* charLiteral();
     IntLiteral* intLiteral();
     BooleanLiteral* boolLiteral();
     FloatLiteral* floatLiteral();

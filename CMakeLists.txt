@@ -19,4 +19,5 @@ add_executable(quickscript main.cpp
         allocator.h
         types.h
         keyw_lookup.h
-        keyw_lookup.cc)
+        keyw_lookup.cc
+        syntaxtree.cc)

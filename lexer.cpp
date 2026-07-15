@@ -651,6 +651,7 @@ Token* Lexer::readQuotedString() {
       continue;
     }
 
+    chlen++;
     appendToReadBuf();
     next();
   }

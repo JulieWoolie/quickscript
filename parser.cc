@@ -92,6 +92,117 @@ Token* Parser::expect(const tokentype tt) {
     bin.op = bop;\
     break;
 
+TypeExpr* Parser::typeExpr() {
+  return arrayType();
+}
+
+TypeExpr* Parser::arrayType() {
+  TypeExpr* typeExpr = primaryTypeExpr();
+
+  while (is(TT_LSQUARE)) {
+    next();
+    expect(TT_RSQUARE);
+
+    ArrayTypeExpr arr;
+    arr.location = typeExpr->location;
+    arr.componentType = typeExpr;
+
+    typeExpr = EMPLACE(arr);
+  }
+
+  return typeExpr;
+}
+
+TypeExpr * Parser::primaryTypeExpr() {
+  Token* t = peek();
+  tokentype tt = t->ttype;
+
+  switch (tt) {
+    case TT_KEYW_BOOL:
+    case TT_KEYW_UINT8:
+    case TT_KEYW_INT8:
+    case TT_KEYW_UINT16:
+    case TT_KEYW_INT16:
+    case TT_KEYW_UINT32:
+    case TT_KEYW_INT32:
+    case TT_KEYW_UINT64:
+    case TT_KEYW_INT64:
+    case TT_KEYW_FLOAT32:
+    case TT_KEYW_FLOAT64:
+    case TT_KEYW_STRING:
+      return primaryTypeExpr();
+    case TT_ID:
+      return typeName();
+    default:
+      FATAL(t->start, "Don't know how to parse %s into a type name", tokentype_name(tt));
+      return nullptr;
+  }
+}
+
+TypeExpr* Parser::typeName() {
+  Token* token = expect(TT_ID);
+  TypeNameExpr e;
+  e.location = token->start;
+  e.typeName = token->valueId;
+  return EMPLACE(e);
+}
+
+PrimitiveTypeExpr* Parser::primitiveType() {
+  primitivetype pt = PT_NIL;
+
+  switch (peek()->ttype) {
+    case TT_KEYW_BOOL:
+      pt = PT_BOOL;
+      break;
+    case TT_KEYW_UINT8:
+      pt = PT_UINT8;
+      break;
+    case TT_KEYW_INT8:
+      pt = PT_INT8;
+      break;
+    case TT_KEYW_UINT16:
+      pt = PT_UINT16;
+      break;
+    case TT_KEYW_INT16:
+      pt = PT_INT16;
+      break;
+    case TT_KEYW_UINT32:
+      pt = PT_UINT32;
+      break;
+    case TT_KEYW_INT32:
+      pt = PT_INT32;
+      break;
+    case TT_KEYW_UINT64:
+      pt = PT_UINT64;
+      break;
+    case TT_KEYW_INT64:
+      pt = PT_INT64;
+      break;
+    case TT_KEYW_FLOAT32:
+      pt = PT_FLOAT32;
+      break;
+    case TT_KEYW_FLOAT64:
+      pt = PT_FLOAT64;
+      break;
+    case TT_KEYW_STRING:
+      pt = PT_STRING;
+      break;
+    default:
+      break;
+  }
+
+  if (pt == PT_NIL) {
+    FATAL("Expected primitive keyword here");
+  }
+
+  Token* t = next();
+
+  PrimitiveTypeExpr pte;
+  pte.location = t->start;
+  pte.primType = pt;
+  return EMPLACE(pte);
+}
+
 Expr* Parser::expr() {
   return assignExpr();
 }
@@ -440,19 +551,25 @@ Expr* Parser::callExpr(Expr* target) {
   call.location = start->start;
   call.target = target;
 
-  Token* p = peek();
-  while (p->ttype != TT_RBRACKET && p->ttype != TT_EOF) {
+  while (!is(TT_RBRACKET) && !is(TT_EOF)) {
     Expr* arg = expr();
     call.arguments.push_back(arg);
 
-    if (is(TT_COMMA)) {
+    Token* p = peek();
+
+    if (p->ttype == TT_COMMA) {
       skip();
       p = peek();
+
       if (p->ttype == TT_RBRACKET || p->ttype == TT_EOF) {
-        ERROR(p->start, "Illegal trailing comma in function call arguments");
+        FATAL("Illegal trailing comma in function call arguments");
       }
-    } else if (!is(TT_RBRACKET)) {
-      ERROR("Unexpected token in function call arguments");
+
+      continue;
+    }
+
+    if (p->ttype == TT_EOF) {
+      FATAL("Call illegal cutoff");
     }
   }
 
@@ -469,6 +586,8 @@ Expr* Parser::primaryExpr() {
       return id();
     case TT_STRING_LITERAL:
       return stringLiteral();
+    case TT_CHAR_LITERAL:
+      return charLiteral();
 
     case TT_INT_LITERAL:
     case TT_HEX_LITERAL:
@@ -497,6 +616,14 @@ Expr* Parser::parenthesizedExpr() {
   Expr* res = expr();
   expect(TT_RBRACKET);
   return res;
+}
+
+CharLiteral * Parser::charLiteral() {
+  Token* t = expect(TT_CHAR_LITERAL);
+  CharLiteral l;
+  l.location = t->start;
+  l.value = t->valueId;
+  return EMPLACE(l);
 }
 
 int64 stringTo64(cstring str, uint32 len) {
