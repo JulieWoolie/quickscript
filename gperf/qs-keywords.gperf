@@ -1,0 +1,58 @@
+%{
+
+struct keyword {
+    const char *name;
+    tokentype token;
+};
+%}
+
+keyword;
+
+%language=C++
+%readonly-tables
+%compare-lengths
+%define lookup-function-name keyword_lookup
+
+
+%%
+true, TT_KEYW_TRUE
+false, TT_KEYW_FALSE
+null, TT_KEYW_NULL
+if, TT_KEYW_IF
+else, TT_KEYW_ELSE
+break, TT_KEYW_BREAK
+continue, TT_KEYW_CONTINUE
+return, TT_KEYW_RETURN
+while, TT_KEYW_WHILE
+for, TT_KEYW_FOR
+function, TT_KEYW_FUNCTION
+struct, TT_KEYW_STRUCT
+module, TT_KEYW_MODULE
+import, TT_KEYW_IMPORT
+do, TT_KEYW_DO
+bool, TT_KEYW_BOOL
+boolean, TT_KEYW_BOOL
+byte, TT_KEYW_INT8
+ubyte, TT_KEYW_UINT8
+char, TT_KEYW_INT8
+uchar, TT_KEYW_UINT8
+short, TT_KEYW_INT16
+ushort, TT_KEYW_UINT16
+int, TT_KEYW_INT32
+uint, TT_KEYW_UINT32
+long, TT_KEYW_INT64
+ulong, TT_KEYW_UINT64
+float, TT_KEYW_FLOAT32
+double, TT_KEYW_FLOAT64
+uint8, TT_KEYW_UINT8
+int8, TT_KEYW_INT8
+uint16, TT_KEYW_UINT16
+int16, TT_KEYW_INT16
+uint32, TT_KEYW_UINT32
+int32, TT_KEYW_INT32
+uint64, TT_KEYW_UINT64
+int64, TT_KEYW_INT64
+float32, TT_KEYW_FLOAT32
+float64, TT_KEYW_FLOAT64
+string, TT_KEYW_STRING
+%%

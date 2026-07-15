@@ -16,4 +16,7 @@ add_executable(quickscript main.cpp
         stringtable.cc
         parser.h
         parser.cc
-        allocator.h)
+        allocator.h
+        types.h
+        keyw_lookup.h
+        keyw_lookup.cc)

@@ -159,6 +159,30 @@ conststring tokentype_name(tokentype ttype) {
       return "'import'";
     case TT_KEYW_DO:
       return "'do'";
+    case TT_KEYW_BOOL:
+      return "'bool'";
+    case TT_KEYW_UINT8:
+      return "'uint8'";
+    case TT_KEYW_INT8:
+      return "'int8'";
+    case TT_KEYW_UINT16:
+      return "'uint16'";
+    case TT_KEYW_INT16:
+      return "'int16'";
+    case TT_KEYW_UINT32:
+      return "'uint32'";
+    case TT_KEYW_INT32:
+      return "'int32'";
+    case TT_KEYW_UINT64:
+      return "'uint64'";
+    case TT_KEYW_INT64:
+      return "'int64'";
+    case TT_KEYW_FLOAT32:
+      return "'float32'";
+    case TT_KEYW_FLOAT64:
+      return "'float64'";
+    case TT_KEYW_STRING:
+      return "'string'";
 
     default:
       return "UNKNOWN";

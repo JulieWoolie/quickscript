@@ -1,6 +1,7 @@
 #include "lexer.h"
 
 #include <utility>
+#include "keyw_lookup.h"
 
 Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table) {
   m_input = input;
@@ -469,7 +470,7 @@ Token* Lexer::readIdOrKeyword() {
     throw std::runtime_error("Invalid Identifier/keyword");
   }
 
-  tokentype keyw = keywordFromString(readbuf, readbufLen);
+  tokentype keyw = tokenTypeFromString(readbuf, readbufLen);
 
   if (keyw != TT_UNKNOWN) {
     return maketoken(keyw);
@@ -752,126 +753,3 @@ bool isBinaryChar(int8 ch) {
 SPECIAL_NUMBER_READER_METHOD(readHexLiteral, isHexChar, "Invalid hex sequence", TT_HEX_LITERAL)
 SPECIAL_NUMBER_READER_METHOD(readOctoLiteral, isOctoChar, "Invalid oct sequence", TT_OCT_LITERAL)
 SPECIAL_NUMBER_READER_METHOD(readBinaryLiteral, isBinaryChar, "Invalid binary sequence", TT_BIN_LITERAL)
-
-tokentype keywordFromString(const int8* id, const uint32 len) {
-  switch (len) {
-    case 2:
-      if (id[0] == 'i'
-       && id[1] == 'f'
-      ) {
-        return TT_KEYW_IF;
-      }
-      if (id[0] == 'd'
-       && id[1] == 'o'
-      ) {
-        return TT_KEYW_DO;
-      }
-      return TT_UNKNOWN;
-    case 3:
-      if (id[0] == 'f'
-       && id[1] == 'o'
-       && id[2] == 'r'
-      ) {
-        return TT_KEYW_FOR;
-      }
-      return TT_UNKNOWN;
-    case 4:
-      if (id[0] == 'e'
-       && id[1] == 'l'
-       && id[2] == 's'
-       && id[3] == 'e'
-      ) {
-        return TT_KEYW_ELSE;
-      }
-      if (id[0] == 'n'
-       && id[1] == 'u'
-       && id[2] == 'l'
-       && id[3] == 'l'
-      ) {
-        return TT_KEYW_NULL;
-      }
-      return TT_UNKNOWN;
-    case 5:
-      if (id[0] == 'w'
-       && id[1] == 'h'
-       && id[2] == 'i'
-       && id[3] == 'l'
-       && id[4] == 'e'
-      ) {
-        return TT_KEYW_WHILE;
-      }
-      if (id[0] == 'b'
-       && id[1] == 'r'
-       && id[2] == 'e'
-       && id[3] == 'a'
-       && id[4] == 'k'
-      ) {
-        return TT_KEYW_BREAK;
-      }
-      return TT_UNKNOWN;
-    case 6:
-      if (id[0] == 'r'
-       && id[1] == 'e'
-       && id[2] == 't'
-       && id[3] == 'u'
-       && id[4] == 'r'
-       && id[5] == 'n'
-      ) {
-        return TT_KEYW_RETURN;
-      }
-      if (id[0] == 's'
-       && id[1] == 't'
-       && id[2] == 'r'
-       && id[3] == 'u'
-       && id[4] == 'c'
-       && id[5] == 't'
-      ) {
-        return TT_KEYW_STRUCT;
-      }
-      if (id[0] == 'i'
-       && id[1] == 'm'
-       && id[2] == 'p'
-       && id[3] == 'o'
-       && id[4] == 'r'
-       && id[5] == 't'
-      ) {
-        return TT_KEYW_IMPORT;
-      }
-      if (id[0] == 'm'
-       && id[1] == 'o'
-       && id[2] == 'd'
-       && id[3] == 'u'
-       && id[4] == 'l'
-       && id[5] == 'e'
-      ) {
-        return TT_KEYW_MODULE;
-      }
-      return TT_UNKNOWN;
-    case 8:
-      if (id[0] == 'c'
-       && id[1] == 'o'
-       && id[2] == 'n'
-       && id[3] == 't'
-       && id[4] == 'i'
-       && id[5] == 'n'
-       && id[6] == 'u'
-       && id[7] == 'e'
-      ) {
-        return TT_KEYW_CONTINUE;
-      }
-      if (id[0] == 'f'
-       && id[1] == 'u'
-       && id[2] == 'n'
-       && id[3] == 'c'
-       && id[4] == 't'
-       && id[5] == 'i'
-       && id[6] == 'o'
-       && id[7] == 'n'
-      ) {
-        return TT_KEYW_FUNCTION;
-      }
-      return TT_UNKNOWN;
-    default:
-      return TT_UNKNOWN;
-  }
-}

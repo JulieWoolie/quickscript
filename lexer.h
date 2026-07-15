@@ -12,8 +12,6 @@
 #define LF '\n'
 #define CR '\r'
 
-tokentype keywordFromString(const int8* id, uint32 len);
-
 class Lexer {
   private:
     int32 idx = EOF;

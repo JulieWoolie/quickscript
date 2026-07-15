@@ -93,6 +93,18 @@
 #define TT_KEYW_MODULE          5012
 #define TT_KEYW_IMPORT          5013
 #define TT_KEYW_DO              5014
+#define TT_KEYW_BOOL            5015
+#define TT_KEYW_UINT8           5016
+#define TT_KEYW_INT8            5018
+#define TT_KEYW_UINT16          5019
+#define TT_KEYW_INT16           5020
+#define TT_KEYW_UINT32          5021
+#define TT_KEYW_INT32           5022
+#define TT_KEYW_UINT64          5023
+#define TT_KEYW_INT64           5024
+#define TT_KEYW_FLOAT32         5025
+#define TT_KEYW_FLOAT64         5026
+#define TT_KEYW_STRING          5027
 
 // =====================
 
