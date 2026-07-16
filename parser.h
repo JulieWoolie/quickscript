@@ -69,6 +69,10 @@ class Parser {
 
     ReturnStatement* returnStatement();
 
+    StructDecl* structDecl();
+
+    StructPropertyDecl* structProperty();
+
     // Type expressions
 
     TypeExpr* typeExpr();

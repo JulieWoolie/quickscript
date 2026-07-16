@@ -193,6 +193,8 @@ Statement* Parser::statement() {
       return returnStatement();
     case TT_LCURL:
       return block();
+    case TT_KEYW_STRUCT:
+      return structDecl();
     case TT_KEYW_CONST:
       return lexDecl();
 
@@ -440,6 +442,40 @@ ReturnStatement* Parser::returnStatement() {
   r.value = expr();
 
   return EMPLACE(r);
+}
+
+StructDecl* Parser::structDecl() {
+  Token* t = expect(TT_KEYW_STRUCT);
+  StructDecl decl;
+  decl.location = t->start;
+  decl.name = id();
+
+  expect(TT_LCURL);
+
+  while (!is(TT_RCURL)) {
+    StructPropertyDecl* prop = structProperty();
+    decl.properties.push_back(prop);
+  }
+
+  expect(TT_RCURL);
+
+  return EMPLACE(decl);
+}
+
+StructPropertyDecl* Parser::structProperty() {
+  TypeExpr* t = typeExpr();
+
+  StructPropertyDecl prop;
+  prop.location = t->location;
+  prop.propertyType = t;
+  prop.name = id();
+
+  if (is(TT_ASSIGN)) {
+    next();
+    prop.value = expr();
+  }
+
+  return EMPLACE(prop);
 }
 
 TypeExpr* Parser::typeExpr() {
@@ -886,7 +922,7 @@ Expr* Parser::memberExprTail(const bool allowCall, Expr* target) {
 }
 
 Expr* Parser::propertyAccess(Expr* target) {
-  Token* t = expect(TT_DOT);
+  const Token* t = expect(TT_DOT);
 
   PropertyAccessExpr expr;
   expr.location = t->start;
@@ -899,7 +935,7 @@ Expr* Parser::propertyAccess(Expr* target) {
 }
 
 Expr* Parser::indexAccess(Expr *target) {
-  Token* t = expect(TT_LSQUARE);
+  const Token* t = expect(TT_LSQUARE);
 
   IndexAccessExpr access;
   access.location = t->start;
@@ -907,14 +943,14 @@ Expr* Parser::indexAccess(Expr *target) {
 
   Expr* propId = expr();
   access.index = propId;
-  
+
   expect(TT_RSQUARE);
 
   return EMPLACE(access);
 }
 
 Expr* Parser::callExpr(Expr* target) {
-  Token* start = expect(TT_LBRACKET);
+  const Token* start = expect(TT_LBRACKET);
 
   CallExpr call;
   call.location = start->start;
@@ -1089,7 +1125,7 @@ FloatLiteral* Parser::floatLiteral() {
   char content[256];
   m_nameTable->getchars(t->valueId, content, 256);
 
-  float64 v = strtod(content, nullptr);
+  const float64 v = strtod(content, nullptr);
 
   FloatLiteral lit;
   lit.location = t->start;

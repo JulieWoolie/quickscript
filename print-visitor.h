@@ -10,6 +10,20 @@
 #define OBJEND dec();nli();printf("}");
 #define OBJPROP(name, v) nli();printf("%s = ", name);v->acceptVisit(this);
 #define OBJPROPO(name, v) if (v) { nli();printf("%s = ", name);v->acceptVisit(this); }
+#define OBJPROPARR(name, v) \
+  nli();\
+  printf("%s = [", name);\
+  if (!v.empty()) {\
+    inc();\
+    for (uint32 i = 0; i < v.size(); i++) {\
+      nli();\
+      printf("[%i] = ", i);\
+      v.at(i)->acceptVisit(this);\
+    }\
+    dec();\
+    nli();\
+  }\
+  printf("]");
 
 struct PrintingVisitor: Visitor {
   private:
@@ -80,23 +94,7 @@ struct PrintingVisitor: Visitor {
       printf(")");
       OBJBEGIN
       OBJPROP("target", v->target)
-
-      nli();
-      printf("arguments = [");
-
-      if (!v->arguments.empty()) {
-        inc();
-        for (uint32 i = 0; i < v->arguments.size(); i++) {
-          nli();
-          printf("[%i] = ", i);
-          v->arguments.at(i)->acceptVisit(this);
-        }
-        dec();
-        nli();
-      }
-
-      printf("]");
-
+      OBJPROPARR("arguments", v->arguments)
       OBJEND
     }
     void acceptPropertyAccessExpr(PropertyAccessExpr *v) override {
@@ -286,22 +284,7 @@ struct PrintingVisitor: Visitor {
       OBJBEGIN
       OBJPROP("name", v->name)
       OBJPROP("return-type", v->returnType)
-
-      nli();
-      printf(" arguments = [");
-      if (!v->arguments.empty()) {
-        inc();
-        for (uint32 i = 0; i < v->arguments.size(); i++) {
-          FunctionParam * p = v->arguments.at(i);
-          nli();
-          printf("[%i] = ", i);
-          p->acceptVisit(this);
-        }
-        dec();
-        nli();
-      }
-      printf("]");
-
+      OBJPROPARR("arguments", v->arguments)
       OBJPROP("body", v->functionBody);
       OBJEND
     }
@@ -320,6 +303,25 @@ struct PrintingVisitor: Visitor {
       OBJBEGIN
       OBJPROP("index", v->index)
       OBJPROP("target", v->target)
+      OBJEND
+    }
+
+    void acceptStructPropertyDecl(StructPropertyDecl *v) override {
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("type", v->propertyType)
+      OBJPROP("name", v->name)
+      OBJPROPO("value", v->value)
+      OBJEND
+    }
+
+    void acceptStructDecl(StructDecl *v) override {
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("name", v->name)
+      OBJPROPARR("properties", v->properties)
       OBJEND
     }
 };

@@ -38,6 +38,8 @@ struct ScriptFileStatement;
 struct FunctionParam;
 struct FunctionDeclStatement;
 struct ExprStatement;
+struct StructPropertyDecl;
+struct StructDecl;
 
 struct Visitor {
   virtual ~Visitor() = default;
@@ -71,6 +73,8 @@ struct Visitor {
   virtual void acceptFunctionParam(FunctionParam* v) = 0;
   virtual void acceptFunctionDeclStatement(FunctionDeclStatement* v) = 0;
   virtual void acceptExprStatement(ExprStatement* v) = 0;
+  virtual void acceptStructPropertyDecl(StructPropertyDecl* v) = 0;
+  virtual void acceptStructDecl(StructDecl* v) = 0;
 };
 
 // ================================
@@ -332,6 +336,17 @@ AST_TYPE(FunctionDeclStatement, Statement,
   std::vector<FunctionParam*> arguments;
   Block* functionBody = nullptr;
   TypeExpr* returnType = nullptr;
+)
+
+AST_TYPE(StructPropertyDecl, Statement,
+  TypeExpr* propertyType = nullptr;
+  Identifier* name = nullptr;
+  Expr* value = nullptr;
+)
+
+AST_TYPE(StructDecl, Statement,
+  Identifier* name = nullptr;
+  std::vector<StructPropertyDecl*> properties;
 )
 
 AST_TYPE(ExprStatement, Statement,
