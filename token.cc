@@ -183,6 +183,8 @@ conststring tokentype_name(tokentype ttype) {
       return "'float64'";
     case TT_KEYW_STRING:
       return "'string'";
+    case TT_KEYW_CONST:
+      return "'const'";
 
     default:
       return "UNKNOWN";
