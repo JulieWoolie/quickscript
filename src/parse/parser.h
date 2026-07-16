@@ -1,7 +1,7 @@
 #ifndef QUICKSCRIPT_PARSER_H
 #define QUICKSCRIPT_PARSER_H
 
-#include "allocator.h"
+#include "../allocator.h"
 #include "errors.h"
 #include "syntaxtree.h"
 #include "token.h"

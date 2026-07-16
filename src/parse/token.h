@@ -1,8 +1,8 @@
 #ifndef QUICKSCRIPT_TOKEN_H
 #define QUICKSCRIPT_TOKEN_H
 
-#include "common.h"
-#include "stringtable.h"
+#include "../common.h"
+#include "../stringtable.h"
 
 // ======= Token Types (TT) =======
 

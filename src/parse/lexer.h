@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "common.h"
-#include "stringtable.h"
+#include "../common.h"
+#include "../stringtable.h"
 #include "token.h"
 
 #define COMMENT_CHAR '/'

@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "common.h"
+#include "../common.h"
 
 #define TK_NIL 0
 #define TK_INT 1

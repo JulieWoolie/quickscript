@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "common.h"
-#include "stringtable.h"
+#include "../common.h"
+#include "../stringtable.h"
 #include "token.h"
 
 // ========================

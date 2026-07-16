@@ -1,8 +1,8 @@
 #ifndef QUICKSCRIPT_PRINT_VISITOR_H
 #define QUICKSCRIPT_PRINT_VISITOR_H
 
-#include "common.h"
-#include "stringtable.h"
+#include "../common.h"
+#include "../stringtable.h"
 #include "syntaxtree.h"
 
 #define PRINTNODEBASE printf("%s(", v->nodeType());printloc(v->location);

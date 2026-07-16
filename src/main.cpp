@@ -5,11 +5,11 @@
 
 #include "allocator.h"
 #include "common.h"
-#include "errors.h"
-#include "lexer.h"
-#include "syntaxtree.h"
-#include "parser.h"
-#include "print-visitor.h"
+#include "parse/errors.h"
+#include "parse/lexer.h"
+#include "parse/syntaxtree.h"
+#include "parse/parser.h"
+#include "parse/print-visitor.h"
 
 int32 main(int32 argc, cstring argv[]) {
   if (argc < 2) {

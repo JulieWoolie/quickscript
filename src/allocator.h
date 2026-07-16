@@ -2,7 +2,6 @@
 #define QUICKSCRIPT_ALLOCATOR_H
 
 #include <algorithm>
-#include <cstdlib>
 #include <cstring>
 #include <stdexcept>
 
