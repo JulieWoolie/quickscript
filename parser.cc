@@ -8,6 +8,32 @@
 
 #define EMPLACE(v) m_pool->emplace(v)
 
+#define RECURSIVE_FUNC(name, binop, ttype, calls) \
+Expr* Parser::name() {\
+Location l = peek()->start;\
+Expr* expr = calls();\
+while (is(ttype)) {\
+skip();\
+\
+BinaryExpr bin;\
+bin.location = l;\
+bin.op = binop;\
+bin.lhs = expr;\
+bin.rhs = calls();\
+\
+expr = m_pool->emplace(bin);\
+}\
+return expr;\
+}
+
+#define BINOP_CASE(ttype, bop) \
+case ttype:\
+bin.op = bop;\
+break;
+
+#define SAVECURSOR uint32 c = m_tokenCursor;
+#define RESTORECURSOR m_tokenCursor = c;
+
 Parser::Parser(TokenList *tokens, NoFreeAllocator *pool, CompilerErrors *errors, StringTable* table) {
   m_tokens = tokens;
   m_pool = pool;
@@ -69,28 +95,352 @@ Token* Parser::expect(const tokentype tt) {
   return t;
 }
 
-#define RECURSIVE_FUNC(name, binop, ttype, calls) \
-  Expr* Parser::name() {\
-    Location l = peek()->start;\
-    Expr* expr = calls();\
-    while (is(ttype)) {\
-      skip();\
-      \
-      BinaryExpr bin;\
-      bin.location = l;\
-      bin.op = binop;\
-      bin.lhs = expr;\
-      bin.rhs = calls();\
-      \
-      expr = m_pool->emplace(bin);\
-    }\
-    return expr;\
+ScriptFileStatement * Parser::parse() {
+  ScriptFileStatement sfs;
+  sfs.location = {
+    .index = 0,
+    .line = 1,
+    .column = 1
+  };
+
+  while (!is(TT_EOF)) {
+    Statement* s = statement();
+    sfs.statements.push_back(s);
   }
 
-#define BINOP_CASE(ttype, bop) \
-  case ttype:\
-    bin.op = bop;\
-    break;
+  return EMPLACE(sfs);
+}
+
+uint8 Parser::isLexOrFuncDecl() {
+  SAVECURSOR
+
+  tokentype tt = peek()->ttype;
+  bool canBeLabelled = true;
+
+  switch (tt) {
+    case TT_KEYW_BOOL:
+    case TT_KEYW_UINT8:
+    case TT_KEYW_INT8:
+    case TT_KEYW_UINT16:
+    case TT_KEYW_INT16:
+    case TT_KEYW_UINT32:
+    case TT_KEYW_INT32:
+    case TT_KEYW_UINT64:
+    case TT_KEYW_INT64:
+    case TT_KEYW_FLOAT32:
+    case TT_KEYW_FLOAT64:
+    case TT_KEYW_STRING:
+      canBeLabelled = false;
+    case TT_ID:
+      break;
+    default:
+      return LFDL_NONE;
+  }
+
+  if (is(TT_COLON) && canBeLabelled) {
+    RESTORECURSOR;
+    return LFDL_LABELLED_LOOP;
+  }
+
+  next();
+  while (is(TT_LSQUARE)) {
+    next();
+
+    if (!is(TT_RSQUARE)) {
+      RESTORECURSOR
+      return LFDL_NONE;
+    }
+
+    next();
+  }
+
+  if (!is(TT_ID)) {
+    RESTORECURSOR
+    return LFDL_NONE;
+  }
+
+  next();
+
+  if (is(TT_ASSIGN)) {
+    RESTORECURSOR
+    return LFDL_LEX;
+  }
+  if (!is(TT_LBRACKET)) {
+    RESTORECURSOR
+    return LFDL_NONE;
+  }
+
+  RESTORECURSOR
+  return LFDL_FUNC;
+}
+
+Statement* Parser::statement() {
+  Token* t = peek();
+
+  switch (t->ttype) {
+    case TT_KEYW_IF:
+      return ifStatement();
+    case TT_KEYW_DO:
+      return doWhileStatement(nullptr);
+    case TT_KEYW_WHILE:
+      return whileStatement(nullptr);
+    case TT_KEYW_FOR:
+      return forStatement(nullptr);
+    case TT_KEYW_CONTINUE:
+    case TT_KEYW_BREAK:
+      return controlFlow();
+    case TT_KEYW_RETURN:
+      return returnStatement();
+    case TT_LCURL:
+      return block();
+    case TT_KEYW_CONST:
+      return lexDecl();
+
+    default:
+      uint8 lfdl = isLexOrFuncDecl();
+      if (lfdl == LFDL_LEX) {
+        return lexDecl();
+      }
+      if (lfdl == LFDL_FUNC) {
+        return funcDecl();
+      }
+      if (lfdl == LFDL_LABELLED_LOOP) {
+        return labelledStatement();
+      }
+
+      Expr* e = expr();
+      ExprStatement stat;
+      stat.location = e->location;
+      stat.expression = e;
+      return EMPLACE(stat);
+  }
+}
+
+FunctionParam * Parser::funcParam() {
+  TypeExpr* ptype = typeExpr();
+  Identifier* pname = id();
+
+  FunctionParam param;
+  param.location = ptype->location;
+  param.name = pname;
+  param.paramType = ptype;
+
+  return EMPLACE(param);
+}
+
+FunctionDeclStatement * Parser::funcDecl() {
+  TypeExpr* retType = typeExpr();
+  Identifier* funcName = id();
+
+  FunctionDeclStatement decl;
+  decl.location = retType->location;
+  decl.name = funcName;
+  decl.returnType = retType;
+
+  expect(TT_LBRACKET);
+
+  while (!is(TT_RBRACKET)) {
+    FunctionParam* param = funcParam();
+    decl.arguments.push_back(param);
+
+    if (is(TT_COMMA)) {
+      next();
+      if (is(TT_RBRACKET)) {
+        ERROR(peek()->start, "Illegal trailing comma in function arguments declaration");
+      }
+    }
+  }
+
+  expect(TT_RBRACKET);
+
+  decl.functionBody = block();
+
+  return EMPLACE(decl);
+}
+
+Block* Parser::block() {
+  Token* t = expect(TT_LCURL);
+
+  Block b;
+  b.location = t->start;
+
+  while (!is(TT_RCURL)) {
+    Statement* s = statement();
+    b.statements.push_back(s);
+  }
+
+  expect(TT_RCURL);
+
+  return EMPLACE(b);
+}
+
+ControlFlowStatement * Parser::controlFlow() {
+  Token* p = next();
+  tokentype tt = p->ttype;
+  controlflowtype cft = CFT_NIL;
+
+  if (tt == TT_KEYW_CONTINUE) {
+    cft = CFT_CONTINUE;
+  } else if (tt == TT_KEYW_BREAK) {
+    cft = CFT_BREAK;
+  } else {
+    // Should never happen as long as this is called from statement()
+    return nullptr;
+  }
+
+  ControlFlowStatement stat;
+  stat.location = p->start;
+  stat.type = cft;
+
+  p = peek();
+  if (p->ttype == TT_ID && p->start.line == stat.location.line) {
+    Identifier* label = id();
+    stat.label = label;
+  }
+
+  return EMPLACE(stat);
+}
+
+IfStatement* Parser::ifStatement() {
+  Token* t = expect(TT_KEYW_IF);
+
+  IfStatement s;
+  s.location = t->start;
+
+  Expr* cond = expr();
+  Statement* body = statement();
+
+  s.condition = cond;
+  s.body = body;
+
+  if (is(TT_KEYW_ELSE)) {
+    next();
+    s.elseBody = statement();
+  }
+
+  return EMPLACE(s);
+}
+
+Statement* Parser::labelledStatement() {
+  Identifier* label = id();
+  expect(TT_COLON);
+
+  Token* t = peek();
+
+  switch (t->ttype) {
+    case TT_KEYW_FOR:
+      return forStatement(label);
+    case TT_KEYW_WHILE:
+      return whileStatement(label);
+    case TT_KEYW_DO:
+      return doWhileStatement(label);
+    default:
+      FATAL(t->start, "Invalid statement for labelled statement");
+      return nullptr;
+  }
+}
+
+ForStatement * Parser::forStatement(Identifier* label) {
+  const Token* t = expect(TT_KEYW_FOR);
+
+  ForStatement f;
+  f.location = t->start;
+  f.label = label;
+
+  bool hasParentheses = false;
+
+  if (is(TT_LBRACKET)) {
+    hasParentheses = true;
+    next();
+  }
+
+  f.first = lexDecl();
+  expect(TT_SEMICOLON);
+  f.second = expr();
+  expect(TT_SEMICOLON);
+  f.third = expr();
+
+  if (hasParentheses) {
+    expect(TT_RBRACKET);
+  }
+
+  f.loopBody = block();
+
+  return EMPLACE(f);
+}
+
+DoWhileStatement* Parser::doWhileStatement(Identifier* label) {
+  const Token* t = expect(TT_KEYW_DO);
+
+  DoWhileStatement dow;
+  dow.location = t->start;
+  dow.label = label;
+  dow.body = block();
+
+  expect(TT_KEYW_WHILE);
+  dow.condition = expr();
+
+  return EMPLACE(dow);
+}
+
+WhileStatement* Parser::whileStatement(Identifier* label) {
+  const Token* t = expect(TT_KEYW_WHILE);
+
+  WhileStatement dow;
+  dow.location = t->start;
+  dow.label = label;
+  dow.condition = expr();
+  dow.body = block();
+
+  return EMPLACE(dow);
+}
+
+LexicalDeclaration * Parser::lexDecl() {
+  bool isConst = is(TT_KEYW_CONST);
+  Location loc;
+
+  if (isConst) {
+    loc = next()->start;
+  } else {
+    loc = peek()->start;
+  }
+
+  TypeExpr* te = typeExpr();
+  Identifier* name = id();
+  Expr* val = nullptr;
+
+  if (is(TT_ASSIGN)) {
+    next();
+    val = expr();
+  }
+
+  LexicalDeclaration lex;
+  lex.location = loc;
+  lex.typeExpr = te;
+  lex.variableName = name;
+  lex.value = val;
+  lex.isConstDeclaration = isConst;
+
+  return EMPLACE(lex);
+}
+
+ReturnStatement* Parser::returnStatement() {
+  Token* t = expect(TT_KEYW_RETURN);
+
+  ReturnStatement r;
+  r.location = t->start;
+
+  if (is(TT_RCURL) || is(TT_EOF)) {
+    return EMPLACE(r);
+  }
+  if (peek()->start.line != r.location.line) {
+    return EMPLACE(r);
+  }
+
+  r.value = expr();
+
+  return EMPLACE(r);
+}
 
 TypeExpr* Parser::typeExpr() {
   return arrayType();
@@ -130,7 +480,7 @@ TypeExpr * Parser::primaryTypeExpr() {
     case TT_KEYW_FLOAT32:
     case TT_KEYW_FLOAT64:
     case TT_KEYW_STRING:
-      return primaryTypeExpr();
+      return primitiveType();
     case TT_ID:
       return typeName();
     default:

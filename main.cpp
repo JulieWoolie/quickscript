@@ -10,12 +10,17 @@
 #include "syntaxtree.h"
 #include "parser.h"
 
-#define PRINTNODEBASE(name) printf(#name);printf("(");printloc(v->location);
+#define PRINTNODEBASE printf("%s(", v->nodeType());printloc(v->location);
+#define OBJBEGIN printf(" {");inc();
+#define OBJEND dec();nli();printf("}");
+#define OBJPROP(name, v) nli();printf("%s = ", name);v->acceptVisit(this);
+#define OBJPROPO(name, v) if (v) { nli();printf("%s = ", name);v->acceptVisit(this); }
 
 struct PrintingVisitor: Visitor {
   private:
     int32 m_indent = 0;
     StringTable* m_table;
+    conststring m_filename;
 
     void nli() {
       printf("\n");
@@ -46,35 +51,40 @@ struct PrintingVisitor: Visitor {
     }
 
   public:
-    PrintingVisitor(StringTable* table) {
+    PrintingVisitor(StringTable* table, conststring filename) {
       m_table = table;
+      m_filename = filename;
     }
 
     void acceptTypeNameExpr(TypeNameExpr *v) override {
-
+      PRINTNODEBASE
+      printf(" type-name='");
+      printstr(v->typeName);
+      printf(")");
     }
     void acceptArrayTypeExpr(ArrayTypeExpr *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("component-type", v->componentType)
+      OBJEND
     }
     void acceptPrimitiveTypeExpr(PrimitiveTypeExpr *v) override {
-
+      PRINTNODEBASE
+      printf(" type=%s)", primitivetype_name(v->primType));
     }
 
     void acceptIdentifier(Identifier *v) override {
-      PRINTNODEBASE(Identifier)
+      PRINTNODEBASE
       printf(" value='");
       printstr(v->value);
       printf("')");
     }
     void acceptCallExpr(CallExpr *v) override {
-      PRINTNODEBASE(CallExpr);
-      printf(") {");
-
-      inc();
-      nli();
-
-      printf("target = ");
-      v->target->acceptVisit(this);
+      PRINTNODEBASE;
+      printf(")");
+      OBJBEGIN
+      OBJPROP("target", v->target)
 
       nli();
       printf("arguments = [");
@@ -92,29 +102,18 @@ struct PrintingVisitor: Visitor {
 
       printf("]");
 
-      dec();
-      nli();
-      printf("}");
+      OBJEND
     }
     void acceptPropertyAccessExpr(PropertyAccessExpr *v) override {
-      PRINTNODEBASE(PropertyAccessExpr)
-      printf(") {");
-      inc();
-
-      nli();
-      printf("property = ");
-      v->property->acceptVisit(this);
-
-      nli();
-      printf("target = ");
-      v->target->acceptVisit(this);
-
-      dec();
-      nli();
-      printf("}");
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("property", v->property)
+      OBJPROP("target", v->target)
+      OBJEND
     }
     void acceptBooleanLiteral(BooleanLiteral *v) override {
-      PRINTNODEBASE(BooleanLiteral)
+      PRINTNODEBASE
       printf(" value=");
       if (v->value) {
         printf("true");
@@ -124,105 +123,200 @@ struct PrintingVisitor: Visitor {
       printf(")");
     }
     void acceptCharLiteral(CharLiteral *v) override {
-      PRINTNODEBASE(CharLiteral)
+      PRINTNODEBASE
       printf(" value='");
       printstr(v->value);
       printf("')");
     }
     void acceptStringLiteral(StringLiteral *v) override {
-      PRINTNODEBASE(StringLiteral)
+      PRINTNODEBASE
       printf(" value=\"");
       printstr(v->value);
       printf("\")");
     }
     void acceptIntLiteral(IntLiteral *v) override {
-      PRINTNODEBASE(IntLiteral)
+      PRINTNODEBASE
       printf(" value=%llu)", v->value);
     }
     void acceptFloatLiteral(FloatLiteral *v) override {
-      PRINTNODEBASE(FloatLiteral)
+      PRINTNODEBASE
       printf(" value=%f)", v->value);
     }
     void acceptBinaryExpr(BinaryExpr *v) override {
-      PRINTNODEBASE(BinaryExpr)
-      printf(" op=%s) {", binaryop_name(v->op));
-
-      inc();
-      nli();
-      printf("lhs = ");
-      v->lhs->acceptVisit(this);
-
-      nli();
-      printf("rhs = ");
-      v->rhs->acceptVisit(this);
-
-      dec();
-      nli();
-      printf("}");
+      PRINTNODEBASE
+      printf(" op=%s)", binaryop_name(v->op));
+      OBJBEGIN
+      OBJPROP("lhs", v->lhs)
+      OBJPROP("rhs", v->rhs)
+      OBJEND
     }
     void acceptUnaryExpr(UnaryExpr *v) override {
-      PRINTNODEBASE(UnaryExpr)
-      printf("op = %s) {", unaryop_name(v->op));
-      inc();
-      nli();
-      printf("target = ");
-      v->target->acceptVisit(this);
-      dec();
-      nli();
-      printf("}");
+      PRINTNODEBASE
+      printf("op = %s)", unaryop_name(v->op));
+      OBJBEGIN
+      OBJPROP("target", v->target)
+      OBJEND
     }
     void acceptTernaryExpr(TernaryExpr *v) override {
-      PRINTNODEBASE(TernaryExpr)
-      printf(") {");
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("condition", v->condition)
+      OBJPROP("left", v->left)
+      OBJPROP("right", v->right)
+      OBJEND
+    }
+    void acceptBlock(Block *v) override {
+      PRINTNODEBASE
+      printf(") [");
+
+      if (v->statements.empty()) {
+        printf("]");
+        return;
+      }
+
       inc();
-      nli();
-      printf("condition = ");
-      v->condition->acceptVisit(this);
 
-      nli();
-      printf("left = ");
-      v->left->acceptVisit(this);
-
-      nli();
-      printf("right = ");
-      v->right->acceptVisit(this);
+      for (uint32 i = 0; i < v->statements.size(); i++) {
+        Statement* s = v->statements.at(i);
+        nli();
+        printf("[%i] = ", i);
+        s->acceptVisit(this);
+      }
 
       dec();
       nli();
-      printf("}");
-    }
-    void acceptBlock(Block *v) override {
-
+      printf("]");
     }
     void acceptIfStatement(IfStatement *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("condition", v->condition)
+      OBJPROP("body", v->body)
+      OBJPROPO("else", v->body)
+      OBJEND
     }
     void acceptForStatement(ForStatement *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROPO("label", v->label)
+      OBJPROP("first", v->first)
+      OBJPROP("second", v->second)
+      OBJPROP("third", v->third)
+      OBJPROP("body", v->loopBody)
+      OBJEND
     }
     void acceptLexicalDeclaration(LexicalDeclaration *v) override {
+      PRINTNODEBASE
+      printf(" const=");
+      if (v->isConstDeclaration) {
+        printf("true");
+      } else {
+        printf("false");
+      }
 
+      printf(")");
+      OBJBEGIN
+      OBJPROP("type", v->typeExpr)
+      OBJPROP("variable-name", v->variableName)
+      OBJPROPO("value", v->value)
+      OBJEND
     }
     void acceptDoWhileStatement(DoWhileStatement *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROPO("label", v->label)
+      OBJPROP("condition", v->condition)
+      OBJPROP("body", v->body)
+      OBJEND
     }
     void acceptWhileStatement(WhileStatement *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROPO("label", v->label)
+      OBJPROP("condition", v->condition)
+      OBJPROP("body", v->body)
+      OBJEND
     }
     void acceptControlFlowStatement(ControlFlowStatement *v) override {
-
+      PRINTNODEBASE
+      printf(" type=%s)", controlflowtype_name(v->type));
+      OBJBEGIN
+      OBJPROPO("label", v->label)
     }
     void acceptReturnStatement(ReturnStatement *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROPO("value", v->value)
+      OBJEND
     }
     void acceptScriptFileStatement(ScriptFileStatement *v) override {
+      PRINTNODEBASE
+      printf(" file-name='%s') [", m_filename);
 
+      if (v->statements.empty()) {
+        printf("]");
+        return;
+      }
+
+      inc();
+
+      for (uint32 i = 0; i < v->statements.size(); i++) {
+        Statement* s = v->statements.at(i);
+        nli();
+        printf("[%i] = ", i);
+        s->acceptVisit(this);
+      }
+
+      dec();
+      nli();
+      printf("]");
     }
     void acceptFunctionParam(FunctionParam *v) override {
-
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("type", v->paramType)
+      OBJPROP("name", v->name)
+      OBJEND
     }
     void acceptFunctionDeclStatement(FunctionDeclStatement *v) override {
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("name", v->name)
+      OBJPROP("return-type", v->returnType)
 
+      nli();
+      printf(" arguments = [");
+      if (!v->arguments.empty()) {
+        inc();
+        for (uint32 i = 0; i < v->arguments.size(); i++) {
+          FunctionParam * p = v->arguments.at(i);
+          nli();
+          printf("[%i] = ", i);
+          p->acceptVisit(this);
+        }
+        dec();
+        nli();
+      }
+      printf("]");
+
+      OBJPROP("body", v->functionBody);
+      OBJEND
+    }
+
+    void acceptExprStatement(ExprStatement *v) override {
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("expression", v->expression)
+      OBJEND
     }
 };
 
@@ -253,10 +347,10 @@ int32 main(int32 argc, cstring argv[]) {
 
   Parser p = Parser(&tokens, &pool, &errors, &table);
 
-  Expr* expr = p.expr();
-  PrintingVisitor pv = PrintingVisitor(&table);
+  ScriptFileStatement* sfs = p.parse();
+  PrintingVisitor pv = PrintingVisitor(&table, fname);
 
-  expr->acceptVisit(&pv);
+  sfs->acceptVisit(&pv);
 
   return EXIT_SUCCESS;
 }

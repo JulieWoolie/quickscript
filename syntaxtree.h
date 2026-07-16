@@ -36,6 +36,7 @@ struct ReturnStatement;
 struct ScriptFileStatement;
 struct FunctionParam;
 struct FunctionDeclStatement;
+struct ExprStatement;
 
 struct Visitor {
   virtual ~Visitor() = default;
@@ -67,6 +68,7 @@ struct Visitor {
   virtual void acceptScriptFileStatement(ScriptFileStatement* v) = 0;
   virtual void acceptFunctionParam(FunctionParam* v) = 0;
   virtual void acceptFunctionDeclStatement(FunctionDeclStatement* v) = 0;
+  virtual void acceptExprStatement(ExprStatement* v) = 0;
 };
 
 // ================================
@@ -111,6 +113,8 @@ struct TypeExpr: Node {
 #define PT_STRING   12
 
 typedef uint8 primitivetype;
+
+conststring primitivetype_name(primitivetype pt);
 
 AST_TYPE(PrimitiveTypeExpr, TypeExpr,
   primitivetype primType = PT_NIL;
@@ -264,31 +268,39 @@ AST_TYPE(IfStatement, Statement,
 )
 
 AST_TYPE(ForStatement, Statement,
-  Statement* first = nullptr;
+  LexicalDeclaration* first = nullptr;
   Expr* second = nullptr;
   Expr* third = nullptr;
+  Statement* loopBody = nullptr;
+  Identifier* label = nullptr;
 )
 
 AST_TYPE(LexicalDeclaration, Statement,
   TypeExpr* typeExpr = nullptr;
   Identifier* variableName = nullptr;
   Expr* value = nullptr;
+  bool isConstDeclaration = false;
 )
 
 AST_TYPE(DoWhileStatement, Statement,
   Block* body = nullptr;
   Expr* condition = nullptr;
+  Identifier* label = nullptr;
 )
 
 AST_TYPE(WhileStatement, Statement,
   Block* body = nullptr;
   Expr* condition = nullptr;
+  Identifier* label = nullptr;
 )
 
-#define CFT_CONTINUE 0
-#define CFT_BREAK 1
+#define CFT_NIL 0
+#define CFT_CONTINUE 1
+#define CFT_BREAK 2
 
 typedef uint8 controlflowtype;
+
+conststring controlflowtype_name(controlflowtype cft);
 
 AST_TYPE(ControlFlowStatement, Statement,
   Identifier* label = nullptr;
@@ -313,6 +325,10 @@ AST_TYPE(FunctionDeclStatement, Statement,
   std::vector<FunctionParam*> arguments;
   Block* functionBody = nullptr;
   TypeExpr* returnType = nullptr;
+)
+
+AST_TYPE(ExprStatement, Statement,
+  Expr* expression = nullptr;
 )
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H

@@ -11,6 +11,10 @@ CompilerErrors::CompilerErrors(std::string *fileContent, conststring fName) {
   m_fileName = fName;
 }
 
+void CompilerErrors::setSilent(bool silent) {
+  m_silent = silent;
+}
+
 CREATE_LOG_METHOD(fatal, LOGL_FATAL)
 CREATE_LOG_METHOD_NL(fatal, LOGL_FATAL)
 

@@ -8,6 +8,11 @@
 
 // === Parser ===
 
+#define LFDL_NONE 0
+#define LFDL_LEX 1
+#define LFDL_FUNC 2
+#define LFDL_LABELLED_LOOP 3
+
 class Parser {
   TokenList* m_tokens;
   NoFreeAllocator* m_pool = nullptr;
@@ -38,7 +43,11 @@ class Parser {
 
     // statements
 
+    uint8 isLexOrFuncDecl();
+
     Statement* statement();
+
+    FunctionParam* funcParam();
 
     FunctionDeclStatement* funcDecl();
 
@@ -48,13 +57,17 @@ class Parser {
 
     IfStatement* ifStatement();
 
-    ForStatement* forStatement();
+    Statement* labelledStatement();
 
-    DoWhileStatement* doWhileStatement();
+    ForStatement* forStatement(Identifier* label);
 
-    WhileStatement* whileStatement();
+    DoWhileStatement* doWhileStatement(Identifier* label);
+
+    WhileStatement* whileStatement(Identifier* label);
 
     LexicalDeclaration* lexDecl();
+
+    ReturnStatement* returnStatement();
 
     // Type expressions
 

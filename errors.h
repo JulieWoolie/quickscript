@@ -12,9 +12,12 @@ typedef uint8 loglevel;
 class CompilerErrors {
   std::string* m_fileContent;
   conststring m_fileName;
+  bool m_silent = false;
 
   public:
     CompilerErrors(std::string* fileContent, conststring fName);
+
+    void setSilent(bool silent);
 
     void fatal(Location& loc, conststring msg, ...);
     void fatal(conststring msg, ...);
