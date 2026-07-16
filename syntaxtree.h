@@ -17,6 +17,7 @@ struct PrimitiveTypeExpr;
 struct Identifier;
 struct CallExpr;
 struct PropertyAccessExpr;
+struct IndexAccessExpr;
 struct BooleanLiteral;
 struct CharLiteral;
 struct StringLiteral;
@@ -48,6 +49,7 @@ struct Visitor {
   virtual void acceptIdentifier(Identifier* v) = 0;
   virtual void acceptCallExpr(CallExpr* v) = 0;
   virtual void acceptPropertyAccessExpr(PropertyAccessExpr* v) = 0;
+  virtual void acceptIndexAccessExpr(IndexAccessExpr* v) = 0;
   virtual void acceptBooleanLiteral(BooleanLiteral* v) = 0;
   virtual void acceptCharLiteral(CharLiteral* v) = 0;
   virtual void acceptStringLiteral(StringLiteral* v) = 0;
@@ -147,6 +149,11 @@ AST_TYPE(CallExpr, Expr,
 
 AST_TYPE(PropertyAccessExpr, Expr,
   Identifier* property = nullptr;
+  Expr* target = nullptr;
+)
+
+AST_TYPE(IndexAccessExpr, Expr,
+  Identifier* index = nullptr;
   Expr* target = nullptr;
 )
 
