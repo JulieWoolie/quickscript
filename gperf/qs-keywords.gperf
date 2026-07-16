@@ -1,4 +1,6 @@
 %{
+#include "keyw_lookup.h"
+#include <cstring>
 
 struct keyword {
     const char *name;
@@ -6,12 +8,12 @@ struct keyword {
 };
 %}
 
-keyword;
+struct keyword;
 
-%language=C++
+%language=ANSI-C
 %readonly-tables
 %compare-lengths
-%define lookup-function-name keyword_lookup
+%define lookup-function-name tokenTypeFromString
 
 
 %%
@@ -55,4 +57,5 @@ int64, TT_KEYW_INT64
 float32, TT_KEYW_FLOAT32
 float64, TT_KEYW_FLOAT64
 string, TT_KEYW_STRING
+const, TT_KEYW_CONST
 %%
