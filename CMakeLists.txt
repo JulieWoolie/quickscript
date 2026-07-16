@@ -20,4 +20,5 @@ add_executable(quickscript main.cpp
         types.h
         keyw_lookup.h
         keyw_lookup.cc
-        syntaxtree.cc)
+        syntaxtree.cc
+        print-visitor.h)
