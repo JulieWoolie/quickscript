@@ -153,7 +153,7 @@ AST_TYPE(PropertyAccessExpr, Expr,
 )
 
 AST_TYPE(IndexAccessExpr, Expr,
-  Identifier* index = nullptr;
+  Expr* index = nullptr;
   Expr* target = nullptr;
 )
 

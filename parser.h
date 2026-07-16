@@ -101,6 +101,7 @@ class Parser {
     Expr* memberExpr(bool allowCall);
     Expr* memberExprTail(bool allowCall, Expr *target);
     Expr* propertyAccess(Expr* target);
+    Expr* indexAccess(Expr* target);
     Expr* callExpr(Expr* target);
     Expr* primaryExpr();
 

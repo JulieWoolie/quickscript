@@ -865,7 +865,11 @@ Expr* Parser::memberExprTail(const bool allowCall, Expr* target) {
 
   while (true) {
     if (is(TT_DOT)) {
-      expr = propertyAccess(target);
+      expr = propertyAccess(expr);
+      continue;
+    }
+    if (is(TT_LSQUARE)) {
+      expr = indexAccess(expr);
       continue;
     }
     if (is(TT_LBRACKET)) {
@@ -892,6 +896,21 @@ Expr* Parser::propertyAccess(Expr* target) {
   expr.property = propId;
 
   return EMPLACE(expr);
+}
+
+Expr* Parser::indexAccess(Expr *target) {
+  Token* t = expect(TT_LSQUARE);
+
+  IndexAccessExpr access;
+  access.location = t->start;
+  access.target = target;
+
+  Expr* propId = expr();
+  access.index = propId;
+  
+  expect(TT_RSQUARE);
+
+  return EMPLACE(access);
 }
 
 Expr* Parser::callExpr(Expr* target) {
