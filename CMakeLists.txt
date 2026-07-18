@@ -21,4 +21,6 @@ add_executable(quickscript src/main.cpp
         src/parse/keyw_lookup.h
         src/parse/keyw_lookup.cc
         src/parse/syntaxtree.cc
-        src/parse/print-visitor.h)
+        src/parse/print-visitor.h
+        src/interpreter/opcodes.h
+        src/interpreter/opcodes.cc)
