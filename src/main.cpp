@@ -5,6 +5,7 @@
 
 #include "allocator.h"
 #include "common.h"
+#include "analysis/TypeResolver.h"
 #include "parse/errors.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
@@ -39,8 +40,13 @@ int32 main(int32 argc, cstring argv[]) {
   Parser p = Parser(&tokens, &pool, &errors, &table);
 
   ScriptFileStatement* sfs = p.parse();
-  PrintingVisitor pv = PrintingVisitor(&table, fname);
 
+  TypeLookup lookup = TypeLookup(&pool);
+  TypeResolver resolver = TypeResolver(&lookup, &table, &errors);
+
+  resolver.acceptScriptFileStatement(sfs);
+
+  PrintingVisitor pv = PrintingVisitor(&table, fname);
   sfs->acceptVisit(&pv);
 
   return EXIT_SUCCESS;

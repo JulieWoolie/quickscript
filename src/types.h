@@ -125,12 +125,13 @@ struct ScriptArrayType: ScriptType {
 };
 
 struct StructProperty {
-  std::string propertyName = nullptr;
+  std::string propertyName = "";
   ScriptType* type = nullptr;
 };
 
 struct ScriptStructType: ScriptType {
-  std::vector<StructProperty> properties;
+  StructProperty* properties = nullptr;
+  uint32 propertyCount = 0;
   std::string structName;
 
   conststring typeName() override {
@@ -226,11 +227,11 @@ class TypeLookup {
   public:
     explicit TypeLookup(NoFreeAllocator *alloc);
 
-    ScriptStructType* createStructType(std::string str);
+    ScriptStructType* createStructType(const std::string& str, uint32 properties);
 
     PrimitiveScriptType* getPrimitiveType(primitivekind pk);
 
-    ScriptType* findReferencedType(std::string str);
+    ScriptType* findReferencedType(const std::string& str);
 
     ScriptArrayType* getArrayType(ScriptType* componentType);
 

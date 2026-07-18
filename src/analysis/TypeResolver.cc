@@ -16,6 +16,9 @@ void TypeResolver::pushScope() {
 }
 
 LexicalScope* TypeResolver::getScope() {
+  if (m_scopes.empty()) {
+    return nullptr;
+  }
   return m_scopes.data() + (m_scopes.size() - 1);
 }
 
@@ -129,6 +132,8 @@ void TypeResolver::acceptCallExpr(CallExpr* v) {
   m_expectedTypes.push_back(&expected);
   v->target->acceptVisit(this);
   m_expectedTypes.pop_back();
+
+  v->resultType = m_lookup->getPrimitiveType(PK_UINT32);
 }
 
 bool hasProperties(const typekind kind) {
@@ -482,34 +487,44 @@ void TypeResolver::acceptExprStatement(ExprStatement* v) {
 }
 
 void TypeResolver::acceptStructPropertyDecl(StructPropertyDecl* v) {
-  v->propertyType->acceptVisit(this);
-  ScriptType* propType = v->propertyType->getReferencedType();
-
-  if (!propType) {
-    return;
-  }
-
-  ScriptStructType* containingType = v->structDeclStatement->type;
-  std::string propname = m_strings->getstring(v->name->value);
-
-  StructProperty prop = {
-    .propertyName = propname,
-    .type = propType
-  };
-
-  containingType->properties.push_back(prop);
+  // Should not be called
 }
 
 void TypeResolver::acceptStructDecl(StructDecl* v) {
-  std::string name = m_strings->getstring(v->name->value);
-  ScriptStructType* stype = m_lookup->createStructType(name);
+  const std::string name = m_strings->getstring(v->name->value);
+
+  uint32 propcount = v->properties.size();
+  ScriptStructType* stype = m_lookup->createStructType(name, propcount);
 
   if (!stype) {
     m_errors->error(v->location, "Double declaration of struct type '%s'", name.c_str());
     return;
   }
 
-  for (StructPropertyDecl* prop : v->properties) {
-    prop->acceptVisit(this);
+  for (uint32 i = 0; i < propcount; i++) {
+    StructPropertyDecl* prop = v->properties.at(i);
+    prop->propertyType->acceptVisit(this);
+
+    std::string pname = m_strings->getstring(prop->name->value);
+    ScriptType* ptype = prop->propertyType->getReferencedType();
+
+    if (prop->value) {
+      prop->value->acceptVisit(this);
+      ScriptType* vtype = prop->value->getResultingType();
+
+      if (isAssignableTo(ptype, vtype)) {
+        m_errors->error(prop->location,
+          "Default value of property %s.%s is a %s and cannot be assigned to %s",
+          name.c_str(),
+          pname.c_str(),
+          vtype->typeName(),
+          ptype->typeName()
+        );
+      }
+    }
+
+    StructProperty* typeprop = stype->properties + i;
+    typeprop->type = ptype;
+    typeprop->propertyName = pname;
   }
 }

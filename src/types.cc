@@ -8,12 +8,14 @@ ScriptType* ScriptArrayType::getPropertyType(std::string propName, TypeLookup* l
 }
 
 ScriptType* ScriptStructType::getPropertyType(std::string propName, TypeLookup* lookup) {
-  for (StructProperty& prop : properties) {
-    if (prop.propertyName != propName) {
+  for (uint32 i = 0; i < propertyCount; i++) {
+    StructProperty* p = properties + i;
+
+    if (p->propertyName != propName) {
       continue;
     }
 
-    return prop.type;
+    return p->type;
   }
 
   return nullptr;
@@ -214,7 +216,7 @@ TypeLookup::TypeLookup(NoFreeAllocator *alloc) {
   typeFloat64.name = "float64";
 }
 
-ScriptStructType* TypeLookup::createStructType(const std::string str) {
+ScriptStructType* TypeLookup::createStructType(const std::string& str, uint32 properties) {
   if (m_typeLookup.contains(str)) {
     return nullptr;
   }
@@ -222,10 +224,14 @@ ScriptStructType* TypeLookup::createStructType(const std::string str) {
   ScriptStructType type;
   type.structName = str;
 
-  ScriptStructType* emplaced = m_alloc->emplace(type);
-  m_typeLookup[str] = emplaced;
+  StructProperty* propbuf = m_alloc->arrayAlloc<StructProperty>(properties);
+  type.properties = propbuf;
+  type.propertyCount = properties;
 
-  return emplaced;
+  ScriptStructType* stored = m_alloc->emplace(type);
+  m_typeLookup[str] = stored;
+
+  return stored;
 }
 
 PrimitiveScriptType* TypeLookup::getPrimitiveType(const primitivekind pk) {
@@ -241,12 +247,11 @@ PrimitiveScriptType* TypeLookup::getPrimitiveType(const primitivekind pk) {
     case PK_INT64: return &typeInt64;
     case PK_FLOAT32: return &typeFloat32;
     case PK_FLOAT64: return &typeFloat64;
-    case PK_VOID: return &typeVoid;
     default: return nullptr;
   }
 }
 
-ScriptType* TypeLookup::findReferencedType(std::string str) {
+ScriptType* TypeLookup::findReferencedType(const std::string& str) {
   if (m_typeLookup.contains(str)) {
     return m_typeLookup[str];
   }
