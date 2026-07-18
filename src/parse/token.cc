@@ -185,6 +185,8 @@ conststring tokentype_name(tokentype ttype) {
       return "'string'";
     case TT_KEYW_CONST:
       return "'const'";
+    case TT_KEYW_VOID:
+      return "'void'";
 
     default:
       return "UNKNOWN";

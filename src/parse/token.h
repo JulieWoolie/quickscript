@@ -106,6 +106,7 @@
 #define TT_KEYW_FLOAT64         5026
 #define TT_KEYW_STRING          5027
 #define TT_KEYW_CONST           5028
+#define TT_KEYW_VOID            5029
 
 // =====================
 

@@ -41,7 +41,7 @@ struct keyword {
 #line 11 "qs-keywords.gperf"
 struct keyword;
 
-#define TOTAL_KEYWORDS 41
+#define TOTAL_KEYWORDS 42
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 8
 #define MIN_HASH_VALUE 4
@@ -71,7 +71,7 @@ hash (conststring str, uint32 len)
       66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
       66, 66, 66, 66, 66, 66, 66, 66, 35,  0,
        5,  5,  5, 30, 66,  5, 66, 25,  0, 30,
-       5,  0, 66, 66,  0, 10, 15,  0, 66, 40,
+       5,  0, 66, 66,  0, 10, 15,  0, 20, 40,
       66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
       66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
       66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
@@ -97,7 +97,7 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
     {
        0,  0,  0,  0,  4,  5,  0,  2,  3,  4,  5,  6,  2,  8,
        4,  5,  6,  0,  8,  4,  5,  6,  0,  3,  4,  5,  6,  0,
-       0,  0,  5,  6,  0,  0,  4,  5,  6,  0,  0,  4,  5,  6,
+       0,  4,  5,  6,  0,  0,  4,  5,  6,  0,  0,  4,  5,  6,
        7,  0,  4,  5,  6,  7,  0,  4,  5,  6,  0,  0,  0,  5,
        6,  7,  0,  0,  5,  0,  0,  0,  0,  5
     };
@@ -147,7 +147,9 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
       {"float", TT_KEYW_FLOAT32},
 #line 33 "qs-keywords.gperf"
       {"import", TT_KEYW_IMPORT},
-      {""}, {""}, {""},
+      {""}, {""},
+#line 61 "qs-keywords.gperf"
+      {"void", TT_KEYW_VOID},
 #line 41 "qs-keywords.gperf"
       {"short", TT_KEYW_INT16},
 #line 31 "qs-keywords.gperf"
