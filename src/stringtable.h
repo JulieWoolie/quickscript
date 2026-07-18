@@ -38,6 +38,8 @@ class StringTable {
     std::string_view getview(stringid id) const;
     int32 getlen(stringid id) const;
     int32 getchars(stringid id, char* out, uint32 maxout) const;
+
+    std::string getstring(stringid id);
 };
 
 #endif //QUICKSCRIPT_STRINGTABLE_H

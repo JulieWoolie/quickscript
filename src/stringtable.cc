@@ -146,3 +146,16 @@ int32 StringTable::getchars(const stringid id, char *out, const uint32 maxout) c
 
   return copied;
 }
+
+std::string StringTable::getstring(stringid id) {
+  if (id == EMPTY_STRING || id >= m_lenEntries) {
+    return "";
+  }
+
+  auto [offset, len] = m_lengths[id];
+
+  char content[len];
+  memcpy(content, m_data + offset, len);
+
+  return std::string(content, len);
+}
