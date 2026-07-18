@@ -32,6 +32,7 @@ typedef uint8 typekind;
 #define PK_UINT64   (PK_INT64+1)
 #define PK_FLOAT32  (PK_UINT64+1)
 #define PK_FLOAT64  (PK_FLOAT32+1)
+#define PK_VOID     (PK_FLOAT64+1)
 typedef uint8 primitivekind;
 
 struct ScriptType {
@@ -113,22 +114,11 @@ struct ScriptStringType: ScriptType {
   }
 };
 
-struct ScriptVoidType: ScriptType {
-  conststring typeName() override {
-    return "void";
-  }
-  uint32 stackSizeBytes() override {
-    return 0;
-  }
-  typekind kind() override {
-    return TK_VOID;
-  }
-};
-
 class TypeLookup {
   NoFreeAllocator* m_alloc = nullptr;
   std::unordered_map<std::string, ScriptType*> m_typeLookup;
 
+  PrimitiveScriptType typeVoid;
   PrimitiveScriptType typeBool;
   PrimitiveScriptType typeInt8;
   PrimitiveScriptType typeUint8;

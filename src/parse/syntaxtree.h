@@ -127,6 +127,7 @@ struct TypeExpr: Node {
 #define PPT_FLOAT32  10
 #define PPT_FLOAT64  11
 #define PPT_STRING   12
+#define PPT_VOID     13
 
 typedef uint8 parsedprimitivetype;
 

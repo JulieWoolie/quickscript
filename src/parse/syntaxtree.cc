@@ -16,6 +16,7 @@ conststring parsedprimitivetype_name(parsedprimitivetype pt) {
     case PPT_FLOAT32: return "FLOAT32";
     case PPT_FLOAT64: return "FLOAT64";
     case PPT_STRING: return "STRING";
+    case PPT_VOID: return "VOID";
     default: return "UNKNOWN";
   }
 }

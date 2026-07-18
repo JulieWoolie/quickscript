@@ -520,6 +520,7 @@ TypeExpr * Parser::primaryTypeExpr() {
     case TT_KEYW_FLOAT32:
     case TT_KEYW_FLOAT64:
     case TT_KEYW_STRING:
+    case TT_KEYW_CONST:
       return primitiveType();
     case TT_ID:
       return typeName();
@@ -576,6 +577,9 @@ PrimitiveTypeExpr* Parser::primitiveType() {
       break;
     case TT_KEYW_STRING:
       pt = PPT_STRING;
+      break;
+    case TT_KEYW_CONST:
+      pt = PPT_VOID;
       break;
     default:
       break;

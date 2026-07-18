@@ -3,6 +3,10 @@
 TypeLookup::TypeLookup(NoFreeAllocator *alloc) {
   m_alloc = alloc;
 
+  typeVoid.stackSize = 0;
+  typeVoid.name = "void";
+  typeVoid.primtype = PK_VOID;
+
   typeBool.stackSize = 1;
   typeBool.name = "bool";
   typeBool.primtype = PK_BOOL;
@@ -75,6 +79,7 @@ PrimitiveScriptType* TypeLookup::getPrimitiveType(const primitivekind pk) {
     case PK_INT64: return &typeInt64;
     case PK_FLOAT32: return &typeFloat32;
     case PK_FLOAT64: return &typeFloat64;
+    case PK_VOID: return &typeVoid;
     default: return nullptr;
   }
 }
