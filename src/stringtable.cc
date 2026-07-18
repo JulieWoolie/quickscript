@@ -24,11 +24,15 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
     return 0;
   }
 
+  char temp[len + 1];
+  memcpy(temp, str, len);
+  temp[len] = '\0';
+
   char* ptr;
   uint64 off;
 
   if (m_data) {
-    ptr = strstr(str, m_data);
+    ptr = strstr(m_data, temp);
   } else {
     ptr = nullptr;
   }
@@ -61,7 +65,7 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
     off = ptr - m_data;
 
     if (m_lenEntries > 1) {
-      const StringEntry* entry = m_lengths;
+      const StringEntry* entry = m_lengths + 1;
 
       for (uint32 i = 1; i < m_lenEntries; i++) {
         if (entry->offset != off || entry->len != len) {
