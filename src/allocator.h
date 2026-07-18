@@ -34,6 +34,9 @@ class NoFreeAllocator {
     template<typename T>
     T* make();
 
+    template<typename T>
+    T* arrayAlloc(uint32 count);
+
     void reset();
 
   private:
@@ -53,6 +56,22 @@ T* NoFreeAllocator::make() {
   uint64 msize = sizeof(T);
   uint8* ptr = allocate(msize);
   return new (ptr) T();
+}
+
+template<typename T>
+T* NoFreeAllocator::arrayAlloc(uint32 count) {
+  const uint64 singleSize = sizeof(T);
+  const uint64 arrSize = singleSize * count;
+
+  uint8* ptr = allocate(arrSize);
+
+  for (uint32 i = 0; i < count; i++) {
+    uint8* offsetptr = ptr + (i * singleSize);
+    T* td = (T*) offsetptr;
+    new (td) T();
+  }
+
+  return (T*) ptr;
 }
 
 inline uint8 * NoFreeAllocator::allocate(uint64 sz) {

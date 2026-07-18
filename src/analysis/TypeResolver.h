@@ -5,11 +5,32 @@
 #include "../parse/errors.h"
 #include "../parse/syntaxtree.h"
 
+struct LexicalSymbol {
+  std::string name;
+  ScriptType* type = nullptr;
+};
+
+struct LexicalScope {
+  std::vector<LexicalSymbol> symbols;
+  ScriptType* expectedReturnType;
+};
 
 class TypeResolver: public Visitor {
   TypeLookup* m_lookup;
   StringTable* m_strings;
   CompilerErrors* m_errors;
+
+  std::vector<LexicalScope> m_scopes;
+  std::vector<ScriptType*> m_expectedTypes;
+
+  void popScope();
+  void pushScope();
+
+  LexicalScope* getScope();
+
+  void pushSymbol(stringid name, ScriptType* type);
+
+  ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop op);
 
   public:
     explicit TypeResolver(TypeLookup *lookup, StringTable* strings, CompilerErrors* errors);

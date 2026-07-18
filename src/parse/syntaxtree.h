@@ -356,6 +356,7 @@ AST_TYPE(ScriptFileStatement, Block,
 AST_TYPE(FunctionParam, Statement,
   TypeExpr* paramType = nullptr;
   Identifier* name = nullptr;
+  bool varargs = false;
 )
 
 AST_TYPE(FunctionDeclStatement, Statement,

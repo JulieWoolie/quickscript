@@ -31,8 +31,12 @@ typedef uint8 typekind;
 #define PK_UINT64   (PK_INT64+1)
 #define PK_FLOAT32  (PK_UINT64+1)
 #define PK_FLOAT64  (PK_FLOAT32+1)
-#define PK_VOID     (PK_FLOAT64+1)
 typedef uint8 primitivekind;
+
+#define TYPEFLAG_INDEXABLE (1 << 0)
+#define TYPEFLAG_PROPERTIES (2 << 0)
+
+class TypeLookup;
 
 struct ScriptType {
 
@@ -40,6 +44,39 @@ struct ScriptType {
   virtual uint32 stackSizeBytes() = 0;
   virtual typekind kind() = 0;
   virtual ~ScriptType() = default;
+
+  virtual uint32 typeFlags() {
+    return 0;
+  }
+
+  virtual ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) {
+    return nullptr;
+  }
+
+  virtual ScriptType* getIndexedType(TypeLookup* lookup) {
+    return nullptr;
+  }
+};
+
+struct FunctionSignatureParam {
+  ScriptType* type = nullptr;
+  bool varargs = false;
+};
+
+struct FunctionSignature: ScriptType {
+  ScriptType* returnType = nullptr;
+  FunctionSignatureParam* params = nullptr;
+  uint32 paramCount = 0;
+
+  conststring typeName() override {
+    return "function";
+  }
+  uint32 stackSizeBytes() override {
+    return POINTERSIZE;
+  }
+  typekind kind() override {
+    return TK_FUNC;
+  }
 };
 
 struct PrimitiveScriptType: ScriptType {
@@ -75,6 +112,16 @@ struct ScriptArrayType: ScriptType {
   typekind kind() override {
     return TK_ARRAY;
   }
+
+  uint32 typeFlags() override {
+    return TYPEFLAG_INDEXABLE | TYPEFLAG_PROPERTIES;
+  }
+
+  ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
+
+  ScriptType* getIndexedType(TypeLookup* lookup) override {
+    return componentType;
+  }
 };
 
 struct StructProperty {
@@ -97,6 +144,14 @@ struct ScriptStructType: ScriptType {
   typekind kind() override {
     return TK_STRUCT;
   }
+
+  uint32 typeFlags() override {
+    return TYPEFLAG_PROPERTIES;
+  }
+
+  ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
+
+  ScriptType* getIndexedType(TypeLookup* lookup) override;
 };
 
 struct ScriptStringType: ScriptType {
@@ -111,13 +166,48 @@ struct ScriptStringType: ScriptType {
   typekind kind() override {
     return TK_STRING;
   }
+
+  uint32 typeFlags() override {
+    return TYPEFLAG_PROPERTIES | TYPEFLAG_INDEXABLE;
+  }
+
+  ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
 };
+
+struct ScriptVoidType: ScriptType {
+  conststring typeName() override {
+    return "void";
+  }
+
+  uint32 stackSizeBytes() override {
+    return 0;
+  }
+
+  typekind kind() override {
+    return TK_VOID;
+  }
+};
+
+bool isNumberType(ScriptType* type);
+
+bool pkIsNumberType(primitivekind kind);
+
+bool isIntegerType(ScriptType* type);
+
+bool pkIsIntegerType(primitivekind kind);
+
+bool pkIsSignedType(primitivekind kind);
+
+PrimitiveScriptType* widestNumberType(PrimitiveScriptType* l, PrimitiveScriptType* r);
+
+ScriptType* getCommonType(ScriptType* t1, ScriptType* t2);
+
+bool isAssignableTo(ScriptType* holder, ScriptType* value);
 
 class TypeLookup {
   NoFreeAllocator* m_alloc = nullptr;
   std::unordered_map<std::string, ScriptType*> m_typeLookup;
 
-  PrimitiveScriptType typeVoid;
   PrimitiveScriptType typeBool;
   PrimitiveScriptType typeInt8;
   PrimitiveScriptType typeUint8;
@@ -129,6 +219,8 @@ class TypeLookup {
   PrimitiveScriptType typeUint64;
   PrimitiveScriptType typeFloat32;
   PrimitiveScriptType typeFloat64;
+
+  ScriptVoidType typeVoid;
   ScriptStringType stringType;
 
   public:
@@ -143,6 +235,10 @@ class TypeLookup {
     ScriptArrayType* getArrayType(ScriptType* componentType);
 
     ScriptStringType* getStringType();
+
+    ScriptVoidType* getVoidType();
+
+    FunctionSignature* createFunctionSignature(uint32 argCount);
 };
 
 #endif //QUICKSCRIPT_TYPES_H
