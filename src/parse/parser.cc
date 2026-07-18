@@ -459,7 +459,11 @@ StructDecl* Parser::structDecl() {
 
   expect(TT_RCURL);
 
-  return EMPLACE(decl);
+  StructDecl* result = EMPLACE(decl);
+  for (StructPropertyDecl* prop : result->properties) {
+    prop->structDeclStatement = result;
+  }
+  return result;
 }
 
 StructPropertyDecl* Parser::structProperty() {

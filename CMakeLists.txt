@@ -17,10 +17,13 @@ add_executable(quickscript src/main.cpp
         src/parse/parser.h
         src/parse/parser.cc
         src/allocator.h
-        src/parse/types.h
+        src/types.h
         src/parse/keyw_lookup.h
         src/parse/keyw_lookup.cc
         src/parse/syntaxtree.cc
         src/parse/print-visitor.h
         src/interpreter/opcodes.h
-        src/interpreter/opcodes.cc)
+        src/interpreter/opcodes.cc
+        src/types.cc
+        src/analysis/typeresolver.cc
+        src/analysis/typeresolver.h)

@@ -6,6 +6,7 @@
 #include "../common.h"
 #include "../stringtable.h"
 #include "token.h"
+#include "../types.h"
 
 // ========================
 // ======== Visitor =======
@@ -96,12 +97,21 @@ struct Node {
   void acceptVisit(Visitor* v) override { v->accept##name(this); }\
 };
 
+#define AST_EXPR_TYPE(name, supertype, body) struct name: supertype {\
+  body\
+  ScriptType* resultType = nullptr;\
+  ScriptType* getResultingType() override { return resultType; }\
+  void setResultingType(ScriptType* t) override { resultType = t; }\
+  conststring nodeType() override {return #name;}\
+  void acceptVisit(Visitor* v) override { v->accept##name(this); }\
+};
+
 // ==============================
 // ====== Type Expressions ======
 // ==============================
 
 struct TypeExpr: Node {
-
+  virtual ScriptType* getReferencedType() = 0;
 };
 
 #define PPT_NIL      0
@@ -124,14 +134,29 @@ conststring parsedprimitivetype_name(parsedprimitivetype pt);
 
 AST_TYPE(PrimitiveTypeExpr, TypeExpr,
   parsedprimitivetype primType = PPT_NIL;
+  ScriptType* referencedType = nullptr;
+
+  ScriptType* getReferencedType() override {
+    return referencedType;
+  }
 )
 
 AST_TYPE(TypeNameExpr, TypeExpr,
   stringid typeName = EMPTY_STRING;
+  ScriptType* referencedType = nullptr;
+
+  ScriptType* getReferencedType() override {
+    return referencedType;
+  }
 )
 
 AST_TYPE(ArrayTypeExpr, TypeExpr,
   TypeExpr* componentType = nullptr;
+  ScriptType* referencedType = nullptr;
+
+  ScriptType* getReferencedType() override {
+    return referencedType;
+  }
 )
 
 // ========================
@@ -139,45 +164,46 @@ AST_TYPE(ArrayTypeExpr, TypeExpr,
 // ========================
 
 struct Expr: Node {
-
+  virtual ScriptType* getResultingType() = 0;
+  virtual void setResultingType(ScriptType* t) = 0;
 };
 
-AST_TYPE(Identifier, Expr,
+AST_EXPR_TYPE(Identifier, Expr,
   stringid value = EMPTY_STRING;
 )
 
-AST_TYPE(CallExpr, Expr,
+AST_EXPR_TYPE(CallExpr, Expr,
   Expr* target = nullptr;
   std::vector<Expr*> arguments;
 )
 
-AST_TYPE(PropertyAccessExpr, Expr,
+AST_EXPR_TYPE(PropertyAccessExpr, Expr,
   Identifier* property = nullptr;
   Expr* target = nullptr;
 )
 
-AST_TYPE(IndexAccessExpr, Expr,
+AST_EXPR_TYPE(IndexAccessExpr, Expr,
   Expr* index = nullptr;
   Expr* target = nullptr;
 )
 
-AST_TYPE(BooleanLiteral, Expr,
+AST_EXPR_TYPE(BooleanLiteral, Expr,
   bool value = false;
 )
 
-AST_TYPE(CharLiteral, Expr,
+AST_EXPR_TYPE(CharLiteral, Expr,
   stringid value = EMPTY_STRING;
 )
 
-AST_TYPE(StringLiteral, Expr,
+AST_EXPR_TYPE(StringLiteral, Expr,
   stringid value = EMPTY_STRING;
 )
 
-AST_TYPE(IntLiteral, Expr,
+AST_EXPR_TYPE(IntLiteral, Expr,
   int64 value = 0;
 )
 
-AST_TYPE(FloatLiteral, Expr,
+AST_EXPR_TYPE(FloatLiteral, Expr,
   float64 value = 0.0;
 )
 
@@ -229,7 +255,7 @@ conststring binaryop_name(binaryop op);
 
 // ---
 
-AST_TYPE(BinaryExpr, Expr,
+AST_EXPR_TYPE(BinaryExpr, Expr,
   Expr* lhs = nullptr;
   Expr* rhs = nullptr;
   binaryop op = BOP_NIL;
@@ -249,12 +275,12 @@ typedef uint8 unaryop;
 
 conststring unaryop_name(unaryop op);
 
-AST_TYPE(UnaryExpr, Expr,
+AST_EXPR_TYPE(UnaryExpr, Expr,
   Expr* target = nullptr;
   unaryop op = UOP_NIL;
 )
 
-AST_TYPE(TernaryExpr, Expr,
+AST_EXPR_TYPE(TernaryExpr, Expr,
   Expr* condition = nullptr;
   Expr* left = nullptr;
   Expr* right = nullptr;
@@ -342,11 +368,13 @@ AST_TYPE(StructPropertyDecl, Statement,
   TypeExpr* propertyType = nullptr;
   Identifier* name = nullptr;
   Expr* value = nullptr;
+  StructDecl* structDeclStatement = nullptr;
 )
 
 AST_TYPE(StructDecl, Statement,
   Identifier* name = nullptr;
   std::vector<StructPropertyDecl*> properties;
+  ScriptStructType* type = nullptr;
 )
 
 AST_TYPE(ExprStatement, Statement,
