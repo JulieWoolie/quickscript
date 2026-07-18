@@ -6,7 +6,6 @@
 
 #include "allocator.h"
 #include "common.h"
-#include "parse/syntaxtree.h"
 
 #define POINTERSIZE 8
 
