@@ -1,6 +1,6 @@
 # I dislike PowerShell but this is pretty much the only way to do this that I know
 
-$outf = "../keyw_lookup.cc"
+$outf = "../src/parse/keyw_lookup.cc"
 
 gperf -t qs-keywords.gperf > $outf
 
