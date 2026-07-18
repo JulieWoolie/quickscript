@@ -104,26 +104,26 @@ struct TypeExpr: Node {
 
 };
 
-#define PT_NIL      0
-#define PT_BOOL     1
-#define PT_UINT8    2
-#define PT_INT8     3
-#define PT_UINT16   4
-#define PT_INT16    5
-#define PT_UINT32   6
-#define PT_INT32    7
-#define PT_UINT64   8
-#define PT_INT64    9
-#define PT_FLOAT32  10
-#define PT_FLOAT64  11
-#define PT_STRING   12
+#define PPT_NIL      0
+#define PPT_BOOL     1
+#define PPT_UINT8    2
+#define PPT_INT8     3
+#define PPT_UINT16   4
+#define PPT_INT16    5
+#define PPT_UINT32   6
+#define PPT_INT32    7
+#define PPT_UINT64   8
+#define PPT_INT64    9
+#define PPT_FLOAT32  10
+#define PPT_FLOAT64  11
+#define PPT_STRING   12
 
-typedef uint8 primitivetype;
+typedef uint8 parsedprimitivetype;
 
-conststring primitivetype_name(primitivetype pt);
+conststring parsedprimitivetype_name(parsedprimitivetype pt);
 
 AST_TYPE(PrimitiveTypeExpr, TypeExpr,
-  primitivetype primType = PT_NIL;
+  parsedprimitivetype primType = PPT_NIL;
 )
 
 AST_TYPE(TypeNameExpr, TypeExpr,

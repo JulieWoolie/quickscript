@@ -534,50 +534,50 @@ TypeExpr* Parser::typeName() {
 }
 
 PrimitiveTypeExpr* Parser::primitiveType() {
-  primitivetype pt = PT_NIL;
+  parsedprimitivetype pt = PPT_NIL;
 
   switch (peek()->ttype) {
     case TT_KEYW_BOOL:
-      pt = PT_BOOL;
+      pt = PPT_BOOL;
       break;
     case TT_KEYW_UINT8:
-      pt = PT_UINT8;
+      pt = PPT_UINT8;
       break;
     case TT_KEYW_INT8:
-      pt = PT_INT8;
+      pt = PPT_INT8;
       break;
     case TT_KEYW_UINT16:
-      pt = PT_UINT16;
+      pt = PPT_UINT16;
       break;
     case TT_KEYW_INT16:
-      pt = PT_INT16;
+      pt = PPT_INT16;
       break;
     case TT_KEYW_UINT32:
-      pt = PT_UINT32;
+      pt = PPT_UINT32;
       break;
     case TT_KEYW_INT32:
-      pt = PT_INT32;
+      pt = PPT_INT32;
       break;
     case TT_KEYW_UINT64:
-      pt = PT_UINT64;
+      pt = PPT_UINT64;
       break;
     case TT_KEYW_INT64:
-      pt = PT_INT64;
+      pt = PPT_INT64;
       break;
     case TT_KEYW_FLOAT32:
-      pt = PT_FLOAT32;
+      pt = PPT_FLOAT32;
       break;
     case TT_KEYW_FLOAT64:
-      pt = PT_FLOAT64;
+      pt = PPT_FLOAT64;
       break;
     case TT_KEYW_STRING:
-      pt = PT_STRING;
+      pt = PPT_STRING;
       break;
     default:
       break;
   }
 
-  if (pt == PT_NIL) {
+  if (pt == PPT_NIL) {
     FATAL("Expected primitive keyword here");
   }
 

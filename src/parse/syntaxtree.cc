@@ -1,21 +1,21 @@
 
 #include "syntaxtree.h"
 
-conststring primitivetype_name(primitivetype pt) {
+conststring parsedprimitivetype_name(parsedprimitivetype pt) {
   switch (pt) {
-    case PT_NIL: return "NIL";
-    case PT_BOOL: return "BOOL";
-    case PT_UINT8: return "UINT8";
-    case PT_INT8: return "INT8";
-    case PT_UINT16: return "UINT16";
-    case PT_INT16: return "INT16";
-    case PT_UINT32: return "UINT32";
-    case PT_INT32: return "INT32";
-    case PT_UINT64: return "UINT64";
-    case PT_INT64: return "INT64";
-    case PT_FLOAT32: return "FLOAT32";
-    case PT_FLOAT64: return "FLOAT64";
-    case PT_STRING: return "STRING";
+    case PPT_NIL: return "NIL";
+    case PPT_BOOL: return "BOOL";
+    case PPT_UINT8: return "UINT8";
+    case PPT_INT8: return "INT8";
+    case PPT_UINT16: return "UINT16";
+    case PPT_INT16: return "INT16";
+    case PPT_UINT32: return "UINT32";
+    case PPT_INT32: return "INT32";
+    case PPT_UINT64: return "UINT64";
+    case PPT_INT64: return "INT64";
+    case PPT_FLOAT32: return "FLOAT32";
+    case PPT_FLOAT64: return "FLOAT64";
+    case PPT_STRING: return "STRING";
     default: return "UNKNOWN";
   }
 }

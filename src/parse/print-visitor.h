@@ -80,7 +80,7 @@ struct PrintingVisitor: Visitor {
     }
     void acceptPrimitiveTypeExpr(PrimitiveTypeExpr *v) override {
       PRINTNODEBASE
-      printf(" type=%s)", primitivetype_name(v->primType));
+      printf(" type=%s)", parsedprimitivetype_name(v->primType));
     }
 
     void acceptIdentifier(Identifier *v) override {
