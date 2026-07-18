@@ -5,11 +5,7 @@ struct Vec2 {
 }
 
 int32 main(string[] args) {
-  const int32 i
-  int32 f = 23
-  structtype sadd = false
-
-  int32 inner() {}
+  Vec2 v = Vec2()
 
   print("Hello, world!")
   return 0
