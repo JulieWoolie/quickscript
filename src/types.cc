@@ -281,12 +281,29 @@ ScriptVoidType* TypeLookup::getVoidType() {
   return &typeVoid;
 }
 
-FunctionSignature* TypeLookup::createFunctionSignature(uint32 argCount) {
-  FunctionSignatureParam* parambuf = m_alloc->arrayAlloc<FunctionSignatureParam>(argCount);
+FunctionSignature* TypeLookup::emplaceFunctionType(FunctionSignature* signature) {
+  if (signature->name.empty()) {
+    signature->composeName();
+  }
 
-  FunctionSignature sign;
-  sign.paramCount = argCount;
-  sign.params = parambuf;
+  std::string name = signature->name;
+  if (m_typeLookup.contains(name)) {
+    return (FunctionSignature*) m_typeLookup[name];
+  }
 
-  return m_alloc->emplace(sign);
+  uint32 pcount = signature->paramCount;
+
+  FunctionSignature* emplaced = m_alloc->make<FunctionSignature>();
+  FunctionSignatureParam* params = m_alloc->arrayAlloc<FunctionSignatureParam>(pcount);
+
+  emplaced->params = params;
+  emplaced->paramCount = pcount;
+  emplaced->returnType = signature->returnType;
+
+  uint64 memsize = pcount * sizeof(FunctionSignatureParam);
+  memcpy(params, signature->params, memsize);
+
+  emplaced->composeName();
+
+  m_typeLookup[name] = emplaced;
 }

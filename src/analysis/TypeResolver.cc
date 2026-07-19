@@ -25,8 +25,12 @@ LexicalScope* TypeResolver::getScope() {
 }
 
 void TypeResolver::pushSymbol(stringid name, ScriptType* type) {
+  pushSymbol(getScope(), name, type);
+}
+
+void TypeResolver::pushSymbol(LexicalScope* scope, stringid name, ScriptType* type) const {
   std::string nameStr = m_strings->getstring(name);
-  getScope()->symbols.emplace_back(nameStr, type);
+  scope->symbols.emplace_back(nameStr, type);
 }
 
 TypeResolver::TypeResolver(TypeLookup* lookup, StringTable* strings, CompilerErrors* errors) {
@@ -600,20 +604,26 @@ void TypeResolver::acceptFunctionParam(FunctionParam* v) {
 void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   v->returnType->acceptVisit(this);
 
-  FunctionSignature* sign = m_lookup->createFunctionSignature(v->arguments.size());
-  sign->returnType = v->returnType->getReferencedType();
+  const uint32 paramCount = v->arguments.size();
 
-  pushSymbol(v->name->value, sign);
+  FunctionSignature sign;
+  sign.returnType = v->returnType->getReferencedType();
+  sign.paramCount = paramCount;
+
+  FunctionSignatureParam params[paramCount];
+  LexicalScope* prescope = getScope();
 
   pushScope();
   getScope()->expectedReturnType = v->returnType->getReferencedType();
 
   for (uint32 i = 0; i < v->arguments.size(); i++) {
     FunctionParam* p = v->arguments.at(i);
-    FunctionSignatureParam* sp = sign->params + i;
+    FunctionSignatureParam* sp = &params[i];
 
     bool varargs = p->varargs;
     ScriptType* trueType;
+
+    p->paramType->acceptVisit(this);
 
     if (varargs) {
       trueType = m_lookup->getArrayType(p->paramType->getReferencedType());
@@ -621,13 +631,16 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
       trueType = p->paramType->getReferencedType();
     }
 
-    p->paramType->acceptVisit(this);
     sp->type = trueType;
     sp->varargs = p->varargs;
 
     pushSymbol(p->name->value, trueType);
   }
 
+  FunctionSignature* ftype = m_lookup->emplaceFunctionType(&sign);
+  pushSymbol(prescope, v->name->value, ftype);
+
+  v->signature = ftype;
   v->functionBody->acceptVisit(this);
 
   popScope();

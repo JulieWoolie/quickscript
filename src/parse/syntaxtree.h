@@ -401,6 +401,7 @@ AST_TYPE(FunctionDeclStatement, Statement,
   std::vector<FunctionParam*> arguments;
   Block* functionBody = nullptr;
   TypeExpr* returnType = nullptr;
+  FunctionSignature* signature = nullptr;
 )
 
 AST_TYPE(StructPropertyDecl, Statement,

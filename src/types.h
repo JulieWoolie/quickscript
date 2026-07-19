@@ -68,6 +68,29 @@ struct FunctionSignature: ScriptType {
   FunctionSignatureParam* params = nullptr;
   uint32 paramCount = 0;
 
+  std::string name;
+
+  void composeName() {
+    name = "";
+    name.append("(");
+    for (uint32 i = 0; i < paramCount; i++) {
+      if (i != 0) {
+        name.append(",");
+      }
+      FunctionSignatureParam* p = &params[i];
+      name.append(p->type->typeName());
+      if (p->varargs) {
+        name.append("...");
+      }
+    }
+    name.append(")=>");
+    if (returnType) {
+      name.append(returnType->typeName());
+    } else {
+      name.append("void");
+    }
+  }
+
   conststring typeName() override {
     return "function";
   }
@@ -252,7 +275,7 @@ class TypeLookup {
 
     ScriptVoidType* getVoidType();
 
-    FunctionSignature* createFunctionSignature(uint32 argCount);
+    FunctionSignature* emplaceFunctionType(FunctionSignature* signature);
 };
 
 #endif //QUICKSCRIPT_TYPES_H
