@@ -35,7 +35,6 @@ conststring binaryop_name(binaryop op) {
     case BOP_MUL: return "BOP_MUL";
     case BOP_DIV: return "BOP_DIV";
     case BOP_MOD: return "BOP_MOD";
-    case BOP_EXP: return "BOP_EXP";
     case BOP_SHL: return "BOP_SHL";
     case BOP_SHR: return "BOP_SHR";
     case BOP_USHR: return "BOP_USHR";
@@ -50,7 +49,7 @@ conststring binaryop_name(binaryop op) {
     case BOP_ASSIGN_MUL: return "BOP_ASSIGN_MUL";
     case BOP_ASSIGN_DIV: return "BOP_ASSIGN_DIV";
     case BOP_ASSIGN_MOD: return "BOP_ASSIGN_MOD";
-    case BOP_ASSIGN_EXP: return "BOP_ASSIGN_EXP";
+    case BOP_ASSIGN_POW: return "BOP_ASSIGN_POW";
     case BOP_ASSIGN_SHL: return "BOP_ASSIGN_SHL";
     case BOP_ASSIGN_SHR: return "BOP_ASSIGN_SHR";
     case BOP_ASSIGN_USHR: return "BOP_ASSIGN_USHR";

@@ -129,11 +129,11 @@ struct PrintingVisitor: Visitor {
     }
     void acceptIntLiteral(IntLiteral *v) override {
       PRINTNODEBASE
-      printf(" value=%llu)", v->value);
+      printf(" value=%llu type=%s)", v->value, parsedprimitivetype_name(v->smallestFittingType));
     }
     void acceptFloatLiteral(FloatLiteral *v) override {
       PRINTNODEBASE
-      printf(" value=%f)", v->value);
+      printf(" value=%f type=%s)", v->value, parsedprimitivetype_name(v->smallestFittingType));
     }
     void acceptBinaryExpr(BinaryExpr *v) override {
       PRINTNODEBASE

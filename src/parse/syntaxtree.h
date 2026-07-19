@@ -43,35 +43,35 @@ struct StructPropertyDecl;
 struct StructDecl;
 
 #define AST_NIL 0
-#define AST_TypeNameExpr (AST_NIL+1)
-#define AST_ArrayTypeExpr (AST_TypeNameExpr+1)
-#define AST_PrimitiveTypeExpr (AST_ArrayTypeExpr+1)
-#define AST_Identifier (AST_PrimitiveTypeExpr+1)
-#define AST_CallExpr (AST_Identifier+1)
-#define AST_PropertyAccessExpr (AST_CallExpr+1)
-#define AST_IndexAccessExpr (AST_PropertyAccessExpr+1)
-#define AST_BooleanLiteral (AST_IndexAccessExpr+1)
-#define AST_CharLiteral (AST_BooleanLiteral+1)
-#define AST_StringLiteral (AST_CharLiteral+1)
-#define AST_IntLiteral (AST_StringLiteral+1)
-#define AST_FloatLiteral (AST_IntLiteral+1)
-#define AST_BinaryExpr (AST_FloatLiteral+1)
-#define AST_UnaryExpr (AST_BinaryExpr+1)
-#define AST_TernaryExpr (AST_UnaryExpr+1)
-#define AST_Block (AST_TernaryExpr+1)
-#define AST_IfStatement (AST_Block+1)
-#define AST_ForStatement (AST_IfStatement+1)
-#define AST_LexicalDeclaration (AST_ForStatement+1)
-#define AST_DoWhileStatement (AST_LexicalDeclaration+1)
-#define AST_WhileStatement (AST_DoWhileStatement+1)
-#define AST_ControlFlowStatement (AST_WhileStatement+1)
-#define AST_ReturnStatement (AST_ControlFlowStatement+1)
-#define AST_ScriptFileStatement (AST_ReturnStatement+1)
-#define AST_FunctionParam (AST_ScriptFileStatement+1)
-#define AST_FunctionDeclStatement (AST_FunctionParam+1)
-#define AST_ExprStatement (AST_FunctionDeclStatement+1)
-#define AST_StructPropertyDecl (AST_ExprStatement+1)
-#define AST_StructDecl (AST_StructPropertyDecl+1)
+#define AST_TypeNameExpr 1
+#define AST_ArrayTypeExpr 2
+#define AST_PrimitiveTypeExpr 3
+#define AST_Identifier 4
+#define AST_CallExpr 5
+#define AST_PropertyAccessExpr 6
+#define AST_IndexAccessExpr 7
+#define AST_BooleanLiteral 8
+#define AST_CharLiteral 9
+#define AST_StringLiteral 10
+#define AST_IntLiteral 11
+#define AST_FloatLiteral 12
+#define AST_BinaryExpr 13
+#define AST_UnaryExpr 14
+#define AST_TernaryExpr 15
+#define AST_Block 16
+#define AST_IfStatement 17
+#define AST_ForStatement 18
+#define AST_LexicalDeclaration 19
+#define AST_DoWhileStatement 20
+#define AST_WhileStatement 21
+#define AST_ControlFlowStatement 22
+#define AST_ReturnStatement 23
+#define AST_ScriptFileStatement 24
+#define AST_FunctionParam 25
+#define AST_FunctionDeclStatement 26
+#define AST_ExprStatement 27
+#define AST_StructPropertyDecl 28
+#define AST_StructDecl 29
 
 typedef uint8 astnodetype;
 
@@ -238,7 +238,7 @@ AST_EXPR_TYPE(StringLiteral, Expr,
 
 AST_EXPR_TYPE(IntLiteral, Expr,
   int64 value = 0;
-  parsedprimitivetype smallesFittingType = PPT_INT64;
+  parsedprimitivetype smallestFittingType = PPT_INT64;
 )
 
 AST_EXPR_TYPE(FloatLiteral, Expr,

@@ -1,5 +1,7 @@
 #include "TypeResolver.h"
 
+#include <stdint.h>
+
 void TypeResolver::popScope() {
   m_scopes.pop_back();
 }
@@ -296,17 +298,69 @@ void TypeResolver::acceptStringLiteral(StringLiteral* v) {
   v->resultType = m_lookup->getStringType();
 }
 
+// Source - https://stackoverflow.com/a/4609795
+// Posted by user79758, modified by community. See post 'Timeline' for change history
+// Retrieved 2026-07-19, License - CC BY-SA 4.0
+template <typename T> int8 sgn(T val) {
+  return (T(0) < val) - (val < T(0));
+}
+
+
 void TypeResolver::acceptIntLiteral(IntLiteral* v) {
   int64 val = v->value;
   parsedprimitivetype smallestFitting = PPT_INT64;
 
-  if ()
+  int8 sign = sgn(val);
 
-  v->resultType = m_lookup->getPrimitiveType(PK_UINT64);
+  if (sign == 0) {
+    smallestFitting = PPT_UINT8;
+  } else if (sign == -1) {
+    if (val >= -128) {
+      smallestFitting = PPT_INT8;
+    } else if (val >= INT16_MIN) {
+      smallestFitting = PPT_INT16;
+    } else if (val >= INT32_MIN) {
+      smallestFitting = PPT_INT32;
+    } else {
+      smallestFitting = PPT_INT64;
+    }
+  } else {
+    if (val <= INT8_MAX) {
+      smallestFitting = PPT_INT8;
+    } else if (val <= UINT8_MAX) {
+      smallestFitting = PPT_UINT8;
+    } else if (val <= INT16_MAX) {
+      smallestFitting = PPT_INT16;
+    } else if (val <= UINT16_MAX) {
+      smallestFitting = PPT_UINT16;
+    } else if (val <= INT32_MAX) {
+      smallestFitting = PPT_INT32;
+    } else if (val <= UINT32_MAX) {
+      smallestFitting = PPT_UINT32;
+    } {
+      smallestFitting = PPT_UINT64;
+    }
+  }
+
+  primitivekind pk = parsedPrimitiveToTypeKind(smallestFitting);
+
+  v->resultType = m_lookup->getPrimitiveType(pk);
+  v->smallestFittingType = smallestFitting;
 }
 
 void TypeResolver::acceptFloatLiteral(FloatLiteral* v) {
-  v->resultType = m_lookup->getPrimitiveType(PK_FLOAT64);
+  const float64 val = v->value;
+  parsedprimitivetype smallestFitting = PPT_FLOAT64;
+
+  float32 sv = static_cast<float32>(val);
+  if (val == sv) {
+    smallestFitting = PPT_FLOAT32;
+  } else {
+    smallestFitting = PPT_FLOAT64;
+  }
+
+  v->resultType = m_lookup->getPrimitiveType(smallestFitting);
+  v->smallestFittingType = smallestFitting;
 }
 
 ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) {
