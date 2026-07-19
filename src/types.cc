@@ -306,4 +306,6 @@ FunctionSignature* TypeLookup::emplaceFunctionType(FunctionSignature* signature)
   emplaced->composeName();
 
   m_typeLookup[name] = emplaced;
+
+  return emplaced;
 }

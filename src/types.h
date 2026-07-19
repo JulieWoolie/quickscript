@@ -73,16 +73,20 @@ struct FunctionSignature: ScriptType {
   void composeName() {
     name = "";
     name.append("(");
-    for (uint32 i = 0; i < paramCount; i++) {
-      if (i != 0) {
-        name.append(",");
-      }
-      FunctionSignatureParam* p = &params[i];
-      name.append(p->type->typeName());
-      if (p->varargs) {
-        name.append("...");
+
+    if (paramCount != 0) {
+      for (uint32 i = 0; i < paramCount; i++) {
+        if (i != 0) {
+          name.append(",");
+        }
+        FunctionSignatureParam* p = &params[i];
+        name.append(p->type->typeName());
+        if (p->varargs) {
+          name.append("...");
+        }
       }
     }
+
     name.append(")=>");
     if (returnType) {
       name.append(returnType->typeName());
@@ -92,7 +96,7 @@ struct FunctionSignature: ScriptType {
   }
 
   conststring typeName() override {
-    return "function";
+    return name.c_str();
   }
   uint32 stackSizeBytes() override {
     return POINTERSIZE;

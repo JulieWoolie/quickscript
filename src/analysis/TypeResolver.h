@@ -26,7 +26,7 @@ class TypeResolver: public Visitor {
   void popScope();
   void pushScope();
 
-  LexicalScope* getScope();
+  LexicalScope* getScope(uint32 off = 0);
 
   void pushSymbol(stringid name, ScriptType* type);
   void pushSymbol(LexicalScope* scope, stringid name, ScriptType* type) const;

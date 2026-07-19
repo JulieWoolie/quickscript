@@ -17,11 +17,11 @@ void TypeResolver::pushScope() {
   m_scopes.push_back(s);
 }
 
-LexicalScope* TypeResolver::getScope() {
+LexicalScope* TypeResolver::getScope(uint32 off) {
   if (m_scopes.empty()) {
     return nullptr;
   }
-  return m_scopes.data() + (m_scopes.size() - 1);
+  return m_scopes.data() + (m_scopes.size() - (1 + off));
 }
 
 void TypeResolver::pushSymbol(stringid name, ScriptType* type) {
@@ -611,7 +611,7 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   sign.paramCount = paramCount;
 
   FunctionSignatureParam params[paramCount];
-  LexicalScope* prescope = getScope();
+  sign.params = params;
 
   pushScope();
   getScope()->expectedReturnType = v->returnType->getReferencedType();
@@ -638,10 +638,13 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   }
 
   FunctionSignature* ftype = m_lookup->emplaceFunctionType(&sign);
-  pushSymbol(prescope, v->name->value, ftype);
+  pushSymbol(getScope(1), v->name->value, ftype);
 
   v->signature = ftype;
-  v->functionBody->acceptVisit(this);
+
+  for (Statement* stat : v->functionBody->statements) {
+    stat->acceptVisit(this);
+  }
 
   popScope();
 }
