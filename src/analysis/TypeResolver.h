@@ -24,6 +24,7 @@ class TypeResolver: public Visitor {
 
   std::vector<LexicalScope> m_scopes;
   std::vector<FunctionSignature*> m_expectedTypes;
+  std::vector<Statement*> m_statementStack;
 
   void popScope();
   void pushScope();

@@ -3,6 +3,9 @@
 #include <functional>
 #include <stdint.h>
 
+#define STATPUSH m_statementStack.push_back(v);
+#define STATPOP m_statementStack.pop_back();
+
 void TypeResolver::popScope() {
   m_scopes.pop_back();
 }
@@ -91,6 +94,16 @@ void TypeResolver::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
 
   if (ppt == PPT_STRING) {
     v->referencedType = m_lookup->getStringType();
+    return;
+  }
+  if (ppt == PPT_VOID) {
+    v->referencedType = m_lookup->getVoidType();
+    Statement* stat = m_statementStack.back();
+
+    if (stat->nodeKind() == AST_LexicalDeclaration) {
+      m_errors->error(v->location, "'void' type not allowed here");
+    }
+
     return;
   }
 
@@ -510,23 +523,32 @@ void TypeResolver::acceptTernaryExpr(TernaryExpr* v) {
 }
 
 void TypeResolver::acceptBlock(Block* v) {
+  STATPUSH
   pushScope();
+
   for (Statement* statement : v->statements) {
     statement->acceptVisit(this);
   }
+
   popScope();
+  STATPOP
 }
 
 void TypeResolver::acceptIfStatement(IfStatement* v) {
+  STATPUSH
+
   v->condition->acceptVisit(this);
   v->body->acceptVisit(this);
 
   if (v->elseBody) {
     v->elseBody->acceptVisit(this);
   }
+
+  STATPOP
 }
 
 void TypeResolver::acceptForStatement(ForStatement* v) {
+  STATPUSH
   pushScope();
 
   v->first->acceptVisit(this);
@@ -535,9 +557,12 @@ void TypeResolver::acceptForStatement(ForStatement* v) {
   v->loopBody->acceptVisit(this);
 
   popScope();
+  STATPOP
 }
 
 void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
+  STATPUSH;
+
   v->typeExpr->acceptVisit(this);
 
   if (v->value) {
@@ -556,16 +581,22 @@ void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
   }
 
   pushSymbol(v->variableName->value, v->typeExpr->getReferencedType());
+
+  STATPOP;
 }
 
 void TypeResolver::acceptDoWhileStatement(DoWhileStatement* v) {
+  STATPUSH
   v->body->acceptVisit(this);
   v->condition->acceptVisit(this);
+  STATPOP
 }
 
 void TypeResolver::acceptWhileStatement(WhileStatement* v) {
+  STATPUSH
   v->condition->acceptVisit(this);
   v->body->acceptVisit(this);
+  STATPOP
 }
 
 void TypeResolver::acceptControlFlowStatement(ControlFlowStatement* v) {
@@ -577,12 +608,14 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
     return;
   }
 
+  STATPUSH
   v->value->acceptVisit(this);
 
   ScriptType* rtype = v->value->getResultingType();
   ScriptType* expected = getScope()->expectedReturnType;
 
   if (!expected || isAssignableTo(expected, rtype)) {
+    STATPOP
     return;
   }
 
@@ -591,10 +624,14 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
     rtype->typeName(),
     expected->typeName()
   );
+
+  STATPOP
 }
 
 void TypeResolver::acceptScriptFileStatement(ScriptFileStatement* v) {
+  STATPUSH
   pushScope();
+
   LexicalScope* scope = getScope();
   scope->expectedReturnType = nullptr;
 
@@ -611,6 +648,7 @@ void TypeResolver::acceptScriptFileStatement(ScriptFileStatement* v) {
   }
 
   popScope();
+  STATPOP
 }
 
 void TypeResolver::acceptFunctionParam(FunctionParam* v) {
@@ -618,6 +656,8 @@ void TypeResolver::acceptFunctionParam(FunctionParam* v) {
 }
 
 void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
+  STATPUSH
+
   v->returnType->acceptVisit(this);
 
   const uint32 paramCount = v->arguments.size();
@@ -663,10 +703,13 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   }
 
   popScope();
+  STATPUSH
 }
 
 void TypeResolver::acceptExprStatement(ExprStatement* v) {
+  STATPUSH
   v->expression->acceptVisit(this);
+  STATPOP
 }
 
 void TypeResolver::acceptStructPropertyDecl(StructPropertyDecl* v) {
@@ -674,6 +717,8 @@ void TypeResolver::acceptStructPropertyDecl(StructPropertyDecl* v) {
 }
 
 void TypeResolver::acceptStructDecl(StructDecl* v) {
+  STATPUSH
+
   const std::string name = m_strings->getstring(v->name->value);
 
   uint32 propcount = v->properties.size();
@@ -681,6 +726,7 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
 
   if (!stype) {
     m_errors->error(v->location, "Double declaration of struct type '%s'", name.c_str());
+    STATPOP
     return;
   }
 
@@ -710,4 +756,5 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
     typeprop->type = ptype;
     typeprop->propertyName = pname;
   }
+  STATPOP
 }

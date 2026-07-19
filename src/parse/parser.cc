@@ -138,6 +138,7 @@ uint8 Parser::isLexOrFuncDecl() {
     case TT_KEYW_FLOAT32:
     case TT_KEYW_FLOAT64:
     case TT_KEYW_STRING:
+    case TT_KEYW_VOID:
       canBeLabelled = false;
     case TT_ID:
       break;
@@ -536,6 +537,7 @@ TypeExpr * Parser::primaryTypeExpr() {
     case TT_KEYW_FLOAT64:
     case TT_KEYW_STRING:
     case TT_KEYW_CONST:
+    case TT_KEYW_VOID:
       return primitiveType();
     case TT_ID:
       return typeName();
@@ -593,7 +595,7 @@ PrimitiveTypeExpr* Parser::primitiveType() {
     case TT_KEYW_STRING:
       pt = PPT_STRING;
       break;
-    case TT_KEYW_CONST:
+    case TT_KEYW_VOID:
       pt = PPT_VOID;
       break;
     default:
