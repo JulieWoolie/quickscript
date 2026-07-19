@@ -42,6 +42,39 @@ struct ExprStatement;
 struct StructPropertyDecl;
 struct StructDecl;
 
+#define AST_NIL 0
+#define AST_TypeNameExpr (AST_NIL+1)
+#define AST_ArrayTypeExpr (AST_TypeNameExpr+1)
+#define AST_PrimitiveTypeExpr (AST_ArrayTypeExpr+1)
+#define AST_Identifier (AST_PrimitiveTypeExpr+1)
+#define AST_CallExpr (AST_Identifier+1)
+#define AST_PropertyAccessExpr (AST_CallExpr+1)
+#define AST_IndexAccessExpr (AST_PropertyAccessExpr+1)
+#define AST_BooleanLiteral (AST_IndexAccessExpr+1)
+#define AST_CharLiteral (AST_BooleanLiteral+1)
+#define AST_StringLiteral (AST_CharLiteral+1)
+#define AST_IntLiteral (AST_StringLiteral+1)
+#define AST_FloatLiteral (AST_IntLiteral+1)
+#define AST_BinaryExpr (AST_FloatLiteral+1)
+#define AST_UnaryExpr (AST_BinaryExpr+1)
+#define AST_TernaryExpr (AST_UnaryExpr+1)
+#define AST_Block (AST_TernaryExpr+1)
+#define AST_IfStatement (AST_Block+1)
+#define AST_ForStatement (AST_IfStatement+1)
+#define AST_LexicalDeclaration (AST_ForStatement+1)
+#define AST_DoWhileStatement (AST_LexicalDeclaration+1)
+#define AST_WhileStatement (AST_DoWhileStatement+1)
+#define AST_ControlFlowStatement (AST_WhileStatement+1)
+#define AST_ReturnStatement (AST_ControlFlowStatement+1)
+#define AST_ScriptFileStatement (AST_ReturnStatement+1)
+#define AST_FunctionParam (AST_ScriptFileStatement+1)
+#define AST_FunctionDeclStatement (AST_FunctionParam+1)
+#define AST_ExprStatement (AST_FunctionDeclStatement+1)
+#define AST_StructPropertyDecl (AST_ExprStatement+1)
+#define AST_StructDecl (AST_StructPropertyDecl+1)
+
+typedef uint8 astnodetype;
+
 struct Visitor {
   virtual ~Visitor() = default;
 
@@ -89,12 +122,14 @@ struct Node {
 
   virtual conststring nodeType() = 0;
   virtual void acceptVisit(Visitor* v) = 0;
+  virtual astnodetype nodeKind() = 0;
 };
 
 #define AST_TYPE(name, supertype, body) struct name: supertype {\
   body\
   conststring nodeType() override {return #name;}\
   void acceptVisit(Visitor* v) override { v->accept##name(this); }\
+  astnodetype nodeKind() override { return AST_##name; }\
 };
 
 #define AST_EXPR_TYPE(name, supertype, body) struct name: supertype {\
@@ -104,6 +139,7 @@ struct Node {
   void setResultingType(ScriptType* t) override { resultType = t; }\
   conststring nodeType() override {return #name;}\
   void acceptVisit(Visitor* v) override { v->accept##name(this); }\
+  astnodetype nodeKind() override { return AST_##name; }\
 };
 
 // ==============================
@@ -202,10 +238,12 @@ AST_EXPR_TYPE(StringLiteral, Expr,
 
 AST_EXPR_TYPE(IntLiteral, Expr,
   int64 value = 0;
+  parsedprimitivetype smallesFittingType = PPT_INT64;
 )
 
 AST_EXPR_TYPE(FloatLiteral, Expr,
   float64 value = 0.0;
+  parsedprimitivetype smallestFittingType = PPT_FLOAT64;
 )
 
 // --- Binary Operations ---
@@ -224,7 +262,7 @@ AST_EXPR_TYPE(FloatLiteral, Expr,
 #define BOP_MUL             0b001001
 #define BOP_DIV             0b001010
 #define BOP_MOD             0b001011
-#define BOP_EXP             0b001100
+#define BOP_POW             0b001100
 #define BOP_SHL             0b001101
 #define BOP_SHR             0b001110
 #define BOP_USHR            0b001111
@@ -233,14 +271,13 @@ AST_EXPR_TYPE(FloatLiteral, Expr,
 #define BOP_LOG_AND         0b010010
 #define BOP_BIT_OR          0b010011
 #define BOP_BIT_AND         0b010100
-#define BOP_POW             0b010101
 
 #define BOP_ASSIGN_ADD      (BOP_ADD | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_SUB      (BOP_SUB | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_MUL      (BOP_MUL | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_DIV      (BOP_DIV | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_MOD      (BOP_MOD | BOP_ASSIGN_FLAG)
-#define BOP_ASSIGN_EXP      (BOP_EXP | BOP_ASSIGN_FLAG)
+#define BOP_ASSIGN_POW      (BOP_POW | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_SHL      (BOP_SHL | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_SHR      (BOP_SHR | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_USHR     (BOP_USHR | BOP_ASSIGN_FLAG)
