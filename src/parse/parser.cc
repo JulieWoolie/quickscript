@@ -1,5 +1,6 @@
 
 #include "parser.h"
+#include "../optimizations.h"
 
 #define FATAL(...) m_errors->fatal(__VA_ARGS__)
 #define ERROR(...) m_errors->error(__VA_ARGS__)
@@ -8,28 +9,35 @@
 
 #define EMPLACE(v) m_pool->emplace(v)
 
-#define RECURSIVE_FUNC(name, binop, ttype, calls) \
+#define RECURSIVE_FUNC(name, cond, calls) \
 Expr* Parser::name() {\
-Location l = peek()->start;\
-Expr* expr = calls();\
-while (is(ttype)) {\
-skip();\
+  Location l = peek()->start;\
+  Expr* expr = calls();\
 \
-BinaryExpr bin;\
-bin.location = l;\
-bin.op = binop;\
-bin.lhs = expr;\
-bin.rhs = calls();\
+  Token* p = peek();\
+  tokentype ttype = p->ttype;\
 \
-expr = m_pool->emplace(bin);\
-}\
-return expr;\
+  while (cond) {\
+    skip();\
+\
+    BinaryExpr bin;\
+    bin.location = l;\
+    bin.op = mapTokenToOp(ttype);\
+    bin.lhs = expr;\
+    bin.rhs = calls();\
+\
+    Expr* optimized = optimizeBinaryOpIfPossible(&bin, m_pool);\
+    if (optimized) {\
+      expr = optimized;\
+    } else {\
+      expr = m_pool->emplace(bin);\
+    }\
+\
+    p = peek();\
+    ttype = p->ttype;\
+  }\
+  return expr;\
 }
-
-#define BINOP_CASE(ttype, bop) \
-case ttype:\
-bin.op = bop;\
-break;
 
 #define SAVECURSOR uint32 c = m_tokenCursor;
 #define RESTORECURSOR m_tokenCursor = c;
@@ -625,36 +633,43 @@ Expr* Parser::ternaryExpr() {
 
 binaryop mapTokenToOp(tokentype tt) {
   switch (tt) {
-    case TT_BIT_AND_ASSIGN:
-      return BOP_ASSIGN_BIT_AND;
-    case TT_LOGICAL_AND_ASSIGN:
-      return BOP_ASSIGN_LOG_AND;
-    case TT_WALL_ASSIGN:
-      return BOP_ASSIGN_BIT_OR;
-    case TT_STAR_ASSIGN:
-      return BOP_ASSIGN_MUL;
-    case TT_SLASH_ASSIGN:
-      return BOP_ASSIGN_DIV;
-    case TT_PLUS_ASSIGN:
-      return BOP_ASSIGN_ADD;
-    case TT_MINUS_ASSIGN:
-      return BOP_ASSIGN_SUB;
-    case TT_XOR_ASSIGN:
-      return BOP_ASSIGN_XOR;
-    case TT_PERCENT_ASSIGN:
-      return BOP_ASSIGN_MOD;
-    case TT_SHL_ASSIGN:
-      return BOP_ASSIGN_SHL;
-    case TT_SHR_ASSIGN:
-      return BOP_ASSIGN_SHR;
-    case TT_USHR_ASSIGN:
-      return BOP_ASSIGN_USHR;
-    case TT_POW_ASSIGN:
-      return BOP_ASSIGN_POW;
-    case TT_DWALL_ASSIGN:
-      return BOP_ASSIGN_LOG_AND;
-    default:
-      return BOP_NIL;
+    case TT_BIT_AND_ASSIGN: return BOP_ASSIGN_BIT_AND;
+    case TT_LOGICAL_AND_ASSIGN: return BOP_ASSIGN_LOG_AND;
+    case TT_WALL_ASSIGN: return BOP_ASSIGN_BIT_OR;
+    case TT_STAR_ASSIGN: return BOP_ASSIGN_MUL;
+    case TT_SLASH_ASSIGN: return BOP_ASSIGN_DIV;
+    case TT_PLUS_ASSIGN: return BOP_ASSIGN_ADD;
+    case TT_MINUS_ASSIGN: return BOP_ASSIGN_SUB;
+    case TT_XOR_ASSIGN: return BOP_ASSIGN_XOR;
+    case TT_PERCENT_ASSIGN: return BOP_ASSIGN_MOD;
+    case TT_SHL_ASSIGN: return BOP_ASSIGN_SHL;
+    case TT_SHR_ASSIGN: return BOP_ASSIGN_SHR;
+    case TT_USHR_ASSIGN: return BOP_ASSIGN_USHR;
+    case TT_POW_ASSIGN: return BOP_ASSIGN_POW;
+    case TT_DWALL_ASSIGN: return BOP_ASSIGN_LOG_OR;
+
+    case TT_GT: return BOP_GT;
+    case TT_LT: return BOP_LT;
+    case TT_GTE: return BOP_GTE;
+    case TT_LTE: return BOP_LTE;
+    case TT_EQ: return BOP_EQ;
+    case TT_NEQ: return BOP_NEQ;
+    case TT_PLUS: return BOP_ADD;
+    case TT_MINUS: return BOP_SUB;
+    case TT_STAR: return BOP_MUL;
+    case TT_SLASH: return BOP_DIV;
+    case TT_PERCENT: return BOP_MOD;
+    case TT_POW: return BOP_POW;
+    case TT_SHL: return BOP_SHL;
+    case TT_SHR: return BOP_SHR;
+    case TT_USHR: return BOP_USHR;
+    case TT_XOR: return BOP_XOR;
+    case TT_DWALL: return BOP_LOG_OR;
+    case TT_LOGICAL_AND: return BOP_LOG_AND;
+    case TT_WALL: return BOP_BIT_OR;
+    case TT_BIT_AND: return BOP_BIT_AND;
+
+    default: return BOP_NIL;
   }
 }
 
@@ -680,178 +695,63 @@ Expr* Parser::assignExpr() {
   return EMPLACE(assign);
 }
 
-RECURSIVE_FUNC(logicalOrExpr, BOP_LOG_OR, TT_DWALL, logicalAndExpr)
-RECURSIVE_FUNC(logicalAndExpr, BOP_LOG_AND, TT_LOGICAL_AND, bitwiseOrExpr)
-RECURSIVE_FUNC(bitwiseOrExpr, BOP_BIT_OR, TT_WALL, bitwiseAndExpr)
-RECURSIVE_FUNC(bitwiseAndExpr, BOP_BIT_AND, TT_BIT_AND, bitwiseXorExpr)
-RECURSIVE_FUNC(bitwiseXorExpr, BOP_XOR, TT_XOR, equalityExpr)
+RECURSIVE_FUNC(
+  logicalOrExpr,
+  ttype == TT_DWALL,
+  logicalAndExpr
+)
+RECURSIVE_FUNC(
+  logicalAndExpr,
+  ttype == TT_LOGICAL_AND,
+  bitwiseOrExpr
+)
+RECURSIVE_FUNC(
+  bitwiseOrExpr,
+  ttype == TT_WALL,
+  bitwiseAndExpr
+)
+RECURSIVE_FUNC(
+  bitwiseAndExpr,
+  ttype == TT_BIT_AND,
+  bitwiseXorExpr
+)
+RECURSIVE_FUNC(
+  bitwiseXorExpr,
+  ttype == TT_XOR,
+  equalityExpr
+)
 
-Expr* Parser::equalityExpr() {
-  Location l = peek()->start;
-  Expr* prev = relationalExpr();
+RECURSIVE_FUNC(
+  equalityExpr,
+  ttype == TT_EQ || ttype == TT_NEQ,
+  relationalExpr
+)
+RECURSIVE_FUNC(
+  relationalExpr,
+  ttype == TT_LT || ttype == TT_LTE || ttype == TT_GT || ttype == TT_GTE,
+  shiftExpr
+)
+RECURSIVE_FUNC(
+  shiftExpr,
+  ttype == TT_SHL || ttype == TT_SHR || ttype == TT_USHR,
+  additiveExpr
+)
+RECURSIVE_FUNC(
+  additiveExpr,
+  ttype == TT_PLUS || ttype == TT_MINUS,
+  multiplicativeExpr
+)
+RECURSIVE_FUNC(
+  multiplicativeExpr,
+  ttype == TT_SLASH || ttype == TT_STAR || ttype == TT_PERCENT,
+  exponentialExpr
+)
 
-  Token* p = peek();
-  tokentype ttype = p->ttype;
-
-  while (ttype == TT_EQ || ttype == TT_NEQ) {
-    skip();
-
-    BinaryExpr bin;
-    bin.location = l;
-    bin.lhs = prev;
-
-    switch (ttype) {
-      BINOP_CASE(TT_EQ, BOP_EQ)
-      BINOP_CASE(TT_NEQ, BOP_NEQ)
-    }
-
-    bin.rhs = relationalExpr();
-    prev = EMPLACE(bin);
-
-    p = peek();
-    ttype = p->ttype;
-  }
-
-  return prev;
-}
-
-Expr* Parser::relationalExpr() {
-  Location l = peek()->start;
-  Expr* prev = shiftExpr();
-
-  Token* p = peek();
-  tokentype ttype = p->ttype;
-
-  while (ttype == TT_LT || ttype == TT_LTE || ttype == TT_GT || ttype == TT_GTE) {
-    skip();
-
-    BinaryExpr bin;
-    bin.location = l;
-    bin.lhs = prev;
-
-    switch (ttype) {
-      BINOP_CASE(TT_LT, BOP_LT)
-      BINOP_CASE(TT_LTE, BOP_LTE)
-      BINOP_CASE(TT_GT, BOP_GT)
-      BINOP_CASE(TT_GTE, BOP_GTE)
-    }
-
-    bin.rhs = shiftExpr();
-    prev = EMPLACE(bin);
-
-    p = peek();
-    ttype = p->ttype;
-  }
-
-  return prev;
-}
-
-Expr* Parser::shiftExpr() {
-  Location l = peek()->start;
-  Expr* prev = additiveExpr();
-
-  Token* p = peek();
-  tokentype ttype = p->ttype;
-
-  while (ttype == TT_SHL || ttype == TT_SHR || ttype == TT_USHR) {
-    skip();
-
-    BinaryExpr bin;
-    bin.location = l;
-    bin.lhs = prev;
-
-    switch (ttype) {
-      case TT_SHL:
-        bin.op = BOP_SHL;
-        break;
-      case TT_SHR:
-        bin.op = BOP_SHR;
-        break;
-      case TT_USHR:
-        bin.op = BOP_USHR;
-        break;
-    }
-
-    bin.rhs = additiveExpr();
-    prev = EMPLACE(bin);
-
-    p = peek();
-    ttype = p->ttype;
-  }
-
-  return prev;
-}
-
-Expr* Parser::additiveExpr() {
-  Location l = peek()->start;
-  Expr* prev = multiplicativeExpr();
-
-  Token* p = peek();
-  tokentype ttype = p->ttype;
-
-  while (ttype == TT_PLUS || ttype == TT_MINUS) {
-    skip();
-
-    BinaryExpr bin;
-    bin.location = l;
-    bin.lhs = prev;
-
-    switch (ttype) {
-      case TT_PLUS:
-        bin.op = BOP_ADD;
-        break;
-      case TT_MINUS:
-        bin.op = BOP_SUB;
-        break;
-    }
-
-    bin.rhs = multiplicativeExpr();
-    prev = EMPLACE(bin);
-
-    p = peek();
-    ttype = p->ttype;
-  }
-
-  return prev;
-}
-
-Expr* Parser::multiplicativeExpr() {
-  Location l = peek()->start;
-  Expr* prev = exponentialExpr();
-
-  Token* p = peek();
-  tokentype ttype = p->ttype;
-
-  while (ttype == TT_SLASH || ttype == TT_STAR || ttype == TT_PERCENT) {
-    skip();
-
-    BinaryExpr bin;
-    bin.location = l;
-    bin.lhs = prev;
-
-    switch (ttype) {
-      case TT_SLASH:
-        bin.op = BOP_DIV;
-        break;
-      case TT_STAR:
-        bin.op = BOP_MUL;
-        break;
-      case TT_PERCENT:
-        bin.op = BOP_MOD;
-        break;
-    }
-
-    bin.rhs = exponentialExpr();
-    prev = EMPLACE(bin);
-
-    p = peek();
-    ttype = p->ttype;
-  }
-
-  return prev;
-}
-
-RECURSIVE_FUNC(exponentialExpr, BOP_POW, TT_POW, unaryExpr)
+RECURSIVE_FUNC(
+  exponentialExpr,
+  ttype == TT_POW,
+  unaryExpr
+)
 
 Expr* Parser::unaryExpr() {
   Token* p = peek();
@@ -895,6 +795,11 @@ Expr* Parser::unaryExpr() {
 
   next();
   u.target = unaryExpr();
+
+  Expr* opt = optimizeUnaryOpIfPossible(&u);
+  if (opt) {
+    return opt;
+  }
 
   return EMPLACE(u);
 }
