@@ -234,6 +234,13 @@ FunctionParam * Parser::funcParam() {
   param.location = ptype->location;
   param.name = pname;
   param.paramType = ptype;
+  
+  if (is(TT_THREE_DOTS)) {
+    next();
+    param.varargs = true;
+  } else {
+    param.varargs = false;
+  }
 
   return EMPLACE(param);
 }
