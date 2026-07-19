@@ -5,6 +5,10 @@
 #include "../stringtable.h"
 #include "syntaxtree.h"
 
+#define PRINTEXPRBASE printf("%s(", v->nodeType());\
+  printloc(v->location);\
+  if (v->resultType) {printf(" res-type='%s'", v->resultType->typeName());}
+
 #define PRINTNODEBASE printf("%s(", v->nodeType());printloc(v->location);
 #define OBJBEGIN printf(" {");inc();
 #define OBJEND dec();nli();printf("}");
@@ -84,13 +88,13 @@ struct PrintingVisitor: Visitor {
     }
 
     void acceptIdentifier(Identifier *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(" value='");
       printstr(v->value);
       printf("')");
     }
     void acceptCallExpr(CallExpr *v) override {
-      PRINTNODEBASE;
+      PRINTEXPRBASE;
       printf(")");
       OBJBEGIN
       OBJPROP("target", v->target)
@@ -98,7 +102,7 @@ struct PrintingVisitor: Visitor {
       OBJEND
     }
     void acceptPropertyAccessExpr(PropertyAccessExpr *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(")");
       OBJBEGIN
       OBJPROP("property", v->property)
@@ -106,7 +110,7 @@ struct PrintingVisitor: Visitor {
       OBJEND
     }
     void acceptBooleanLiteral(BooleanLiteral *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(" value=");
       if (v->value) {
         printf("true");
@@ -116,27 +120,27 @@ struct PrintingVisitor: Visitor {
       printf(")");
     }
     void acceptCharLiteral(CharLiteral *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(" value='");
       printstr(v->value);
       printf("')");
     }
     void acceptStringLiteral(StringLiteral *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(" value=\"");
       printstr(v->value);
       printf("\")");
     }
     void acceptIntLiteral(IntLiteral *v) override {
-      PRINTNODEBASE
-      printf(" value=%llu type=%s)", v->value, parsedprimitivetype_name(v->smallestFittingType));
+      PRINTEXPRBASE
+      printf(" value=%llu)", v->value);
     }
     void acceptFloatLiteral(FloatLiteral *v) override {
-      PRINTNODEBASE
-      printf(" value=%f type=%s)", v->value, parsedprimitivetype_name(v->smallestFittingType));
+      PRINTEXPRBASE
+      printf(" value=%f)", v->value);
     }
     void acceptBinaryExpr(BinaryExpr *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(" op=%s)", binaryop_name(v->op));
       OBJBEGIN
       OBJPROP("lhs", v->lhs)
@@ -144,14 +148,14 @@ struct PrintingVisitor: Visitor {
       OBJEND
     }
     void acceptUnaryExpr(UnaryExpr *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf("op = %s)", unaryop_name(v->op));
       OBJBEGIN
       OBJPROP("target", v->target)
       OBJEND
     }
     void acceptTernaryExpr(TernaryExpr *v) override {
-      PRINTNODEBASE
+      PRINTEXPRBASE
       printf(")");
       OBJBEGIN
       OBJPROP("condition", v->condition)
