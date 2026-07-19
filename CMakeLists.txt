@@ -26,4 +26,6 @@ add_executable(quickscript src/main.cpp
         src/interpreter/opcodes.cc
         src/types.cc
         src/analysis/typeresolver.cc
-        src/analysis/typeresolver.h)
+        src/analysis/typeresolver.h
+        src/optimizations.h
+        src/optimizations.cc)
