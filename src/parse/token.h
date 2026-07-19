@@ -10,6 +10,10 @@
 #define TT_UNKNOWN              0000
 #define TT_EOF                  (-1)
 
+// Comment types, only parsed if lexer's comment skipping is disabled
+#define TT_LCOMMENT             0001
+#define TT_BCOMMENT             0002
+
 // IDs
 #define TT_ID                   1001
 

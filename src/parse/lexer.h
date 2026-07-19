@@ -34,8 +34,12 @@ class Lexer {
     uint32 readbufCap = 0;
     uint32 readbufLen = 0;
 
+    bool ignoreComments = true;
+
   public:
     Lexer(const std::string& input, TokenList* m_tokens, StringTable* table);
+
+    void setCommentsIgnored(bool ignored);
 
     void lex();
 
@@ -59,6 +63,9 @@ class Lexer {
     void skipBlockComment();
 
     Token* readToken();
+
+    Token* readBlockComment();
+    Token* readLineComment();
 
     Token* eoftoken();
 

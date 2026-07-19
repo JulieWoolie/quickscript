@@ -23,6 +23,10 @@ Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table) {
   tokenStart.line = 0;
 }
 
+void Lexer::setCommentsIgnored(bool ignored) {
+  ignoreComments = ignored;
+}
+
 void Lexer::lex() {
   Token* t = nextToken();
   while (t->ttype != TT_EOF) {
@@ -132,6 +136,10 @@ void Lexer::skipEmptyContent() {
       continue;
     }
 
+    if (!ignoreComments) {
+      break;
+    }
+
     if (currentChar == '#' || (currentChar == COMMENT_CHAR && peek() == COMMENT_CHAR)) {
       skipLineComment();
       continue;
@@ -191,6 +199,15 @@ Token * Lexer::readToken() {
   tokenStart.column = col;
 
   int8 p = peek();
+
+  if (!ignoreComments) {
+    if (currentChar == '#' || (currentChar == COMMENT_CHAR && p == COMMENT_CHAR)) {
+      return readLineComment();
+    }
+    if (currentChar == COMMENT_CHAR && p == STAR_CHAR) {
+      return readBlockComment();
+    }
+  }
 
   switch (currentChar) {
     case '{':
@@ -428,6 +445,54 @@ Token * Lexer::readToken() {
       return maketoken(TT_UNKNOWN);
 
   }
+}
+
+Token* Lexer::readBlockComment() {
+  next();
+  next();
+
+  clearReadBuf();
+  while (true) {
+    if (currentChar == EOF) {
+      break;
+    }
+    if (currentChar == STAR_CHAR && peek() == COMMENT_CHAR) {
+      next();
+      next();
+      break;
+    }
+
+    appendToReadBuf();
+    next();
+  }
+
+  return maketokenv(TT_BCOMMENT);
+}
+
+Token* Lexer::readLineComment() {
+  if (currentChar == COMMENT_CHAR) {
+    next();
+    next();
+  } else {
+    next();
+  }
+
+  clearReadBuf();
+  while (true) {
+    if (currentChar == EOF) {
+      break;
+    }
+
+    if (currentChar == LF) {
+      next();
+      break;
+    }
+
+    appendToReadBuf();
+    next();
+  }
+
+  return maketokenv(TT_LCOMMENT);
 }
 
 Token* Lexer::eoftoken() {

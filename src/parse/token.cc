@@ -6,6 +6,10 @@ conststring tokentype_name(tokentype ttype) {
   switch (ttype) {
     case TT_EOF:
       return "END_OF_FILE";
+    case TT_LCOMMENT:
+      return "LINECOMMENT";
+    case TT_BCOMMENT:
+      return "BLOCKCOMMENT";
 
     case TT_ID:
       return "IDENTIFIER";
