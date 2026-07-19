@@ -395,6 +395,12 @@ Token * Lexer::readToken() {
       }
     case '.':
       if (currentChar == '.' && !isNumeric(p)) {
+        if (p == '.' && peek(1) == '.') {
+          next();
+          next();
+          next();
+          return maketoken(TT_THREE_DOTS);
+        }
         next();
         return maketoken(TT_DOT);
       }
@@ -417,8 +423,6 @@ Token * Lexer::readToken() {
       if (currentChar == EOF) {
         return eoftoken();
       }
-
-      printf("currentChar='%i'", currentChar);
 
       next();
       return maketoken(TT_UNKNOWN);

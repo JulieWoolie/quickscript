@@ -24,6 +24,7 @@
 #define TT_SEMICOLON            2007
 #define TT_COMMA                2008
 #define TT_DOT                  2009
+#define TT_THREE_DOTS           2010
 
 // Operators
 #define TT_BIT_AND              3000

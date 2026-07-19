@@ -30,6 +30,8 @@ conststring tokentype_name(tokentype ttype) {
       return "','";
     case TT_DOT:
       return "'.'";
+    case TT_THREE_DOTS:
+      return "'...'";
 
     case TT_BIT_AND:
       return "'&'";
