@@ -328,6 +328,36 @@ struct PrintingVisitor: Visitor {
       OBJPROPARR("properties", v->properties)
       OBJEND
     }
+
+    void acceptObjectLiteralProperty(ObjectLiteralProperty* v) override {
+      PRINTNODEBASE
+      printf(")");
+      OBJBEGIN
+      OBJPROP("property-name", v->propertyName)
+      OBJPROP("value", v->value)
+      OBJEND
+    }
+
+    void acceptObjectLiteral(ObjectLiteral* v) override {
+      PRINTEXPRBASE
+      printf(") [");
+
+      std::vector<ObjectLiteralProperty*>& properties = v->properties;
+      if (!properties.empty()) {
+        inc();
+
+        for (uint32 i = 0; i < properties.size(); i++) {
+          nli();
+          printf("[%i] = ", i);
+          properties[i]->acceptVisit(this);
+        }
+
+        dec();
+        nli();
+      }
+
+      printf("]");
+    }
 };
 
 #endif //QUICKSCRIPT_PRINT_VISITOR_H

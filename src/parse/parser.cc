@@ -932,6 +932,9 @@ Expr* Parser::primaryExpr() {
     case TT_LBRACKET:
       return parenthesizedExpr();
 
+    case TT_LCURL:
+      return objectLiteral();
+
     default:
       FATAL(p->start, "This token was not expected here");
       return nullptr;
@@ -1062,6 +1065,37 @@ StringLiteral* Parser::stringLiteral() {
   id->location = t->start;
   id->value = t->valueId;
   return id;
+}
+
+ObjectLiteral* Parser::objectLiteral() {
+  const Token* t = expect(TT_LCURL);
+
+  ObjectLiteral lit;
+  lit.location = t->start;
+
+  while (!is(TT_RCURL)) {
+    Identifier* property = id();
+    expect(TT_ASSIGN);
+    Expr* val = expr();
+
+    ObjectLiteralProperty prop;
+    prop.location = property->location;
+    prop.propertyName = property;
+    prop.value = val;
+
+    lit.properties.push_back(EMPLACE(prop));
+
+    if (is(TT_COMMA)) {
+      next();
+      if (is(TT_RCURL)) {
+        ERROR(peek()->start, "Illegal trailing comma in object initializer");
+      }
+    }
+  }
+
+  expect(TT_RCURL);
+
+  return EMPLACE(lit);
 }
 
 Identifier* Parser::id() {

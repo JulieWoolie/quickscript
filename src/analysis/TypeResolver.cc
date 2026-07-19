@@ -112,7 +112,7 @@ void TypeResolver::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
 }
 
 void TypeResolver::acceptIdentifier(Identifier* v) {
-  FunctionSignature* expectedType = nullptr;
+  ScriptType* expectedType = nullptr;
   if (!m_expectedTypes.empty()) {
     expectedType = m_expectedTypes.at(m_expectedTypes.size() - 1);
   }
@@ -135,22 +135,25 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
       }
       ScriptType* stype = symbol.type;
 
-      if (expectedType == nullptr) {
+      if (!expectedType) {
         if (stype->kind() == TK_FUNC) {
           continue;
         }
         v->resultType = symbol.type;
         return;
       }
-      if (stype->kind() != TK_FUNC) {
+
+      if (stype->kind() != TK_FUNC && expectedType->kind() != TK_FUNC) {
         continue;
       }
 
+      FunctionSignature* expectedSig = static_cast<FunctionSignature*>(expectedType);
+
       FunctionSignature* sfunc = (FunctionSignature*) stype;
       uint32 pcount = sfunc->paramCount;
-      uint32 expectedParams = expectedType->paramCount;
+      uint32 expectedParams = expectedSig->paramCount;
 
-      if (pcount > expectedType->getMaxArgs() || pcount < expectedParams) {
+      if (pcount > expectedSig->getMaxArgs() || pcount < expectedParams) {
         continue;
       }
 
@@ -160,18 +163,25 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
       for (uint32 pIdx = 0; pIdx < pcount; pIdx++) {
         FunctionSignatureParam* param = &sfunc->params[pIdx];
         FunctionSignatureParam* expectedParam = nullptr;
+        ScriptType* paramExpectedType = nullptr;
 
         if (pIdx >= expectedParams) {
-          expectedParam = &expectedType->params[expectedParams - 1];
+          expectedParam = &expectedSig->params[expectedParams - 1];
         } else {
-          expectedParam = &expectedType->params[pIdx];
+          expectedParam = &expectedSig->params[pIdx];
         }
 
-        if (param->type == expectedParam->type) {
+        if (expectedParam->varargs) {
+          paramExpectedType = static_cast<ScriptArrayType*>(expectedParam->type)->componentType;
+        } else {
+          paramExpectedType = expectedParam->type;
+        }
+
+        if (param->type == paramExpectedType) {
           score += 2;
           continue;
         }
-        if (isAssignableTo(expectedParam->type, param->type)) {
+        if (isAssignableTo(paramExpectedType, param->type)) {
           score += 1;
           continue;
         }
@@ -387,6 +397,65 @@ void TypeResolver::acceptFloatLiteral(FloatLiteral* v) {
   v->smallestFittingType = smallestFitting;
 }
 
+void TypeResolver::acceptObjectLiteral(ObjectLiteral* v) {
+  ScriptType* expectedType = m_expectedTypes.back();
+  if (expectedType->kind() != TK_STRUCT) {
+    m_errors->error(
+      v->location,
+      "Type %s cannot be initialized with an object literal",
+      expectedType->typeName()
+    );
+    return;
+  }
+
+  ScriptStructType* structType = static_cast<ScriptStructType*>(expectedType);
+  uint32 pcount = structType->propertyCount;
+
+  v->resultType = structType;
+
+  for (ObjectLiteralProperty* prop : v->properties) {
+    std::string propertyName = m_strings->getstring(prop->propertyName->value);
+    ScriptType* proptype = nullptr;
+
+    for (uint32 pi = 0; pi < pcount; pi++) {
+      StructProperty* prop = &structType->properties[pi];
+
+      if (prop->propertyName != propertyName) {
+        continue;
+      }
+
+      proptype = prop->type;
+      break;
+    }
+
+    if (!proptype) {
+      m_errors->error(prop->location, "No such property named '%s' on struct %s",
+        propertyName.c_str(),
+        structType->typeName()
+      );
+      continue;
+    }
+
+    m_expectedTypes.push_back(proptype);
+    prop->value->acceptVisit(this);
+    m_expectedTypes.pop_back();
+
+    ScriptType* pvalType = prop->value->getResultingType();
+
+    if (!isAssignableTo(proptype, pvalType)) {
+      m_errors->error(prop->location,
+        "Cannot assign value of type %s to property of type %s",
+        pvalType->typeName(),
+        proptype->typeName()
+      );
+    }
+  }
+}
+
+void TypeResolver::acceptObjectLiteralProperty(ObjectLiteralProperty* v) {
+
+}
+
 ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) {
   // Clear the assignment flag
   op &= !BOP_ASSIGN_FLAG;
@@ -564,9 +633,12 @@ void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
   STATPUSH;
 
   v->typeExpr->acceptVisit(this);
+  ScriptType* declType = v->typeExpr->getReferencedType();
 
   if (v->value) {
+    m_expectedTypes.push_back(declType);
     v->value->acceptVisit(this);
+    m_expectedTypes.pop_back();
 
     ScriptType* vartype = v->typeExpr->getReferencedType();
     ScriptType* valtype = v->value->getResultingType();

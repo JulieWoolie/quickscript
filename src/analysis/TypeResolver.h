@@ -23,7 +23,7 @@ class TypeResolver: public Visitor {
   Bindings* m_bindings;
 
   std::vector<LexicalScope> m_scopes;
-  std::vector<FunctionSignature*> m_expectedTypes;
+  std::vector<ScriptType*> m_expectedTypes;
   std::vector<Statement*> m_statementStack;
 
   void popScope();
@@ -56,9 +56,12 @@ class TypeResolver: public Visitor {
     void acceptStringLiteral(StringLiteral *v) override;
     void acceptIntLiteral(IntLiteral *v) override;
     void acceptFloatLiteral(FloatLiteral *v) override;
+    void acceptObjectLiteral(ObjectLiteral* v) override;
+    void acceptObjectLiteralProperty(ObjectLiteralProperty* v) override;
     void acceptBinaryExpr(BinaryExpr *v) override;
     void acceptUnaryExpr(UnaryExpr *v) override;
     void acceptTernaryExpr(TernaryExpr *v) override;
+
     void acceptBlock(Block *v) override;
     void acceptIfStatement(IfStatement *v) override;
     void acceptForStatement(ForStatement *v) override;

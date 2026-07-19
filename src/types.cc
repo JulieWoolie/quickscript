@@ -1,5 +1,7 @@
 #include "types.h"
 
+#include <functional>
+
 ScriptType* ScriptArrayType::getPropertyType(std::string propName, TypeLookup* lookup) {
   if (propName != "length") {
     return nullptr;
@@ -108,6 +110,7 @@ bool isAssignableTo(ScriptType* holder, ScriptType* value) {
   if (holder == value) {
     return true;
   }
+
   if (holder->kind() == TK_PRIMITIVE && value->kind() == TK_PRIMITIVE) {
     PrimitiveScriptType* ph = (PrimitiveScriptType*) holder;
     PrimitiveScriptType* pv = (PrimitiveScriptType*) value;
@@ -121,6 +124,7 @@ bool isAssignableTo(ScriptType* holder, ScriptType* value) {
 
     return holder->stackSizeBytes() > value->stackSizeBytes();
   }
+
   return false;
 }
 

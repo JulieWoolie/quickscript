@@ -41,8 +41,8 @@ class TypeLookup;
 struct ScriptType {
 
   virtual conststring typeName() = 0;
-  virtual uint32 stackSizeBytes() = 0;
-  virtual typekind kind() = 0;
+  virtual uint32 stackSizeBytes() const = 0;
+  virtual typekind kind() const = 0;
   virtual ~ScriptType() = default;
 
   virtual uint32 typeFlags() {
@@ -98,10 +98,10 @@ struct FunctionSignature: ScriptType {
   conststring typeName() override {
     return name.c_str();
   }
-  uint32 stackSizeBytes() override {
+  uint32 stackSizeBytes() const override {
     return POINTERSIZE;
   }
-  typekind kind() override {
+  typekind kind()  const override {
     return TK_FUNC;
   }
 
@@ -128,11 +128,11 @@ struct PrimitiveScriptType: ScriptType {
     return name;
   }
 
-  uint32 stackSizeBytes() override {
+  uint32 stackSizeBytes() const override {
     return stackSize;
   }
 
-  typekind kind() override {
+  typekind kind()  const override {
     return TK_PRIMITIVE;
   }
 };
@@ -145,11 +145,11 @@ struct ScriptArrayType: ScriptType {
     return name.c_str();
   }
 
-  uint32 stackSizeBytes() override {
+  uint32 stackSizeBytes() const override {
     return POINTERSIZE;
   }
 
-  typekind kind() override {
+  typekind kind() const override {
     return TK_ARRAY;
   }
 
@@ -178,11 +178,11 @@ struct ScriptStructType: ScriptType {
     return structName.c_str();
   }
 
-  uint32 stackSizeBytes() override {
+  uint32 stackSizeBytes() const override {
     return POINTERSIZE;
   }
 
-  typekind kind() override {
+  typekind kind() const override {
     return TK_STRUCT;
   }
 
@@ -200,11 +200,11 @@ struct ScriptStringType: ScriptType {
     return "string";
   }
 
-  uint32 stackSizeBytes() override {
+  uint32 stackSizeBytes() const override {
     return POINTERSIZE;
   }
 
-  typekind kind() override {
+  typekind kind() const override {
     return TK_STRING;
   }
 
@@ -220,11 +220,11 @@ struct ScriptVoidType: ScriptType {
     return "void";
   }
 
-  uint32 stackSizeBytes() override {
+  uint32 stackSizeBytes() const override {
     return 0;
   }
 
-  typekind kind() override {
+  typekind kind() const override {
     return TK_VOID;
   }
 };
