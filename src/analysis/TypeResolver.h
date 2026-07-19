@@ -21,7 +21,7 @@ class TypeResolver: public Visitor {
   CompilerErrors* m_errors;
 
   std::vector<LexicalScope> m_scopes;
-  std::vector<ScriptType*> m_expectedTypes;
+  std::vector<FunctionSignature*> m_expectedTypes;
 
   void popScope();
   void pushScope();

@@ -1,12 +1,8 @@
-
-struct Vec2 {
-  float32 x
-  float32 y
+int32 f() {
+  return 0
 }
 
 int32 main(string[] args) {
-  Vec2 v = Vec2()
-
-  print("Hello, world!")
+  int32 i = f()
   return 0
 }

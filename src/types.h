@@ -77,6 +77,19 @@ struct FunctionSignature: ScriptType {
   typekind kind() override {
     return TK_FUNC;
   }
+
+  uint32 getMaxArgs() {
+    if (paramCount == 0) {
+      return 0;
+    }
+
+    FunctionSignatureParam* last = &params[paramCount - 1];
+    if (last->varargs) {
+      return UINT_MAX;
+    }
+
+    return paramCount;
+  }
 };
 
 struct PrimitiveScriptType: ScriptType {

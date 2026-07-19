@@ -86,12 +86,16 @@ void TypeResolver::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
 }
 
 void TypeResolver::acceptIdentifier(Identifier* v) {
-  ScriptType* expectedType = nullptr;
+  FunctionSignature* expectedType = nullptr;
   if (!m_expectedTypes.empty()) {
     expectedType = m_expectedTypes.at(m_expectedTypes.size() - 1);
   }
 
   std::string name = m_strings->getstring(v->value);
+
+  uint32 scores[10];
+  FunctionSignature* signatures[10];
+  uint32 scorerlen = 0;
 
   for (int32 i = m_scopes.size() - 1; i >= 0; i--) {
     LexicalScope* scope = m_scopes.data() + i;
@@ -103,13 +107,88 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
       if (symbol.name != name) {
         continue;
       }
+      ScriptType* stype = symbol.type;
 
-      v->resultType = symbol.type;
-      return;
+      if (expectedType == nullptr) {
+        if (stype->kind() == TK_FUNC) {
+          continue;
+        }
+        v->resultType = symbol.type;
+        return;
+      }
+      if (stype->kind() != TK_FUNC) {
+        continue;
+      }
+
+      FunctionSignature* sfunc = (FunctionSignature*) stype;
+      uint32 pcount = sfunc->paramCount;
+      uint32 expectedParams = expectedType->paramCount;
+
+      if (pcount > expectedType->getMaxArgs() || pcount < expectedParams) {
+        continue;
+      }
+
+      bool paramTestingFailed = false;
+      uint32 score = 0;
+
+      for (uint32 pIdx = 0; pIdx < pcount; pIdx++) {
+        FunctionSignatureParam* param = &sfunc->params[pIdx];
+        FunctionSignatureParam* expectedParam = nullptr;
+
+        if (pIdx >= expectedParams) {
+          expectedParam = &expectedType->params[expectedParams - 1];
+        } else {
+          expectedParam = &expectedType->params[pIdx];
+        }
+
+        if (param->type == expectedParam->type) {
+          score += 2;
+          continue;
+        }
+        if (isAssignableTo(expectedParam->type, param->type)) {
+          score += 1;
+          continue;
+        }
+
+        paramTestingFailed = true;
+        break;
+      }
+
+      if (paramTestingFailed) {
+        continue;
+      }
+
+      scores[scorerlen] = score;
+      signatures[scorerlen] = sfunc;
+      scorerlen++;
     }
   }
 
-  m_errors->error(v->location, "Unknown variable/function '%s'", name.c_str());
+  if (scorerlen == 0) {
+    m_errors->error(v->location, "Unknown variable/function '%s'", name.c_str());
+    v->resultType = m_lookup->getVoidType();
+    return;
+  }
+  if (scorerlen == 1) {
+    v->resultType = signatures[0];
+    return;
+  }
+
+  int32 highest = -1;
+  FunctionSignature* best = nullptr;
+
+  for (uint32 idx = 0; idx < scorerlen; idx++) {
+    int32 scr = scores[idx];
+
+    if (scr <= highest) {
+      continue;
+    }
+
+    highest = scr;
+    best = signatures[idx];
+  }
+
+  v->resultType = best;
 }
 
 void TypeResolver::acceptCallExpr(CallExpr* v) {
@@ -133,7 +212,18 @@ void TypeResolver::acceptCallExpr(CallExpr* v) {
   v->target->acceptVisit(this);
   m_expectedTypes.pop_back();
 
-  v->resultType = m_lookup->getPrimitiveType(PK_UINT32);
+  ScriptType* targetType = v->target->getResultingType();
+  if (targetType->kind() != TK_FUNC) {
+    m_errors->error(v->location,
+      "Expression does not return a callable function, but returns a %s",
+      targetType->typeName()
+    );
+
+    v->resultType = targetType;
+    return;
+  }
+
+  v->resultType = ((FunctionSignature*) targetType)->returnType;
 }
 
 bool hasProperties(const typekind kind) {
@@ -207,6 +297,11 @@ void TypeResolver::acceptStringLiteral(StringLiteral* v) {
 }
 
 void TypeResolver::acceptIntLiteral(IntLiteral* v) {
+  int64 val = v->value;
+  parsedprimitivetype smallestFitting = PPT_INT64;
+
+  if ()
+
   v->resultType = m_lookup->getPrimitiveType(PK_UINT64);
 }
 
@@ -453,6 +548,8 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
 
   FunctionSignature* sign = m_lookup->createFunctionSignature(v->arguments.size());
   sign->returnType = v->returnType->getReferencedType();
+
+  pushSymbol(v->name->value, sign);
 
   pushScope();
   getScope()->expectedReturnType = v->returnType->getReferencedType();
