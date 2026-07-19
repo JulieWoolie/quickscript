@@ -2,6 +2,7 @@
 #define QUICKSCRIPT_TYPERESOLVER_H
 
 #include "../types.h"
+#include "../interpreter/nativeinterface.h"
 #include "../parse/errors.h"
 #include "../parse/syntaxtree.h"
 
@@ -19,6 +20,7 @@ class TypeResolver: public Visitor {
   TypeLookup* m_lookup;
   StringTable* m_strings;
   CompilerErrors* m_errors;
+  Bindings* m_bindings;
 
   std::vector<LexicalScope> m_scopes;
   std::vector<FunctionSignature*> m_expectedTypes;
@@ -34,7 +36,12 @@ class TypeResolver: public Visitor {
   ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop op);
 
   public:
-    explicit TypeResolver(TypeLookup *lookup, StringTable* strings, CompilerErrors* errors);
+    explicit TypeResolver(
+      TypeLookup *lookup,
+      StringTable* strings,
+      CompilerErrors* errors,
+      Bindings* bindings
+    );
 
     void acceptTypeNameExpr(TypeNameExpr *v) override;
     void acceptArrayTypeExpr(ArrayTypeExpr *v) override;

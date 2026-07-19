@@ -6,11 +6,35 @@
 #include "allocator.h"
 #include "common.h"
 #include "analysis/TypeResolver.h"
+#include "interpreter/nativeinterface.h"
 #include "parse/errors.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
+
+void native_printfn(NativeCall* call) {
+  // nop;
+}
+
+Bindings createStandardBindings(TypeLookup* lookup) {
+  Bindings bindings;
+
+  FunctionSignature sign;
+  sign.paramCount = 1;
+  sign.returnType = lookup->getVoidType();
+
+  FunctionSignatureParam param;
+  param.type = lookup->getStringType();
+  param.varargs = false;
+  sign.params = &param;
+
+  FunctionSignature* emplaced = lookup->emplaceFunctionType(&sign);
+
+  bindings.putFunction("print", emplaced, native_printfn);
+
+  return bindings;
+}
 
 int32 main(int32 argc, cstring argv[]) {
   if (argc < 2) {
@@ -42,7 +66,9 @@ int32 main(int32 argc, cstring argv[]) {
   ScriptFileStatement* sfs = p.parse();
 
   TypeLookup lookup = TypeLookup(&pool);
-  TypeResolver resolver = TypeResolver(&lookup, &table, &errors);
+  Bindings bindings = createStandardBindings(&lookup);
+
+  TypeResolver resolver = TypeResolver(&lookup, &table, &errors, &bindings);
 
   resolver.acceptScriptFileStatement(sfs);
 

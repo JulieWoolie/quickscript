@@ -1,5 +1,6 @@
 #include "TypeResolver.h"
 
+#include <functional>
 #include <stdint.h>
 
 void TypeResolver::popScope() {
@@ -33,10 +34,16 @@ void TypeResolver::pushSymbol(LexicalScope* scope, stringid name, ScriptType* ty
   scope->symbols.emplace_back(nameStr, type);
 }
 
-TypeResolver::TypeResolver(TypeLookup* lookup, StringTable* strings, CompilerErrors* errors) {
+TypeResolver::TypeResolver(
+  TypeLookup* lookup,
+  StringTable* strings,
+  CompilerErrors* errors,
+  Bindings* bindings
+) {
   m_lookup = lookup;
   m_strings = strings;
   m_errors = errors;
+  m_bindings = bindings;
 }
 
 void TypeResolver::acceptTypeNameExpr(TypeNameExpr* v) {
@@ -588,7 +595,16 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
 
 void TypeResolver::acceptScriptFileStatement(ScriptFileStatement* v) {
   pushScope();
-  getScope()->expectedReturnType = nullptr;
+  LexicalScope* scope = getScope();
+  scope->expectedReturnType = nullptr;
+
+  std::vector<NativeBinding>* bindings = m_bindings->getBindings();
+  uint32 bindingCount = bindings->size();
+
+  for (uint32 i = 0; i < bindingCount; i++) {
+    const NativeBinding& bind = bindings->at(i);
+    scope->symbols.emplace_back(bind.name, bind.type);
+  }
 
   for (Statement* statement : v->statements) {
     statement->acceptVisit(this);
