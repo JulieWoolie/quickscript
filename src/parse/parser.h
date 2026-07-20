@@ -28,14 +28,12 @@ class Parser {
 
     Token* next();
     Token* peek() const;
-    Token* peek(uint32 ahead) const;
 
     void skip();
 
     bool hasNext() const;
 
     bool is(tokentype tt) const;
-    bool is(uint32 ahead, tokentype tt) const;
 
     Token* expect(tokentype tt);
 

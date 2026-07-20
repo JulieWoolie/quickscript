@@ -59,7 +59,26 @@ Token* Parser::gettoken(uint32 idx) const {
   return m_tokens->get(idx);
 }
 
+#define IS_COMMENT(ttype) (ttype == TT_LCOMMENT || ttype == TT_BCOMMENT)
+
+uint32 skipComments(TokenList* l, uint32 cursor) {
+  while (cursor < l->size()) {
+    Token* t = l->get(cursor);
+    tokentype ttype = t->ttype;
+
+    if (IS_COMMENT(ttype)) {
+      cursor++;
+      continue;
+    }
+
+    return cursor;
+  }
+  return cursor;
+}
+
 Token* Parser::next() {
+  m_tokenCursor = skipComments(m_tokens, m_tokenCursor);
+
   Token* t = gettoken(m_tokenCursor);
   if (t->ttype != TT_EOF) {
     m_tokenCursor++;
@@ -68,11 +87,18 @@ Token* Parser::next() {
 }
 
 Token* Parser::peek() const {
-  return peek(0);
-}
+  uint32 cur = m_tokenCursor;
 
-Token* Parser::peek(uint32 ahead) const {
-  return gettoken(m_tokenCursor + ahead);
+  while (true) {
+    Token* t = gettoken(cur);
+    tokentype ttype = t->ttype;
+
+    if (!IS_COMMENT(ttype)) {
+      return t;
+    }
+
+    cur++;
+  }
 }
 
 void Parser::skip() {
@@ -88,10 +114,6 @@ bool Parser::hasNext() const {
 
 bool Parser::is(const tokentype tt) const {
   return peek()->ttype == tt;
-}
-
-bool Parser::is(const uint32 ahead, const tokentype tt) const {
-  return peek(ahead)->ttype == tt;
 }
 
 Token* Parser::expect(const tokentype tt) {
