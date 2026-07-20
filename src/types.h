@@ -34,7 +34,8 @@ typedef uint8 typekind;
 typedef uint8 primitivekind;
 
 #define TYPEFLAG_INDEXABLE (1 << 0)
-#define TYPEFLAG_PROPERTIES (2 << 0)
+#define TYPEFLAG_PROPERTIES (1 << 1)
+#define TYPEFLAG_HEAP_ALLOCATED (1 << 2)
 
 class TypeLookup;
 
@@ -154,7 +155,7 @@ struct ScriptArrayType: ScriptType {
   }
 
   uint32 typeFlags() override {
-    return TYPEFLAG_INDEXABLE | TYPEFLAG_PROPERTIES;
+    return TYPEFLAG_INDEXABLE | TYPEFLAG_PROPERTIES | TYPEFLAG_HEAP_ALLOCATED;
   }
 
   ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
@@ -187,7 +188,7 @@ struct ScriptStructType: ScriptType {
   }
 
   uint32 typeFlags() override {
-    return TYPEFLAG_PROPERTIES;
+    return TYPEFLAG_PROPERTIES | TYPEFLAG_HEAP_ALLOCATED;
   }
 
   ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
@@ -209,7 +210,7 @@ struct ScriptStringType: ScriptType {
   }
 
   uint32 typeFlags() override {
-    return TYPEFLAG_PROPERTIES | TYPEFLAG_INDEXABLE;
+    return TYPEFLAG_PROPERTIES | TYPEFLAG_INDEXABLE | TYPEFLAG_HEAP_ALLOCATED;
   }
 
   ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
