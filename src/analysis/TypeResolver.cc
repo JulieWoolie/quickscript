@@ -113,8 +113,11 @@ void TypeResolver::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
 
 void TypeResolver::acceptIdentifier(Identifier* v) {
   ScriptType* expectedType = nullptr;
+  uint32 expectedKind = TK_NIL;
+
   if (!m_expectedTypes.empty()) {
     expectedType = m_expectedTypes.at(m_expectedTypes.size() - 1);
+    expectedKind = expectedType->kind();
   }
 
   std::string name = m_strings->getstring(v->value);
@@ -135,7 +138,7 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
       }
       ScriptType* stype = symbol.type;
 
-      if (!expectedType) {
+      if (!expectedType || expectedKind != TK_FUNC) {
         if (stype->kind() == TK_FUNC) {
           continue;
         }
@@ -143,13 +146,13 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
         return;
       }
 
-      if (stype->kind() != TK_FUNC && expectedType->kind() != TK_FUNC) {
+      if (stype->kind() != TK_FUNC) {
         continue;
       }
 
       FunctionSignature* expectedSig = static_cast<FunctionSignature*>(expectedType);
 
-      FunctionSignature* sfunc = (FunctionSignature*) stype;
+      FunctionSignature* sfunc = static_cast<FunctionSignature*>(stype);
       uint32 pcount = sfunc->paramCount;
       uint32 expectedParams = expectedSig->paramCount;
 
