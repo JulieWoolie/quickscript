@@ -71,6 +71,8 @@ class Parser {
 
     StructPropertyDecl* structProperty();
 
+    AssertStatement* assertStatement();
+
     // Type expressions
 
     TypeExpr* typeExpr();

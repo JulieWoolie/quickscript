@@ -193,6 +193,8 @@ conststring tokentype_name(tokentype ttype) {
       return "'const'";
     case TT_KEYW_VOID:
       return "'void'";
+    case TT_KEYW_ASSERT:
+      return "'assert'";
 
     default:
       return "UNKNOWN";

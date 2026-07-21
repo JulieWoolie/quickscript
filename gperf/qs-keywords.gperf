@@ -59,4 +59,5 @@ float64, TT_KEYW_FLOAT64
 string, TT_KEYW_STRING
 const, TT_KEYW_CONST
 void, TT_KEYW_VOID
+assert, TT_KEYW_ASSERT
 %%

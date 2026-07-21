@@ -680,7 +680,7 @@ void TypeResolver::acceptControlFlowStatement(ControlFlowStatement* v) {
 
 void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
   ScriptType* expected = getScope()->expectedReturnType;
-  
+
   if (!v->value) {
     if (!expected || expected->kind() == TK_VOID) {
       return;
@@ -843,4 +843,33 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
     typeprop->propertyName = pname;
   }
   STATPOP
+}
+
+void TypeResolver::acceptAssertStatement(AssertStatement* v) {
+  if (v->message) {
+    v->message->acceptVisit(this);
+
+    ScriptType* msgType = v->message->getResultingType();
+
+    if (msgType->kind() != TK_STRING) {
+      m_errors->error(
+        v->message->location,
+        "assert statement message cannot be assigned to string"
+      );
+    }
+  }
+
+  v->condition->acceptVisit(this);
+  
+  ScriptType* condType = v->condition->getResultingType();
+  PrimitiveScriptType* boolType = m_lookup->getPrimitiveType(PK_BOOL);
+
+  if (isAssignableTo(boolType, condType)) {
+    return;
+  }
+
+  m_errors->error(
+    v->condition->location,
+    "assert statement condition cannot be assigned to boolean"
+  );
 }

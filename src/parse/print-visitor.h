@@ -358,6 +358,14 @@ struct PrintingVisitor: Visitor {
 
       printf("]");
     }
+
+    void acceptAssertStatement(AssertStatement* v) override {
+      PRINTNODEBASE
+      OBJBEGIN
+      OBJPROP("condition", v->condition)
+      OBJPROPO("message", v->message)
+      OBJEND
+    }
 };
 
 #endif //QUICKSCRIPT_PRINT_VISITOR_H

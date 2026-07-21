@@ -6,5 +6,9 @@ struct vec2f {
 int32 main(string[] args) {
   vec2f v = {}
 
+  assert true : "asdadsd"
+  assert 1 == 1
+  assert "asads" : 232
+
   return 0
 }

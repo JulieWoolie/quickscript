@@ -228,6 +228,8 @@ Statement* Parser::statement() {
       return structDecl();
     case TT_KEYW_CONST:
       return lexDecl();
+    case TT_KEYW_ASSERT:
+      return assertStatement();
 
     default:
       uint8 lfdl = isLexOrFuncDecl();
@@ -518,6 +520,21 @@ StructPropertyDecl* Parser::structProperty() {
   }
 
   return EMPLACE(prop);
+}
+
+AssertStatement* Parser::assertStatement() {
+  const Token* t = expect(TT_KEYW_ASSERT);
+
+  AssertStatement ass;
+  ass.location = t->start;
+  ass.condition = expr();
+
+  if (is(TT_COLON)) {
+    skip();
+    ass.message = expr();
+  }
+
+  return EMPLACE(ass);
 }
 
 TypeExpr* Parser::typeExpr() {

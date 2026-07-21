@@ -76,6 +76,7 @@ class TypeResolver: public Visitor {
     void acceptExprStatement(ExprStatement *v) override;
     void acceptStructPropertyDecl(StructPropertyDecl *v) override;
     void acceptStructDecl(StructDecl *v) override;
+    void acceptAssertStatement(AssertStatement* v) override;
 };
 
 

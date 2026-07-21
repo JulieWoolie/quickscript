@@ -112,6 +112,7 @@
 #define TT_KEYW_STRING          5027
 #define TT_KEYW_CONST           5028
 #define TT_KEYW_VOID            5029
+#define TT_KEYW_ASSERT          5030
 
 // =====================
 

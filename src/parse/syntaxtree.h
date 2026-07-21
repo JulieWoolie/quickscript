@@ -43,6 +43,7 @@ struct FunctionDeclStatement;
 struct ExprStatement;
 struct StructPropertyDecl;
 struct StructDecl;
+struct AssertStatement;
 
 #define AST_NIL 0
 #define AST_TypeNameExpr 1
@@ -76,6 +77,7 @@ struct StructDecl;
 #define AST_StructDecl 29
 #define AST_ObjectLiteralProperty 30
 #define AST_ObjectLiteral 31
+#define AST_AssertStatement 32
 
 typedef uint8 astnodetype;
 
@@ -115,6 +117,8 @@ struct Visitor {
   virtual void acceptExprStatement(ExprStatement* v) = 0;
   virtual void acceptStructPropertyDecl(StructPropertyDecl* v) = 0;
   virtual void acceptStructDecl(StructDecl* v) = 0;
+
+  virtual void acceptAssertStatement(AssertStatement* v) = 0;
 };
 
 // ================================
@@ -434,6 +438,11 @@ AST_TYPE(StructDecl, Statement,
 
 AST_TYPE(ExprStatement, Statement,
   Expr* expression = nullptr;
+)
+
+AST_TYPE(AssertStatement, Statement,
+  Expr* condition = nullptr;
+  Expr* message = nullptr;
 )
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H
