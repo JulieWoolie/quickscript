@@ -679,7 +679,19 @@ void TypeResolver::acceptControlFlowStatement(ControlFlowStatement* v) {
 }
 
 void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
+  ScriptType* expected = getScope()->expectedReturnType;
+  
   if (!v->value) {
+    if (!expected || expected->kind() == TK_VOID) {
+      return;
+    }
+
+    m_errors->error(
+      v->location,
+      "Function expects return value with %s, cannot return nothing",
+      expected->typeName()
+    );
+
     return;
   }
 
@@ -687,7 +699,6 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
   v->value->acceptVisit(this);
 
   ScriptType* rtype = v->value->getResultingType();
-  ScriptType* expected = getScope()->expectedReturnType;
 
   if (!expected || isAssignableTo(expected, rtype)) {
     STATPOP
