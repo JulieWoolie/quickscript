@@ -816,7 +816,7 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
       prop->value->acceptVisit(this);
       ScriptType* vtype = prop->value->getResultingType();
 
-      if (isAssignableTo(ptype, vtype)) {
+      if (!isAssignableTo(ptype, vtype)) {
         m_errors->error(prop->location,
           "Default value of property %s.%s is a %s and cannot be assigned to %s",
           name.c_str(),
