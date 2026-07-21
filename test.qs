@@ -1,6 +1,10 @@
-int32 main(string[] args) {
-  print("Hello, world!")
-  return 0
+struct vec2f {
+  float32 x = 0.0
+  float32 y = 0.0
 }
 
-void a() {}
+int32 main(string[] args) {
+  vec2f v = {}
+
+  return 0
+}

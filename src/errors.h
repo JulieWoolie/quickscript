@@ -1,6 +1,6 @@
 #ifndef GIT_QUICKSCRIPT_ERRORS_H
 #define GIT_QUICKSCRIPT_ERRORS_H
-#include "lexer.h"
+#include "parse/lexer.h"
 
 typedef uint8 loglevel;
 

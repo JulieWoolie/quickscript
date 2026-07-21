@@ -7,7 +7,7 @@
 #include "common.h"
 #include "analysis/TypeResolver.h"
 #include "interpreter/nativeinterface.h"
-#include "parse/errors.h"
+#include "errors.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"

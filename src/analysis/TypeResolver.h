@@ -3,7 +3,7 @@
 
 #include "../types.h"
 #include "../interpreter/nativeinterface.h"
-#include "../parse/errors.h"
+#include "../errors.h"
 #include "../parse/syntaxtree.h"
 
 struct LexicalSymbol {
