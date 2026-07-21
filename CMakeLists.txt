@@ -7,8 +7,8 @@ add_executable(quickscript src/main.cpp
         src/common.h
         src/parse/lexer.h
         src/parse/lexer.cpp
-        src/parse/errors.h
-        src/parse/errors.cc
+        src/errors.h
+        src/errors.cc
         src/parse/token.h
         src/parse/token.cc
         src/parse/syntaxtree.h
