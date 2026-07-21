@@ -1,5 +1,5 @@
 
-#include "parse/errors.h"
+#include "errors.h"
 
 #include <stdarg.h>
 
