@@ -860,7 +860,7 @@ void TypeResolver::acceptAssertStatement(AssertStatement* v) {
   }
 
   v->condition->acceptVisit(this);
-  
+
   ScriptType* condType = v->condition->getResultingType();
   PrimitiveScriptType* boolType = m_lookup->getPrimitiveType(PK_BOOL);
 
