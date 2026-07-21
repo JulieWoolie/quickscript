@@ -1,5 +1,5 @@
-
 #include "opcodes.h"
+
 
 conststring opcode_name(opcode code) {
   switch (code) {
@@ -8,18 +8,38 @@ conststring opcode_name(opcode code) {
     case OP_JMP: return "JMP";
     case OP_JMPI0: return "JMPI0";
     case OP_JMPN0: return "JMPN0";
-    case OP_STACKALLOC: return "STACKALLOC";
-    case OP_STACKFREE: return "STACKFREE";
-    case OP_SREAD: return "SREAD";
-    case OP_SWRITE: return "SWRITE";
     case OP_LOADCONST8: return "LOADCONST8";
     case OP_LOADCONST16: return "LOADCONST16";
     case OP_LOADCONST32: return "LOADCONST32";
     case OP_LOADCONST64: return "LOADCONST64";
-    case OP_READOBJ: return "READOBJ";
-    case OP_WRITEOBJ: return "WRITEOBJ";
+    case OP_STACKALLOC: return "STACKALLOC";
+    case OP_STACKFREE: return "STACKFREE";
+    case OP_RSREAD8: return "RSREAD8";
+    case OP_RSREAD16: return "RSREAD16";
+    case OP_RSREAD32: return "RSREAD32";
+    case OP_RSREAD64: return "RSREAD64";
+    case OP_RSWRITE8: return "RSWRITE8";
+    case OP_RSWRITE16: return "RSWRITE16";
+    case OP_RSWRITE32: return "RSWRITE32";
+    case OP_RSWRITE64: return "RSWRITE64";
+    case OP_ASREAD8: return "ASREAD8";
+    case OP_ASREAD16: return "ASREAD16";
+    case OP_ASREAD32: return "ASREAD32";
+    case OP_ASREAD64: return "ASREAD64";
+    case OP_ASWRITE8: return "ASWRITE8";
+    case OP_ASWRITE16: return "ASWRITE16";
+    case OP_ASWRITE32: return "ASWRITE32";
+    case OP_ASWRITE64: return "ASWRITE64";
     case OP_HEAPALLOC: return "HEAPALLOC";
     case OP_HEAPFREE: return "HEAPFREE";
+    case OP_READOBJ8: return "READOBJ8";
+    case OP_READOBJ16: return "READOBJ16";
+    case OP_READOBJ32: return "READOBJ32";
+    case OP_READOBJ64: return "READOBJ64";
+    case OP_WRITEOBJ8: return "WRITEOBJ8";
+    case OP_WRITEOBJ16: return "WRITEOBJ16";
+    case OP_WRITEOBJ32: return "WRITEOBJ32";
+    case OP_WRITEOBJ64: return "WRITEOBJ64";
     case OP_PUSHARG: return "PUSHARG";
     case OP_SETRV: return "SETRV";
     case OP_INVOKE: return "INVOKE";

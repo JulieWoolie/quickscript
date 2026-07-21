@@ -60,36 +60,40 @@ appendCode("RET")
 appendCode("JMP")
 appendCode("JMPI0")
 appendCode("JMPN0")
-appendCode("STACKALLOC")
-appendCode("STACKFREE")
-appendCode("SREAD")
-appendCode("SWRITE")
 
 byteSizedOpCode("LOADCONST")
 
-appendCode("READOBJ")
-appendCode("WRITEOBJ")
+out += `\n\n// 4.3.2 Stack Memory OP Codes`
+appendCode("STACKALLOC")
+appendCode("STACKFREE")
+byteSizedOpCode("RSREAD")
+byteSizedOpCode("RSWRITE")
+byteSizedOpCode("ASREAD")
+byteSizedOpCode("ASWRITE")
 
+out += `\n\n// 4.3.3 Heap Memory OP Codes`
 appendCode("HEAPALLOC")
 appendCode("HEAPFREE")
+byteSizedOpCode("READOBJ")
+byteSizedOpCode("WRITEOBJ")
 
-out += `\n\n// 4.3.2 Function Call Instructions`
+out += `\n\n// 4.3.4 Function Call Instructions`
 appendCode("PUSHARG")
 appendCode("SETRV")
 appendCode("INVOKE")
 
-out += `\n\n// 4.3.3 Conversion Instructions`
+out += `\n\n// 4.3.5 Conversion Instructions`
 conversionCodes()
 
-out += `\n\n// 4.3.4 Unary Operations`
+out += `\n\n// 4.3.6 Unary Operations`
 appendCode("BNEGATE")
 appendCode("LNEGATE")
 
-out += `\n\n// 4.3.5.1 Integer-only Binary Operations`
+out += `\n\n// 4.3.7.1 Integer-only Binary Operations`
 byteSizedOpCode("LSHIFT")
 byteSizedOpCode("URSHIFT")
 
-out += `\n\n// 4.3.5.2 Boolean-only Binary Operations`
+out += `\n\n// 4.3.7.2 Boolean-only Binary Operations`
 appendCode("BAND")
 appendCode("BOR")
 appendCode("BXOR")
@@ -97,7 +101,7 @@ appendCode("LAND")
 appendCode("LOR")
 appendCode("LXOR")
 
-out += `\n\n// 4.3.5.3 General Number Binary Operations`
+out += `\n\n// 4.3.7.3 General Number Binary Operations`
 mathOpCodes()
 
 function nextOpCode(): string {
@@ -136,6 +140,11 @@ function mathOpCodes() {
 }
 
 out += `\n\ntypedef uint16 opcode;\n\nconststring opcode_name(opcode code);`
+out += `\n\n#endif //QUICKSCRIPT_OPCODES_H`
+
+await writeToFile("../src/interpreter/opcodes.h")
+
+out = `#include "opcodes.h"`
 
 out += `\n\n\nconststring opcode_name(opcode code) {\n  switch (code) {`
 for (const code of opcodes) {
@@ -145,7 +154,10 @@ for (const code of opcodes) {
   out += `\n    case OP_${code}: return "${code}";`
 }
 out += `\n    default: return "NOP";`
-out += `\n  }\n}`
-out += `\n\n#endif //QUICKSCRIPT_OPCODES_H`
+out += `\n  }\n}\n`
 
-console.log(out)
+await writeToFile("../src/interpreter/opcodes.cc")
+
+async function writeToFile(fname: string): Promise<void> {
+  await Deno.writeTextFile(fname, out)
+}
