@@ -19,17 +19,17 @@ class CompilerErrors {
 
     void setSilent(bool silent);
 
-    void fatal(Location& loc, conststring msg, ...);
-    void fatal(conststring msg, ...);
+    void fatal(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
+    void fatal(conststring msg, ...) __attribute__((format(printf, 2, 3)));
 
-    void error(Location& loc, conststring msg, ...);
-    void error(conststring msg, ...);
+    void error(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
+    void error(conststring msg, ...) __attribute__((format(printf, 2, 3)));
 
-    void warn(Location& loc, conststring msg, ...);
-    void warn(conststring msg, ...);
+    void warn(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
+    void warn(conststring msg, ...) __attribute__((format(printf, 2, 3)));
 
-    void info(Location& loc, conststring msg, ...);
-    void info(conststring msg, ...);
+    void info(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
+    void info(conststring msg, ...) __attribute__((format(printf, 2, 3)));
 
     void log(loglevel level, Location* l, conststring msg, va_list list);
 };
