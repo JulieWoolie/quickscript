@@ -11,12 +11,21 @@ CompilerErrors::CompilerErrors(std::string *fileContent, conststring fName) {
   m_fileName = fName;
 }
 
-void CompilerErrors::setSilent(bool silent) {
+void CompilerErrors::setSilent(const bool silent) {
   m_silent = silent;
 }
 
 uint32 CompilerErrors::getErrorCount() const {
-  return m_errorCount;
+  uint32 count = 0;
+
+  for (const ReportedError& err : m_errors) {
+    if (err.level == LOGL_INFO || err.level == LOGL_WARN) {
+      continue;
+    }
+    count++;
+  }
+
+  return count;
 }
 
 CREATE_LOG_METHOD(fatal, LOGL_FATAL)
@@ -77,30 +86,42 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
   char content[1024];
   int32 result = vsnprintf_s(content, 1024, 1024, msg, list);
 
-  if (result < 1) {
-    if (level == LOGL_FATAL) {
-      throw std::runtime_error(msg);
-    }
-    if (level == LOGL_ERROR) {
-      m_errorCount++;
-    }
+  ReportedError reported;
+  reported.level = level;
+  reported.message = std::string(content, result);
+  if (l) {
+    reported.location = *l;
+  }
 
+  m_errors.push_back(reported);
+
+  if (!m_silent) {
+    printError(reported);
+  }
+
+  if (level == LOGL_FATAL) {
+    throw std::runtime_error(content);
+  }
+}
+
+void CompilerErrors::printError(const ReportedError& err) {
+  conststring content = err.message.c_str();
+
+  if (err.location.index == -1) {
+    printf_s("[%s] %s\n", loglevel_name(err.level), err.message.c_str());
     return;
   }
 
-  if (!l) {
-    printf_s("[%s] %s\n", loglevel_name(level), content);
-    return;
-  }
+  int32 index = err.location.index;
 
-  const uint32 linestart = findLineBoundary(m_fileContent, l->index, -1);
-  const uint32 lineend = findLineBoundary(m_fileContent, l->index, 1);
+  const uint32 linestart = findLineBoundary(m_fileContent, index, -1);
+  const uint32 lineend = findLineBoundary(m_fileContent, index, 1);
   const uint32 linelen = lineend - linestart;
 
   std::string line = m_fileContent->substr(linestart, linelen);
 
-  const uint32 lineno = l->line;
-  const uint32 col = l->column;
+  const uint32 lineno = err.location.line;
+  const uint32 col = err.location.column;
 
   std::string linenoStr = std::to_string(lineno);
   uint32 len = linenoStr.length() + 1;
@@ -116,7 +137,7 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
 
   printf(
     "[%s] %s\n%s--> %s:%s:%i\n%s |\n%s | %s\n%s |%s^ %s\n%s |\n",
-    loglevel_name(level),
+    loglevel_name(err.level),
     content,
     lpad, m_fileName, linenoStr.c_str(), col,
     lpad,
@@ -124,8 +145,4 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
     lpad, cpad, content,
     lpad
   );
-
-  if (level == LOGL_FATAL) {
-    throw std::runtime_error(content);
-  }
 }

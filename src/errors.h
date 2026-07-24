@@ -1,5 +1,7 @@
 #ifndef GIT_QUICKSCRIPT_ERRORS_H
 #define GIT_QUICKSCRIPT_ERRORS_H
+#include <vector>
+
 #include "parse/lexer.h"
 
 typedef uint8 loglevel;
@@ -9,12 +11,23 @@ typedef uint8 loglevel;
 #define LOGL_ERROR 2
 #define LOGL_FATAL 3
 
+struct ReportedError {
+  std::string message = "";
+  loglevel level = LOGL_INFO;
+
+  Location location = {
+    .index = -1,
+    .line = 0,
+    .column = 0
+  };
+};
+
 class CompilerErrors {
   std::string* m_fileContent;
   conststring m_fileName;
   bool m_silent = false;
 
-  uint32 m_errorCount = 0;
+  std::vector<ReportedError> m_errors;
 
   public:
     CompilerErrors(std::string* fileContent, conststring fName);
@@ -36,6 +49,8 @@ class CompilerErrors {
     void info(conststring msg, ...) __attribute__((format(printf, 2, 3)));
 
     void log(loglevel level, Location* l, conststring msg, va_list list);
+
+    void printError(const ReportedError& err);
 };
 
 #endif //GIT_QUICKSCRIPT_ERRORS_H
