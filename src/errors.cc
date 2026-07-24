@@ -106,9 +106,14 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
 
 void CompilerErrors::printError(const ReportedError& err) {
   conststring content = err.message.c_str();
+  FILE* out = stderr;
+
+  if (err.level == LOGL_INFO || err.level == LOGL_WARN) {
+    out = stdout;
+  }
 
   if (err.location.index == -1) {
-    printf_s("[%s] %s\n", loglevel_name(err.level), err.message.c_str());
+    fprintf_s(out, "[%s] %s\n", loglevel_name(err.level), err.message.c_str());
     return;
   }
 
@@ -135,7 +140,7 @@ void CompilerErrors::printError(const ReportedError& err) {
   repeat(' ', cpadlen, cpad);
   cpad[cpadlen] = '\0';
 
-  printf(
+  fprintf(out,
     "[%s] %s\n%s--> %s:%s:%i\n%s |\n%s | %s\n%s |%s^ %s\n%s |\n",
     loglevel_name(err.level),
     content,
