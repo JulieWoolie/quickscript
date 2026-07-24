@@ -374,7 +374,7 @@ void TypeResolver::acceptIntLiteral(IntLiteral* v) {
       smallestFitting = PPT_INT32;
     } else if (val <= UINT32_MAX) {
       smallestFitting = PPT_UINT32;
-    } {
+    } else {
       smallestFitting = PPT_UINT64;
     }
   }
@@ -509,6 +509,34 @@ ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, b
   }
 }
 
+bool isLiteral(astnodetype type) {
+  switch (type) {
+    case AST_BooleanLiteral:
+    case AST_FloatLiteral:
+    case AST_IntLiteral:
+    case AST_StringLiteral:
+    case AST_CharLiteral:
+    case AST_ObjectLiteral:
+      return true;
+    default:
+      return false;
+  }
+}
+
+void checkAssignability(Expr* expr, CompilerErrors* errors) {
+  astnodetype kind = expr->nodeKind();
+
+  if (isLiteral(kind)) {
+    errors->error(expr->location, "Cannot assign a value to a literal");
+    return;
+  }
+
+  if (kind == AST_TernaryExpr) {
+    errors->error(expr->location, "Cannot assign value to ternary expression");
+    return;
+  }
+}
+
 void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
   v->lhs->acceptVisit(this);
   v->rhs->acceptVisit(this);
@@ -522,11 +550,22 @@ void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
   if (!res) {
     m_errors->error(v->location,
       "Cannot use %s operator on %s and %s",
-      binaryop_name(op), ltype, rtype
+      binaryop_name(op), ltype->typeName(), rtype->typeName()
     );
 
     v->resultType = ltype;
     return;
+  }
+
+  if (v->op & BOP_ASSIGN_FLAG) {
+    checkAssignability(v->lhs, m_errors);
+
+    if (!isAssignableTo(ltype, rtype)) {
+      m_errors->error(v->location, "Cannot assign value of type %s to %s",
+        rtype->typeName(),
+        ltype->typeName()
+      );
+    }
   }
 
   v->resultType = res;
