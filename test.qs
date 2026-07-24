@@ -6,12 +6,12 @@ struct vec2f {
 int32 main(string[] args) {
   vec2f v = {}
 
-  assert true : "asdadsd"
-  assert 1 == 1
-  assert "asads" : 232
-
-  bool b = true
+  bool b = (v.x + v.y) == 0.0
   int32 i = b ? 1 : 0
+
+  i * 2.0
+
+  print(args[0])
 
   return 0
 }

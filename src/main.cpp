@@ -8,6 +8,7 @@
 #include "analysis/TypeResolver.h"
 #include "interpreter/nativeinterface.h"
 #include "errors.h"
+#include "analysis/LexicalAnalyzer.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
@@ -69,8 +70,10 @@ int32 main(int32 argc, cstring argv[]) {
   Bindings bindings = createStandardBindings(&lookup);
 
   TypeResolver resolver = TypeResolver(&lookup, &table, &errors, &bindings);
-
   resolver.acceptScriptFileStatement(sfs);
+
+  LexicalAnalyzer lexAnalysis = LexicalAnalyzer(&table, &errors, &bindings);
+  lexAnalysis.acceptScriptFileStatement(sfs);
 
   PrintingVisitor pv = PrintingVisitor(&table, fname);
   sfs->acceptVisit(&pv);
