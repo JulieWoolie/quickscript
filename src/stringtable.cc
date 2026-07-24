@@ -133,7 +133,7 @@ stringid StringTable::findId(const std::string& str) const {
       continue;
     }
 
-    return entry->offset;
+    return i;
   }
 
   return EMPTY_STRING;
