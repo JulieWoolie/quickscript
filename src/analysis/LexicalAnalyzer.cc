@@ -225,7 +225,22 @@ void LexicalAnalyzer::acceptLexicalDeclaration(LexicalDeclaration* v) {
     symType = SYM_VAR;
   }
 
-  getScope()->pushSymbol(v->variableName->value, symType);
+  AnalyzerScope* scope = getScope();
+  stringid varname = v->variableName->value;
+
+  Symbol* existingVar = scope->getSymbol(varname, SYM_VAR);
+  Symbol* existingConst = scope->getSymbol(varname, SYM_CONST);
+
+  if (existingConst || existingVar) {
+    std::string_view sv = m_strings->getview(varname);
+
+    m_errors->error(v->location, "Duplicate variable defined '%.*s'",
+      static_cast<int>(sv.length()), sv.data()
+    );
+  } else {
+    Symbol* sym = getScope()->pushSymbol(v->variableName->value, symType);
+    sym->scriptType = v->typeExpr->getReferencedType();
+  }
 
   if (v->value) {
     v->value->acceptVisit(this);
@@ -281,6 +296,7 @@ void LexicalAnalyzer::acceptScriptFileStatement(ScriptFileStatement* v) {
     }
 
     Symbol* sym = mainscope->pushSymbol(nameid, st);
+    sym->scriptType = bind->type;
     sym->uses = 1;
   }
 
@@ -324,7 +340,8 @@ void LexicalAnalyzer::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
     );
   }
 
-  scope->pushSymbol(v->name->value, SYM_FUNC);
+  Symbol* funcSym = scope->pushSymbol(v->name->value, SYM_FUNC);
+  funcSym->scriptType = v->signature;
 
   pushScope(SCOPE_FUNCTION);
   std::set<stringid> pnames;
@@ -344,7 +361,9 @@ void LexicalAnalyzer::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
     }
 
     param->paramType->acceptVisit(this);
-    fscope->pushSymbol(param->name->value, SYM_VAR);
+
+    Symbol* psym = fscope->pushSymbol(param->name->value, SYM_VAR);
+    psym->scriptType = param->paramType->getReferencedType();
   }
 
   for (Statement* s : v->functionBody->statements) {
@@ -367,7 +386,8 @@ void LexicalAnalyzer::acceptStructDecl(StructDecl* v) {
     m_errors->error(v->location, "Struct declarations are only allowed in global scope");
   }
 
-  scope->pushSymbol(v->name->value, SYM_STRUCT);
+  Symbol* structSym = scope->pushSymbol(v->name->value, SYM_STRUCT);
+  structSym->scriptType = v->type;
 
   std::string_view structName = m_strings->getview(v->name->value);
 
@@ -381,7 +401,8 @@ void LexicalAnalyzer::acceptStructDecl(StructDecl* v) {
 
     stringid combinedId = m_strings->allocate(propSym);
 
-    scope->pushSymbol(combinedId, SYM_PROP);
+    Symbol* spropsym = scope->pushSymbol(combinedId, SYM_PROP);
+    spropsym->scriptType = prop->propertyType->getReferencedType();
 
     prop->propertyType->acceptVisit(this);
   }
