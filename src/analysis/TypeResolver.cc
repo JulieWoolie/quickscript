@@ -459,9 +459,20 @@ void TypeResolver::acceptObjectLiteralProperty(ObjectLiteralProperty* v) {
 
 }
 
-ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) {
+ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) const {
   // Clear the assignment flag
-  op &= !BOP_ASSIGN_FLAG;
+  op &= ~BOP_ASSIGN_FLAG;
+
+  if (op == BOP_EQ || op == BOP_NEQ) {
+    if (left->kind() != right->kind()) {
+      return nullptr;
+    }
+    if (left->kind() == TK_STRUCT && left != right) {
+      return nullptr;
+    }
+
+    return m_lookup->getPrimitiveType(PK_BOOL);
+  }
 
   if (left->kind() == TK_STRING) {
     if ((right->kind() == TK_STRING || right->kind() == TK_PRIMITIVE) && op == BOP_ADD) {

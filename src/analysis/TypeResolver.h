@@ -34,7 +34,7 @@ class TypeResolver: public Visitor {
   void pushSymbol(stringid name, ScriptType* type);
   void pushSymbol(LexicalScope* scope, stringid name, ScriptType* type) const;
 
-  ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop op);
+  ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop op) const;
 
   public:
     explicit TypeResolver(
