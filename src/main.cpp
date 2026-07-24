@@ -75,8 +75,10 @@ int32 main(int32 argc, cstring argv[]) {
   LexicalAnalyzer lexAnalysis = LexicalAnalyzer(&table, &errors, &bindings);
   lexAnalysis.acceptScriptFileStatement(sfs);
 
-  PrintingVisitor pv = PrintingVisitor(&table, fname);
-  sfs->acceptVisit(&pv);
+  if (errors.getErrorCount() == 0) {
+    PrintingVisitor pv = PrintingVisitor(&table, fname);
+    sfs->acceptVisit(&pv);
+  }
 
   return EXIT_SUCCESS;
 }
