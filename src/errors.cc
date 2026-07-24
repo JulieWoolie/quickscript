@@ -15,6 +15,10 @@ void CompilerErrors::setSilent(bool silent) {
   m_silent = silent;
 }
 
+uint32 CompilerErrors::getErrorCount() const {
+  return m_errorCount;
+}
+
 CREATE_LOG_METHOD(fatal, LOGL_FATAL)
 CREATE_LOG_METHOD_NL(fatal, LOGL_FATAL)
 
@@ -76,6 +80,9 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
   if (result < 1) {
     if (level == LOGL_FATAL) {
       throw std::runtime_error(msg);
+    }
+    if (level == LOGL_ERROR) {
+      m_errorCount++;
     }
 
     return;

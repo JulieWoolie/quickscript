@@ -14,10 +14,14 @@ class CompilerErrors {
   conststring m_fileName;
   bool m_silent = false;
 
+  uint32 m_errorCount = 0;
+
   public:
     CompilerErrors(std::string* fileContent, conststring fName);
 
     void setSilent(bool silent);
+
+    uint32 getErrorCount() const;
 
     void fatal(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
     void fatal(conststring msg, ...) __attribute__((format(printf, 2, 3)));
