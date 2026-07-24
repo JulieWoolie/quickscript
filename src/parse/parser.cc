@@ -665,6 +665,8 @@ Expr* Parser::ternaryExpr() {
     return expr;
   }
 
+  skip();
+
   TernaryExpr tern;
   tern.location = l;
   tern.condition = expr;
@@ -976,7 +978,7 @@ Expr* Parser::primaryExpr() {
       return objectLiteral();
 
     default:
-      FATAL(p->start, "This token was not expected here");
+      FATAL(p->start, "This token (%s) was not expected here", tokentype_name(p->ttype));
       return nullptr;
   }
 }

@@ -10,7 +10,8 @@ int32 main(string[] args) {
   assert 1 == 1
   assert "asads" : 232
 
-  v = {}
+  bool b = true
+  int32 i = b ? 1 : 0
 
   return 0
 }
