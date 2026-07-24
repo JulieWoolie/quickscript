@@ -695,6 +695,7 @@ binaryop mapTokenToOp(tokentype tt) {
     case TT_USHR_ASSIGN: return BOP_ASSIGN_USHR;
     case TT_POW_ASSIGN: return BOP_ASSIGN_POW;
     case TT_DWALL_ASSIGN: return BOP_ASSIGN_LOG_OR;
+    case TT_ASSIGN: return BOP_ASSIGN;
 
     case TT_GT: return BOP_GT;
     case TT_LT: return BOP_LT;

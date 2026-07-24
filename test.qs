@@ -10,5 +10,7 @@ int32 main(string[] args) {
   assert 1 == 1
   assert "asads" : 232
 
+  v = {}
+
   return 0
 }

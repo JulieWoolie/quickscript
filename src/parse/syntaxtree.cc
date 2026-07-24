@@ -44,6 +44,7 @@ conststring binaryop_name(binaryop op) {
     case BOP_BIT_OR: return "BOP_BIT_OR";
     case BOP_BIT_AND: return "BOP_BIT_AND";
     case BOP_POW: return "BOP_POW";
+    case BOP_ASSIGN: return "BOP_ASSIGN";
     case BOP_ASSIGN_ADD: return "BOP_ASSIGN_ADD";
     case BOP_ASSIGN_SUB: return "BOP_ASSIGN_SUB";
     case BOP_ASSIGN_MUL: return "BOP_ASSIGN_MUL";

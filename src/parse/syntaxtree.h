@@ -291,6 +291,8 @@ AST_EXPR_TYPE(ObjectLiteral, Expr,
 #define BOP_BIT_OR          0b010011
 #define BOP_BIT_AND         0b010100
 
+#define BOP_ASSIGN          BOP_ASSIGN_FLAG
+
 #define BOP_ASSIGN_ADD      (BOP_ADD | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_SUB      (BOP_SUB | BOP_ASSIGN_FLAG)
 #define BOP_ASSIGN_MUL      (BOP_MUL | BOP_ASSIGN_FLAG)
