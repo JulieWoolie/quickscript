@@ -50,7 +50,7 @@ class CompilerErrors {
 
     void log(loglevel level, Location* l, conststring msg, va_list list);
 
-    void printError(const ReportedError& err);
+    void printError(const ReportedError& err) const;
 };
 
 #endif //GIT_QUICKSCRIPT_ERRORS_H

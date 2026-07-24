@@ -104,7 +104,7 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
   }
 }
 
-void CompilerErrors::printError(const ReportedError& err) {
+void CompilerErrors::printError(const ReportedError& err) const {
   conststring content = err.message.c_str();
   FILE* out = stderr;
 
