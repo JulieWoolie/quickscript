@@ -104,6 +104,41 @@ stringid StringTable::allocate(const std::string& str) {
   return allocate(str.c_str(), str.length());
 }
 
+stringid StringTable::findId(const std::string& str) const {
+  if (m_lenEntries < 2) {
+    return EMPTY_STRING;
+  }
+
+  uint32 len = str.length();
+
+  for (uint32 i = 0; i < m_lenEntries; i++) {
+    StringEntry* entry = &m_lengths[i];
+    if (entry->len != len) {
+      continue;
+    }
+
+    char* data = m_data + entry->offset;
+    bool matches = true;
+
+    for (uint32 chi = 0; chi < len; chi++) {
+      char ch = data[chi];
+      if (ch == str[chi]) {
+        continue;
+      }
+      matches = false;
+      break;
+    }
+
+    if (!matches) {
+      continue;
+    }
+
+    return entry->offset;
+  }
+
+  return EMPTY_STRING;
+}
+
 std::string_view StringTable::getview(const stringid id) const {
   if (id >= m_lenEntries) {
     return {};

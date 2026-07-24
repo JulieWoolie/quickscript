@@ -35,6 +35,8 @@ class StringTable {
     stringid allocate(conststring str, uint32 len);
     stringid allocate(const std::string& str);
 
+    stringid findId(const std::string& str) const;
+
     std::string_view getview(stringid id) const;
     int32 getlen(stringid id) const;
     int32 getchars(stringid id, char* out, uint32 maxout) const;
