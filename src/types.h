@@ -20,17 +20,17 @@
 typedef uint8 typekind;
 
 #define PK_NIL      0
-#define PK_BOOL     (PK_NIL+1)
-#define PK_INT8     (PK_BOOL+1)
-#define PK_UINT8    (PK_INT8+1)
-#define PK_INT16    (PK_UINT8+1)
-#define PK_UINT16   (PK_INT16+1)
-#define PK_INT32    (PK_UINT16+1)
-#define PK_UINT32   (PK_INT32+1)
-#define PK_INT64    (PK_UINT32+1)
-#define PK_UINT64   (PK_INT64+1)
-#define PK_FLOAT32  (PK_UINT64+1)
-#define PK_FLOAT64  (PK_FLOAT32+1)
+#define PK_BOOL     1
+#define PK_INT8     2
+#define PK_UINT8    3
+#define PK_INT16    4
+#define PK_UINT16   5
+#define PK_INT32    6
+#define PK_UINT32   7
+#define PK_INT64    8
+#define PK_UINT64   9
+#define PK_FLOAT32  10
+#define PK_FLOAT64  11
 typedef uint8 primitivekind;
 
 #define TYPEFLAG_INDEXABLE (1 << 0)
