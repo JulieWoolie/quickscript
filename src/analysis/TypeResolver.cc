@@ -328,7 +328,7 @@ void TypeResolver::acceptBooleanLiteral(BooleanLiteral* v) {
 }
 
 void TypeResolver::acceptCharLiteral(CharLiteral* v) {
-  v->resultType = m_lookup->getPrimitiveType(PK_UINT16);
+  v->resultType = m_lookup->getPrimitiveType(PK_INT8);
 }
 
 void TypeResolver::acceptStringLiteral(StringLiteral* v) {
