@@ -3,10 +3,11 @@
 #include <utility>
 #include "keyw_lookup.h"
 
-Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table) {
+Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table, CompilerErrors* errors) {
   m_input = input;
   m_tokens = tokens;
   m_table = table;
+  m_errors = errors;
 
   idx = -1;
   line = 0;
@@ -544,7 +545,7 @@ Token* Lexer::readIdOrKeyword() {
 
   int32 end = idx;
   if (start == end) {
-    throw std::runtime_error("Invalid Identifier/keyword");
+    m_errors->fatal(tokenStart, "Invalid Identifier/keyword");
   }
 
   tokentype keyw = tokenTypeFromString(readbuf, readbufLen);
@@ -602,13 +603,15 @@ void Lexer::readHexEscape() {
   int32 len = 0;
   int8 chars[4];
 
+  Location location = recordLocation();
+
   while (isHexChar(currentChar) && len < 4) {
     chars[len++] = currentChar;
     next();
   }
 
   if (len != 4) {
-    throw std::runtime_error("Invalid unicode escape");
+    m_errors->fatal(location, "Invalid unicode escape");
   }
 
   uint16 hexval = hexValue(chars);
@@ -666,10 +669,10 @@ Token* Lexer::readQuotedString() {
 
   while (true) {
     if (currentChar == EOF) {
-      throw std::runtime_error("Unclosed string");
+      m_errors->fatal(tokenStart, "Unclosed string");
     }
     if (currentChar == LF || currentChar == CR) {
-      throw std::runtime_error("Line break inside string");
+      m_errors->fatal(tokenStart, "Line break inside string");
     }
 
     if (currentChar == quote) {
@@ -721,7 +724,8 @@ Token* Lexer::readQuotedString() {
           break;
 
         default:
-          throw std::runtime_error("Invalid escape sequence");
+          Location l = recordLocation();
+          m_errors->fatal(l, "Invalid escape sequence");
       }
 
       chlen++;
@@ -736,7 +740,7 @@ Token* Lexer::readQuotedString() {
   if (currentChar == quote) {
     next();
   } else {
-    throw std::runtime_error("Unclosed string");
+    m_errors->fatal(tokenStart, "Unclosed string");
   }
 
   tokentype ttype = TT_STRING_LITERAL;
@@ -744,7 +748,7 @@ Token* Lexer::readQuotedString() {
   if (quote == '\'') {
     ttype = TT_CHAR_LITERAL;
     if (chlen != 1) {
-      throw std::runtime_error("Char too long");
+      m_errors->fatal(tokenStart, "Char literal too long");
     }
   }
 
@@ -800,7 +804,7 @@ Token* Lexer::readNumberLiteral() {
   end = idx;
 
   if (start == end) {
-    throw std::runtime_error("Invalid number");
+    m_errors->fatal(tokenStart, "Invalid number");
   }
 
   return maketokenv(ttype);
@@ -815,7 +819,7 @@ Token* Lexer::readNumberLiteral() {
     next();\
   }\
   if (readbufLen == 0) {\
-    throw std::runtime_error(errormsg);\
+    m_errors->fatal(tokenStart, errormsg);\
   }\
   return maketokenv(tt);\
   }

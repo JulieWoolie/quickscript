@@ -56,10 +56,11 @@ int32 main(int32 argc, cstring argv[]) {
   TokenList tokens = TokenList();
   StringTable table = StringTable();
 
-  Lexer l = Lexer(file_contents, &tokens, &table);
+  CompilerErrors errors = CompilerErrors(&file_contents, fname);
+
+  Lexer l = Lexer(file_contents, &tokens, &table, &errors);
   l.lex();
 
-  CompilerErrors errors = CompilerErrors(&file_contents, fname);
   NoFreeAllocator pool = NoFreeAllocator();
 
   Parser p = Parser(&tokens, &pool, &errors, &table);

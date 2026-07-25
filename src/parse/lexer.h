@@ -6,6 +6,7 @@
 #include "../common.h"
 #include "../stringtable.h"
 #include "token.h"
+#include "../errors.h"
 
 #define COMMENT_CHAR '/'
 #define STAR_CHAR '*'
@@ -24,6 +25,7 @@ class Lexer {
     TokenList* m_tokens;
 
     StringTable* m_table;
+    CompilerErrors* m_errors;
 
     Token* peekedToken = nullptr;
     Token* eofToken = nullptr;
@@ -37,7 +39,7 @@ class Lexer {
     bool ignoreComments = true;
 
   public:
-    Lexer(const std::string& input, TokenList* m_tokens, StringTable* table);
+    Lexer(const std::string& input, TokenList* m_tokens, StringTable* table, CompilerErrors* errors);
     ~Lexer();
 
     void setCommentsIgnored(bool ignored);

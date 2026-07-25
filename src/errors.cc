@@ -2,6 +2,7 @@
 #include "errors.h"
 
 #include <stdarg.h>
+#include <stdexcept>
 
 #define CREATE_LOG_METHOD(name, level) void CompilerErrors::name(Location& loc, conststring msg, ...) {va_list l; va_start(l, msg); log(level, &loc, msg, l); va_end(l);}
 #define CREATE_LOG_METHOD_NL(name, level) void CompilerErrors::name(conststring msg, ...) {va_list l; va_start(l, msg); log(level, nullptr, msg, l); va_end(l);}
