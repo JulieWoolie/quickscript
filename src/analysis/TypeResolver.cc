@@ -329,6 +329,7 @@ void TypeResolver::acceptBooleanLiteral(BooleanLiteral* v) {
 
 void TypeResolver::acceptCharLiteral(CharLiteral* v) {
   v->resultType = m_lookup->getPrimitiveType(PK_INT8);
+
 }
 
 void TypeResolver::acceptStringLiteral(StringLiteral* v) {
@@ -459,6 +460,38 @@ void TypeResolver::acceptObjectLiteralProperty(ObjectLiteralProperty* v) {
 
 }
 
+void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
+  ScriptType* type = m_expectedTypes.back();
+  if (type->kind() != TK_ARRAY) {
+    m_errors->error(
+      v->location,
+      "Type %s cannot be initialized with an object literal",
+      type->typeName()
+    );
+    return;
+  }
+
+  ScriptType* componentType = ((ScriptArrayType*) type)->componentType;
+  m_expectedTypes.push_back(componentType);
+
+  for (Expr* expr : v->values) {
+    expr->acceptVisit(this);
+
+    ScriptType* valType = expr->getResultingType();
+    if (isAssignableTo(componentType, valType)) {
+      continue;
+    }
+
+    m_errors->error(expr->location,
+      "Cannot use value of type %s in array of type %s",
+      valType->typeName(),
+      componentType->typeName()
+    );
+  }
+
+  v->resultType = type;
+}
+
 ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) const {
   // Clear the assignment flag
   op &= ~BOP_ASSIGN_FLAG;
@@ -548,6 +581,28 @@ void checkAssignability(Expr* expr, CompilerErrors* errors) {
   }
 }
 
+void testTypeAssignability(Expr* expr, CompilerErrors* errors) {
+  if (expr->nodeKind() == AST_IndexAccessExpr) {
+    IndexAccessExpr* idx = static_cast<IndexAccessExpr*>(expr);
+    ScriptType* type = idx->target->getResultingType();
+
+    if (type->kind() == TK_STRING) {
+      errors->error(expr->location, "Cannot mutate strings");
+    }
+    return;
+  }
+
+  if (expr->nodeKind() == AST_PropertyAccessExpr) {
+    PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
+    ScriptType* objType = prop->target->getResultingType();
+
+    // Void means it's already failed in the TypeResolver stage
+    if (objType->kind() == TK_ARRAY && prop->resultType->kind() != TK_VOID) {
+      errors->error(expr->location, "Cannot mutate array length");
+    }
+  }
+}
+
 void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
   v->lhs->acceptVisit(this);
   v->rhs->acceptVisit(this);
@@ -577,6 +632,7 @@ void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
         ltype->typeName()
       );
     }
+    testTypeAssignability(v->lhs, m_errors);
   }
 
   v->resultType = res;
@@ -604,6 +660,7 @@ void TypeResolver::acceptUnaryExpr(UnaryExpr* v) {
   v->setResultingType(v->target->getResultingType());
 
   if (unaryOpIsValidFor(v->op, v->resultType)) {
+    testTypeAssignability(v->target, m_errors);
     return;
   }
 

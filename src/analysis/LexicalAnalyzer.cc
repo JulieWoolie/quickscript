@@ -166,29 +166,13 @@ void LexicalAnalyzer::acceptObjectLiteralProperty(ObjectLiteralProperty* v) {
   v->value->acceptVisit(this);
 }
 
+void LexicalAnalyzer::acceptArrayLiteral(ArrayLiteral* v) {
+  for (Expr* e : v->values) {
+    e->acceptVisit(this);
+  }
+}
+
 void LexicalAnalyzer::testAssignability(Expr* expr) {
-  if (expr->nodeKind() == AST_IndexAccessExpr) {
-    IndexAccessExpr* idx = static_cast<IndexAccessExpr*>(expr);
-    ScriptType* type = idx->target->getResultingType();
-
-    if (type->kind() == TK_STRING) {
-      m_errors->error(expr->location, "Cannot mutate strings");
-    }
-    return;
-  }
-
-  if (expr->nodeKind() == AST_PropertyAccessExpr) {
-    PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
-    ScriptType* objType = prop->target->getResultingType();
-
-    // Void means it's already failed in the TypeResolver stage
-    if (objType->kind() == TK_ARRAY && prop->resultType->kind() != TK_VOID) {
-      m_errors->error(expr->location, "Cannot mutate array length");
-    }
-
-    return;
-  }
-
   if (expr->nodeKind() != AST_Identifier) {
     return;
   }
