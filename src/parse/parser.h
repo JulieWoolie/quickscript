@@ -117,6 +117,7 @@ class Parser {
     FloatLiteral* floatLiteral();
     StringLiteral* stringLiteral();
     ObjectLiteral* objectLiteral();
+    ArrayLiteral* arrayLiteral();
     Identifier* id();
 };
 

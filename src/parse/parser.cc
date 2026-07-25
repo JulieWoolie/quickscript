@@ -977,6 +977,9 @@ Expr* Parser::primaryExpr() {
     case TT_LCURL:
       return objectLiteral();
 
+    case TT_LSQUARE:
+      return arrayLiteral();
+
     default:
       FATAL(p->start, "This token (%s) was not expected here", tokentype_name(p->ttype));
       return nullptr;
@@ -1136,6 +1139,29 @@ ObjectLiteral* Parser::objectLiteral() {
   }
 
   expect(TT_RCURL);
+
+  return EMPLACE(lit);
+}
+
+ArrayLiteral* Parser::arrayLiteral() {
+  Token* t = expect(TT_LSQUARE);
+
+  ArrayLiteral lit;
+  lit.location = t->start;
+
+  while (!is(TT_RSQUARE)) {
+    Expr* val = expr();
+    lit.values.push_back(val);
+
+    if (is(TT_COMMA)) {
+      skip();
+      if (is(TT_RSQUARE)) {
+        ERROR(peek()->start, "Illegal trailing comma in array initializer");
+      }
+    }
+  }
+
+  expect(TT_RSQUARE);
 
   return EMPLACE(lit);
 }

@@ -366,6 +366,27 @@ struct PrintingVisitor: Visitor {
       OBJPROPO("message", v->message)
       OBJEND
     }
+
+    void acceptArrayLiteral(ArrayLiteral* v) override {
+      PRINTNODEBASE
+      printf(") [");
+
+      std::vector<Expr*>& properties = v->values;
+      if (!properties.empty()) {
+        inc();
+
+        for (uint32 i = 0; i < properties.size(); i++) {
+          nli();
+          printf("[%i] = ", i);
+          properties[i]->acceptVisit(this);
+        }
+
+        dec();
+        nli();
+      }
+
+      printf("]");
+    }
 };
 
 #endif //QUICKSCRIPT_PRINT_VISITOR_H

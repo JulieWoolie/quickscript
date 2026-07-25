@@ -58,6 +58,7 @@ class TypeResolver: public Visitor {
     void acceptFloatLiteral(FloatLiteral *v) override;
     void acceptObjectLiteral(ObjectLiteral* v) override;
     void acceptObjectLiteralProperty(ObjectLiteralProperty* v) override;
+    void acceptArrayLiteral(ArrayLiteral* v) override;
     void acceptBinaryExpr(BinaryExpr *v) override;
     void acceptUnaryExpr(UnaryExpr *v) override;
     void acceptTernaryExpr(TernaryExpr *v) override;

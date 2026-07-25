@@ -26,6 +26,7 @@ struct IntLiteral;
 struct FloatLiteral;
 struct ObjectLiteralProperty;
 struct ObjectLiteral;
+struct ArrayLiteral;
 struct BinaryExpr;
 struct UnaryExpr;
 struct TernaryExpr;
@@ -78,6 +79,7 @@ struct AssertStatement;
 #define AST_ObjectLiteralProperty 30
 #define AST_ObjectLiteral 31
 #define AST_AssertStatement 32
+#define AST_ArrayLiteral 33
 
 typedef uint8 astnodetype;
 
@@ -99,6 +101,7 @@ struct Visitor {
   virtual void acceptFloatLiteral(FloatLiteral* v) = 0;
   virtual void acceptObjectLiteral(ObjectLiteral* v) = 0;
   virtual void acceptObjectLiteralProperty(ObjectLiteralProperty* v) = 0;
+  virtual void acceptArrayLiteral(ArrayLiteral* v) = 0;
   virtual void acceptBinaryExpr(BinaryExpr* v) = 0;
   virtual void acceptUnaryExpr(UnaryExpr* v) = 0;
   virtual void acceptTernaryExpr(TernaryExpr* v) = 0;
@@ -263,6 +266,10 @@ AST_TYPE(ObjectLiteralProperty, Node,
 
 AST_EXPR_TYPE(ObjectLiteral, Expr,
   std::vector<ObjectLiteralProperty*> properties;
+)
+
+AST_EXPR_TYPE(ArrayLiteral, Expr,
+  std::vector<Expr*> values;
 )
 
 // --- Binary Operations ---
