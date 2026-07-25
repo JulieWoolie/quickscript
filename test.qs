@@ -8,6 +8,8 @@ int32 main(string[] args) {
 
   bool b = (v.x + v.y) == 0.0
   int32 i = b ? 1 : 0
+  int32 u = 0
+  int32 u = 1
 
   i * 2.0
 

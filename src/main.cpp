@@ -8,6 +8,7 @@
 #include "analysis/TypeResolver.h"
 #include "interpreter/nativeinterface.h"
 #include "errors.h"
+#include "tester.h"
 #include "analysis/LexicalAnalyzer.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
@@ -39,11 +40,21 @@ Bindings createStandardBindings(TypeLookup* lookup) {
 
 int32 main(int32 argc, cstring argv[]) {
   if (argc < 2) {
-    printf("Enter file name to execute!\n");
+    fprintf(stderr, "Enter file name to execute!\n");
     return EXIT_FAILURE;
   }
 
   cstring fname = argv[argc - 1];
+  if (strcmp(fname, "run-tests") == 0) {
+    TesterSettings settings;
+    settings.printAsts = false;
+    settings.directory = "../tests/";
+
+    runTests(settings);
+
+    return EXIT_SUCCESS;
+  }
+
   std::ifstream file(fname);
 
   if (!file.is_open()) {

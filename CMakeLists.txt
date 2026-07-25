@@ -32,5 +32,7 @@ add_executable(quickscript src/main.cpp
         src/interpreter/nativeinterface.h
         src/interpreter/nativeinterface.cc
         src/interpreter/interpreter.h
+        src/tester.h
+        src/tester.cc
         src/analysis/LexicalAnalyzer.cc
         src/analysis/LexicalAnalyzer.h)
