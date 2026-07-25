@@ -2,7 +2,7 @@
 #define GIT_QUICKSCRIPT_ERRORS_H
 #include <vector>
 
-#include "parse/lexer.h"
+#include "parse/token.h"
 
 typedef uint8 loglevel;
 
