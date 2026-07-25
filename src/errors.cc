@@ -28,6 +28,10 @@ uint32 CompilerErrors::getErrorCount() const {
   return count;
 }
 
+const std::vector<ReportedError>& CompilerErrors::getErrors() const {
+  return m_errors;
+}
+
 CREATE_LOG_METHOD(fatal, LOGL_FATAL)
 CREATE_LOG_METHOD_NL(fatal, LOGL_FATAL)
 

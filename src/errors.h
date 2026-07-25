@@ -12,7 +12,7 @@ typedef uint8 loglevel;
 #define LOGL_FATAL 3
 
 struct ReportedError {
-  std::string message = "";
+  std::string message;
   loglevel level = LOGL_INFO;
 
   Location location = {
@@ -35,6 +35,8 @@ class CompilerErrors {
     void setSilent(bool silent);
 
     uint32 getErrorCount() const;
+
+    const std::vector<ReportedError>& getErrors() const;
 
     void fatal(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
     void fatal(conststring msg, ...) __attribute__((format(printf, 2, 3)));
