@@ -468,6 +468,8 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
       "Type %s cannot be initialized with an object literal",
       type->typeName()
     );
+
+    v->resultType = m_lookup->getVoidType();
     return;
   }
 
@@ -489,6 +491,7 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
     );
   }
 
+  m_expectedTypes.pop_back();
   v->resultType = type;
 }
 
@@ -596,9 +599,17 @@ void testTypeAssignability(Expr* expr, CompilerErrors* errors) {
     PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
     ScriptType* objType = prop->target->getResultingType();
 
+    if (prop->resultType->kind() == TK_VOID) {
+      // Property not found, don't try to check
+      return;
+    }
+
     // Void means it's already failed in the TypeResolver stage
-    if (objType->kind() == TK_ARRAY && prop->resultType->kind() != TK_VOID) {
+    if (objType->kind() == TK_ARRAY) {
       errors->error(expr->location, "Cannot mutate array length");
+    }
+    if (objType->kind() == TK_STRING) {
+      errors->error(expr->location, "Cannot mutate string length");
     }
   }
 }
