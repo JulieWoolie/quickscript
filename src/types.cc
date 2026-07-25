@@ -34,6 +34,10 @@ ScriptType* ScriptStringType::getPropertyType(std::string propName, TypeLookup* 
   return lookup->getPrimitiveType(PK_UINT32);
 }
 
+ScriptType* ScriptStringType::getIndexedType(TypeLookup* lookup) {
+  return lookup->getPrimitiveType(PK_INT8);
+}
+
 bool isNumberType(ScriptType* type) {
   if (type->kind() != TK_PRIMITIVE) {
     return false;

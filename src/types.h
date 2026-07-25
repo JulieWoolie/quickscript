@@ -214,6 +214,8 @@ struct ScriptStringType: ScriptType {
   }
 
   ScriptType* getPropertyType(std::string propName, TypeLookup* lookup) override;
+
+  ScriptType* getIndexedType(TypeLookup* lookup) override;
 };
 
 struct ScriptVoidType: ScriptType {
