@@ -14,6 +14,15 @@ StringTable::StringTable() {
   m_lengths->offset = 0;
 }
 
+StringTable::~StringTable() {
+  if (m_data) {
+    free(m_data);
+  }
+  if (m_lengths) {
+    free(m_lengths);
+  }
+}
+
 stringid StringTable::allocate(const conststring str) {
   uint32 len = strlen(str);
   return allocate(str, len);

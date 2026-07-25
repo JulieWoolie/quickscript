@@ -30,6 +30,7 @@ class StringTable {
 
   public:
     StringTable();
+    ~StringTable();
 
     stringid allocate(conststring str);
     stringid allocate(conststring str, uint32 len);

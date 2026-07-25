@@ -202,6 +202,12 @@ conststring tokentype_name(tokentype ttype) {
 }
 
 
+TokenList::~TokenList() {
+  if (m_dataStart) {
+    free(m_dataStart);
+  }
+}
+
 uint32 TokenList::size() const {
   return items;
 }

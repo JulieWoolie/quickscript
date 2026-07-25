@@ -23,6 +23,14 @@ Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table) {
   tokenStart.line = 0;
 }
 
+Lexer::~Lexer() {
+  if (readbuf) {
+    free(readbuf);
+    readbuf = nullptr;
+    readbufCap = 0;
+  }
+}
+
 void Lexer::setCommentsIgnored(bool ignored) {
   ignoreComments = ignored;
 }

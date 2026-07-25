@@ -38,6 +38,7 @@ class Lexer {
 
   public:
     Lexer(const std::string& input, TokenList* m_tokens, StringTable* table);
+    ~Lexer();
 
     void setCommentsIgnored(bool ignored);
 

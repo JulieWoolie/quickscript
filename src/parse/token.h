@@ -142,6 +142,7 @@ class TokenList {
 
   public:
     TokenList() = default;
+    ~TokenList();
 
     uint32 size() const;
 
