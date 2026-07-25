@@ -75,6 +75,8 @@ class LexicalAnalyzer: public Visitor {
 
   Symbol* getSymbol(stringid name, symboltype stype);
 
+  void testAssignability(Expr* expr);
+
   public:
     LexicalAnalyzer(StringTable* strings, CompilerErrors* errors, Bindings* bindings);
 

@@ -166,13 +166,72 @@ void LexicalAnalyzer::acceptObjectLiteralProperty(ObjectLiteralProperty* v) {
   v->value->acceptVisit(this);
 }
 
+void LexicalAnalyzer::testAssignability(Expr* expr) {
+  if (expr->nodeKind() == AST_IndexAccessExpr) {
+    IndexAccessExpr* idx = static_cast<IndexAccessExpr*>(expr);
+    ScriptType* type = idx->target->getResultingType();
+
+    if (type->kind() == TK_STRING) {
+      m_errors->error(expr->location, "Cannot mutate strings");
+    }
+    return;
+  }
+
+  if (expr->nodeKind() == AST_PropertyAccessExpr) {
+    PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
+    ScriptType* objType = prop->target->getResultingType();
+
+    // Void means it's already failed in the TypeResolver stage
+    if (objType->kind() == TK_ARRAY && prop->resultType->kind() != TK_VOID) {
+      m_errors->error(expr->location, "Cannot mutate array length");
+    }
+
+    return;
+  }
+
+  if (expr->nodeKind() != AST_Identifier) {
+    return;
+  }
+
+  Identifier* id = static_cast<Identifier*>(expr);
+
+  Symbol* varsym = getSymbol(id->value, SYM_VAR);
+  Symbol* constsym = getSymbol(id->value, SYM_CONST);
+
+  if (constsym) {
+    std::string_view view = m_strings->getview(id->value);
+    m_errors->error(expr->location, "Cannot reassign const variable '%.*s'",
+      static_cast<int>(view.length()), view.data()
+    );
+  }
+}
+
 void LexicalAnalyzer::acceptBinaryExpr(BinaryExpr* v) {
   v->lhs->acceptVisit(this);
   v->rhs->acceptVisit(this);
+
+  if (!(v->op & BOP_ASSIGN_FLAG)) {
+    return;
+  }
+
+  testAssignability(v->lhs);
 }
 
 void LexicalAnalyzer::acceptUnaryExpr(UnaryExpr* v) {
   v->target->acceptVisit(this);
+
+  unaryop op = v->op;
+  switch (op) {
+    case UOP_POS:
+    case UOP_NEG:
+    case UOP_BIT_NOT:
+    case UOP_LOG_NOT:
+      return;
+    default:
+      break;
+  }
+
+  testAssignability(v->target);
 }
 
 void LexicalAnalyzer::acceptTernaryExpr(TernaryExpr* v) {
