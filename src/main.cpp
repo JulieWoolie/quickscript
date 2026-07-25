@@ -46,7 +46,7 @@ int32 main(int32 argc, cstring argv[]) {
   cstring fname = argv[argc - 1];
   std::ifstream file(fname);
 
-  if (!file) {
+  if (!file.is_open()) {
     printf("File '%s' doesn't exist or can't be read.\n", fname);
     return EXIT_FAILURE;
   }
