@@ -171,7 +171,11 @@ void findExpectedErrors(std::vector<ExpectedError>* out, TokenList* list, String
         } else if (p.key == "message") {
           err.message = std::string(p.value);
         } else if (p.key == "line") {
-          err.line = parseViewToInt(p.value);
+          if (p.value == "next") {
+            err.line = t->start.line + 1;
+          } else {
+            err.line = parseViewToInt(p.value);
+          }
         }
         readidx = p.end;
       }
