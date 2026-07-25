@@ -27,6 +27,7 @@ class NoFreeAllocator {
 
   public:
     NoFreeAllocator() = default;
+    ~NoFreeAllocator();
 
     template<typename T>
     T* emplace(T node);
@@ -72,6 +73,22 @@ T* NoFreeAllocator::arrayAlloc(uint32 count) {
   }
 
   return (T*) ptr;
+}
+
+inline NoFreeAllocator::~NoFreeAllocator() {
+  if (!m_chunkData) {
+    return;
+  }
+
+  for (uint32 i = 0; i < m_capacity; i++) {
+    Chunk* chunk = &m_chunkData[i];
+    if (!chunk->data) {
+      continue;
+    }
+    free(chunk->data);
+  }
+  
+  free(m_chunkData);
 }
 
 inline uint8 * NoFreeAllocator::allocate(uint64 sz) {
