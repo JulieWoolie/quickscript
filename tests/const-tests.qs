@@ -6,4 +6,7 @@ int32 main() {
 
   # ERROR line=next message="Cannot reassign const variable 'x'"
   x++
+
+  # ERROR line=next message="Const variable 'nonvalue' has no value"
+  const uint32 nonvalue
 }
