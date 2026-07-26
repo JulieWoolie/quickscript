@@ -62,6 +62,7 @@ appendCode("JMPI0")
 appendCode("JMPN0")
 
 byteSizedOpCode("LOADCONST")
+appendCode("LOADCONSTSTR")
 
 out += `\n\n// 4.3.2 Stack Memory OP Codes`
 appendCode("STACKALLOC")

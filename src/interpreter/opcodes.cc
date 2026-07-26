@@ -12,6 +12,7 @@ conststring opcode_name(opcode code) {
     case OP_LOADCONST16: return "LOADCONST16";
     case OP_LOADCONST32: return "LOADCONST32";
     case OP_LOADCONST64: return "LOADCONST64";
+    case OP_LOADCONSTSTR: return "LOADCONSTSTR";
     case OP_STACKALLOC: return "STACKALLOC";
     case OP_STACKFREE: return "STACKFREE";
     case OP_RSREAD8: return "RSREAD8";
