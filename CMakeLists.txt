@@ -35,4 +35,8 @@ add_executable(quickscript src/main.cpp
         src/tester.h
         src/tester.cc
         src/analysis/LexicalAnalyzer.cc
-        src/analysis/LexicalAnalyzer.h)
+        src/analysis/LexicalAnalyzer.h
+        src/analysis/ast_optimizer.h
+        src/analysis/ast_optimizer.cc
+        src/codegen/compiler.h
+        src/codegen/compiler.cc)
