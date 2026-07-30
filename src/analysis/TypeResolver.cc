@@ -243,7 +243,7 @@ void TypeResolver::acceptCallExpr(CallExpr* v) {
   for (uint32 i = 0; i < args; i++) {
     Expr* e = v->arguments.at(i);
     e->acceptVisit(this);
-    params[i].type = e->getResultingType();
+    params[i].type = e->resultType;
     params[i].varargs = false;
   }
 
@@ -251,7 +251,7 @@ void TypeResolver::acceptCallExpr(CallExpr* v) {
   v->target->acceptVisit(this);
   m_expectedTypes.pop_back();
 
-  ScriptType* targetType = v->target->getResultingType();
+  ScriptType* targetType = v->target->resultType;
   if (targetType->kind() != TK_FUNC) {
     m_errors->error(v->location,
       "Expression does not return a callable function, but returns a %s",
@@ -278,7 +278,7 @@ bool hasProperties(const typekind kind) {
 
 void TypeResolver::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
   v->target->acceptVisit(this);
-  ScriptType* resType = v->target->getResultingType();
+  ScriptType* resType = v->target->resultType;
 
   if (!(resType->typeFlags() & TYPEFLAG_PROPERTIES)) {
     m_errors->error(v->location, "%s has no properties that can be accessed", resType->typeName());
@@ -301,7 +301,7 @@ void TypeResolver::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
 
 void TypeResolver::acceptIndexAccessExpr(IndexAccessExpr* v) {
   v->index->acceptVisit(this);
-  ScriptType* indexType = v->index->getResultingType();
+  ScriptType* indexType = v->index->resultType;
 
   if (!isIntegerType(indexType)) {
     m_errors->error(v->index->location,
@@ -311,7 +311,7 @@ void TypeResolver::acceptIndexAccessExpr(IndexAccessExpr* v) {
   }
 
   v->target->acceptVisit(this);
-  ScriptType* resultType = v->target->getResultingType();
+  ScriptType* resultType = v->target->resultType;
 
   if (!(resultType->typeFlags() & TYPEFLAG_INDEXABLE)) {
     m_errors->error(v->location, "Type %s cannot be indexed", resultType->typeName());
@@ -444,7 +444,7 @@ void TypeResolver::acceptObjectLiteral(ObjectLiteral* v) {
     prop->value->acceptVisit(this);
     m_expectedTypes.pop_back();
 
-    ScriptType* pvalType = prop->value->getResultingType();
+    ScriptType* pvalType = prop->value->resultType;
 
     if (!isAssignableTo(proptype, pvalType)) {
       m_errors->error(prop->location,
@@ -479,7 +479,7 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
   for (Expr* expr : v->values) {
     expr->acceptVisit(this);
 
-    ScriptType* valType = expr->getResultingType();
+    ScriptType* valType = expr->resultType;
     if (isAssignableTo(componentType, valType)) {
       continue;
     }
@@ -587,7 +587,7 @@ void checkAssignability(Expr* expr, CompilerErrors* errors) {
 void testTypeAssignability(Expr* expr, CompilerErrors* errors) {
   if (expr->nodeKind() == AST_IndexAccessExpr) {
     IndexAccessExpr* idx = static_cast<IndexAccessExpr*>(expr);
-    ScriptType* type = idx->target->getResultingType();
+    ScriptType* type = idx->target->resultType;
 
     if (type->kind() == TK_STRING) {
       errors->error(expr->location, "Cannot mutate strings");
@@ -597,7 +597,7 @@ void testTypeAssignability(Expr* expr, CompilerErrors* errors) {
 
   if (expr->nodeKind() == AST_PropertyAccessExpr) {
     PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
-    ScriptType* objType = prop->target->getResultingType();
+    ScriptType* objType = prop->target->resultType;
 
     if (prop->resultType->kind() == TK_VOID) {
       // Property not found, don't try to check
@@ -618,8 +618,8 @@ void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
   v->lhs->acceptVisit(this);
   v->rhs->acceptVisit(this);
 
-  ScriptType* ltype = v->lhs->getResultingType();
-  ScriptType* rtype = v->rhs->getResultingType();
+  ScriptType* ltype = v->lhs->resultType;
+  ScriptType* rtype = v->rhs->resultType;
 
   binaryop op = v->op;
   ScriptType* res = getOpResultType(ltype, rtype, op);
@@ -668,7 +668,7 @@ bool unaryOpIsValidFor(unaryop op, ScriptType* type) {
 
 void TypeResolver::acceptUnaryExpr(UnaryExpr* v) {
   v->target->acceptVisit(this);
-  v->setResultingType(v->target->getResultingType());
+  v->resultType = v->target->resultType;
 
   if (unaryOpIsValidFor(v->op, v->resultType)) {
     testTypeAssignability(v->target, m_errors);
@@ -684,17 +684,17 @@ void TypeResolver::acceptUnaryExpr(UnaryExpr* v) {
 void TypeResolver::acceptTernaryExpr(TernaryExpr* v) {
   v->condition->acceptVisit(this);
 
-  if (v->condition->getResultingType()->kind() != TK_PRIMITIVE) {
+  if (v->condition->resultType->kind() != TK_PRIMITIVE) {
     m_errors->error(v->condition->location, "%s is not assignable to a bool condition",
-      v->condition->getResultingType()->typeName()
+      v->condition->resultType->typeName()
     );
   }
 
   v->left->acceptVisit(this);
   v->right->acceptVisit(this);
 
-  ScriptType* lType = v->left->getResultingType();
-  ScriptType* rType = v->right->getResultingType();
+  ScriptType* lType = v->left->resultType;
+  ScriptType* rType = v->right->resultType;
 
   ScriptType* common = getCommonType(lType, rType);
 
@@ -762,7 +762,7 @@ void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
     m_expectedTypes.pop_back();
 
     ScriptType* vartype = v->typeExpr->getReferencedType();
-    ScriptType* valtype = v->value->getResultingType();
+    ScriptType* valtype = v->value->resultType;
 
     if (!isAssignableTo(vartype, valtype)) {
       m_errors->error(v->location,
@@ -816,7 +816,7 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
   STATPUSH
   v->value->acceptVisit(this);
 
-  ScriptType* rtype = v->value->getResultingType();
+  ScriptType* rtype = v->value->resultType;
 
   if (!expected || isAssignableTo(expected, rtype)) {
     STATPOP
@@ -943,7 +943,7 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
 
     if (prop->value) {
       prop->value->acceptVisit(this);
-      ScriptType* vtype = prop->value->getResultingType();
+      ScriptType* vtype = prop->value->resultType;
 
       if (!isAssignableTo(ptype, vtype)) {
         m_errors->error(prop->location,
@@ -967,7 +967,7 @@ void TypeResolver::acceptAssertStatement(AssertStatement* v) {
   if (v->message) {
     v->message->acceptVisit(this);
 
-    ScriptType* msgType = v->message->getResultingType();
+    ScriptType* msgType = v->message->resultType;
 
     if (msgType->kind() != TK_STRING) {
       m_errors->error(
@@ -979,7 +979,7 @@ void TypeResolver::acceptAssertStatement(AssertStatement* v) {
 
   v->condition->acceptVisit(this);
 
-  ScriptType* condType = v->condition->getResultingType();
+  ScriptType* condType = v->condition->resultType;
   PrimitiveScriptType* boolType = m_lookup->getPrimitiveType(PK_BOOL);
 
   if (isAssignableTo(boolType, condType)) {

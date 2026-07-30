@@ -147,9 +147,6 @@ struct Node {
 
 #define AST_EXPR_TYPE(name, supertype, body) struct name: supertype {\
   body\
-  ScriptType* resultType = nullptr;\
-  ScriptType* getResultingType() override { return resultType; }\
-  void setResultingType(ScriptType* t) override { resultType = t; }\
   conststring nodeType() override {return #name;}\
   void acceptVisit(Visitor* v) override { v->accept##name(this); }\
   astnodetype nodeKind() override { return AST_##name; }\
@@ -214,8 +211,7 @@ AST_TYPE(ArrayTypeExpr, TypeExpr,
 // ========================
 
 struct Expr: Node {
-  virtual ScriptType* getResultingType() = 0;
-  virtual void setResultingType(ScriptType* t) = 0;
+  ScriptType* resultType = nullptr;
 };
 
 AST_EXPR_TYPE(Identifier, Expr,

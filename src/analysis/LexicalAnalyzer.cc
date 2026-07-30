@@ -120,7 +120,7 @@ void LexicalAnalyzer::acceptCallExpr(CallExpr* v) {
 void LexicalAnalyzer::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
   v->target->acceptVisit(this);
 
-  ScriptType* resType = v->target->getResultingType();
+  ScriptType* resType = v->target->resultType;
   if (resType->kind() == TK_VOID) {
     return;
   }
