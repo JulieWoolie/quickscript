@@ -89,6 +89,7 @@ conversionCodes()
 out += `\n\n// 4.3.6 Unary Operations`
 appendCode("BNEGATE")
 appendCode("LNEGATE")
+appendCode("NEG")
 
 out += `\n\n// 4.3.7.1 Integer-only Binary Operations`
 byteSizedOpCode("LSHIFT")

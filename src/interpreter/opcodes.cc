@@ -136,6 +136,7 @@ conststring opcode_name(opcode code) {
     case OP_F64TF32: return "F64TF32";
     case OP_BNEGATE: return "BNEGATE";
     case OP_LNEGATE: return "LNEGATE";
+    case OP_NEG: return "NEG";
     case OP_LSHIFT8: return "LSHIFT8";
     case OP_LSHIFT16: return "LSHIFT16";
     case OP_LSHIFT32: return "LSHIFT32";
