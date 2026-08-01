@@ -5,8 +5,68 @@
 #include "opcodespec.h"
 #include "../interpreter/opcodes.h"
 
+#define BYTEWIDTH_OPCODE(size, writer, opcode) \
+  switch (size) {\
+    case 1: writer->appendOpCode(opcode##8); break;\
+    case 2: writer->appendOpCode(opcode##16); break;\
+    case 4: writer->appendOpCode(opcode##32); break;\
+    default: writer->appendOpCode(opcode##64); break;\
+  }
+
+#define NUMTYPE_OPCODE(primkind, writer, opcode) \
+  switch (primkind) { \
+    case PK_BOOL:\
+    case PK_UINT8: writer->appendOpCode(opcode##U8); break; \
+    case PK_INT8: writer->appendOpCode(opcode##I8); break; \
+    case PK_UINT16: writer->appendOpCode(opcode##U16); break; \
+    case PK_INT16: writer->appendOpCode(opcode##I16); break; \
+    case PK_UINT32: writer->appendOpCode(opcode##U32); break; \
+    case PK_INT32: writer->appendOpCode(opcode##I32); break; \
+    case PK_UINT64: writer->appendOpCode(opcode##U64); break; \
+    case PK_INT64: writer->appendOpCode(opcode##I64); break; \
+    case PK_FLOAT32: writer->appendOpCode(opcode##F32); break; \
+    default: writer->appendOpCode(opcode##F64); break; \
+  }
+
+#define BIN_APPEND(pad) \
+      writer->appendU8(r1);\
+      writer->appendU8(r2);\
+      writer->appendU8(r1);\
+      writer->appendPadding(pad);
+
+#define CMP_CASE(cmptype) \
+  case BOP_##cmptype: \
+    if (lkind == TK_PRIMITIVE) { \
+      NUMTYPE_OPCODE(pk, writer, OP_##cmptype) \
+    } else { \
+      writer->appendOpCode(OP_##cmptype##ARR); \
+    } \
+    writer->appendU8(r1); \
+    writer->appendU8(r2); \
+    writer->appendU8(r1); \
+    writer->appendPadding(PAD_##cmptype); \
+    break;
+
+#define EQUALITY_CASE(type)\
+  case BOP_##type:\
+    if (lkind == TK_PRIMITIVE) {\
+      BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_##type)\
+    } else if (lkind == TK_ARRAY || lkind == TK_STRING) {\
+      writer->appendOpCode(OP_##type##ARR);\
+    } else if (lkind == TK_STRUCT) {\
+      writer->appendOpCode(OP_##type##STRUCT);\
+    }\
+    BIN_APPEND(PAD_##type)\
+    break;
+
+#define MATH_CASE(type)\
+  case BOP_##type:\
+    NUMTYPE_OPCODE(pk, writer, OP_##type)\
+    BIN_APPEND(PAD_##type)\
+    break;
+
 #define ALL_REGISTERS_USED 0xFFFFFFFFFFFFFFFF
-#define NIL_REGISTER -1
+#define NO_REGISTER -1
 
 #define SSYM_NIL 0
 #define SSYM_VAR 1
@@ -95,7 +155,7 @@ struct CompilerContext {
 
     char* charptr = reinterpret_cast<char*>(writeptr);
     stringTable->copychars(id, charptr, len);
-    
+
     uint64 off = stringPool->len;
     stringPool->len += sizeof(uint32) + len;
     map->emplace(id, off);
@@ -105,7 +165,7 @@ struct CompilerContext {
 
   registeridopt findFreeRegister() const {
     if (registersInUse == ALL_REGISTERS_USED) {
-      return NIL_REGISTER;
+      return NO_REGISTER;
     }
     if (registersInUse == 0) {
       return 0;
@@ -120,7 +180,7 @@ struct CompilerContext {
       return i;
     }
 
-    return NIL_REGISTER;
+    return NO_REGISTER;
   }
 
   bool registerInUse(const registerid id) const {
@@ -145,10 +205,10 @@ struct CompilerContext {
 
 struct AddrOutput {
   uint8 outptype = OUTP_NIL;
-  registeridopt objectRegister = NIL_REGISTER;
-  registeridopt indexRegister = NIL_REGISTER;
+  registeridopt objectRegister = NO_REGISTER;
+  registeridopt indexRegister = NO_REGISTER;
   uint32 memoffset = 0;
-  uint64 stackoffset = 0;
+  int64 stackoffset = 0;
 };
 
 #define APPEND_METHOD(name, bytes, type) \
@@ -250,29 +310,405 @@ void appendStatement(Statement* stat, CompilerContext* ctx) {
   }
 }
 
-#define BYTEWIDTH_OPCODE(size, writer, opcode) \
-  switch (size) {\
-    case 1: writer->appendOpCode(opcode##8); break;\
-    case 2: writer->appendOpCode(opcode##16); break;\
-    case 4: writer->appendOpCode(opcode##32); break;\
-    default: writer->appendOpCode(opcode##64); break;\
+void compileWriteOperation(
+  AddrOutput* addrout,
+  uint32 stacksize,
+  CompilerContext* ctx,
+  registerid valueRegister
+) {
+  BytecodeWriter* writer = ctx->writer;
+
+  switch (addrout->outptype) {
+    case OUTP_IDX:
+      BYTEWIDTH_OPCODE(stacksize, writer, OP_WRITEIDX)
+      writer->appendU8(addrout->objectRegister);
+      writer->appendU8(valueRegister);
+      writer->appendU8(addrout->indexRegister);
+      writer->appendPadding(PAD_WRITEIDX);
+      break;
+    case OUTP_PROP:
+      BYTEWIDTH_OPCODE(stacksize, writer, OP_WRITEOBJ)
+      writer->appendU8(addrout->objectRegister);
+      writer->appendU8(valueRegister);
+      writer->appendU32(addrout->memoffset);
+      writer->appendPadding(PAD_WRITEOBJ);
+      break;
+    case OUTP_RSTACK:
+      BYTEWIDTH_OPCODE(stacksize, writer, OP_RSWRITE)
+      writer->appendU8(valueRegister);
+      writer->appendU64(addrout->stackoffset);
+      break;
+    case OUTP_ASTACK:
+      BYTEWIDTH_OPCODE(stacksize, writer, OP_ASWRITE)
+      writer->appendU8(valueRegister);
+      writer->appendU64(addrout->stackoffset);
+      break;
+    default:
+      break;
   }
 
-#define NUMTYPE_OPCODE(primkind, writer, opcode) \
-  switch (primkind) { \
-    case PK_UINT8: writer->appendOpCode(opcode##U8); break; \
-    case PK_INT8: writer->appendOpCode(opcode##I8); break; \
-    case PK_UINT16: writer->appendOpCode(opcode##U16); break; \
-    case PK_INT16: writer->appendOpCode(opcode##I16); break; \
-    case PK_UINT32: writer->appendOpCode(opcode##U32); break; \
-    case PK_INT32: writer->appendOpCode(opcode##I32); break; \
-    case PK_UINT64: writer->appendOpCode(opcode##U64); break; \
-    case PK_INT64: writer->appendOpCode(opcode##I64); break; \
-    case PK_FLOAT32: writer->appendOpCode(opcode##F32); break; \
-    default: writer->appendOpCode(opcode##F64); break; \
+  if (addrout->objectRegister != NO_REGISTER) {
+    ctx->freeRegister(addrout->objectRegister);
+  }
+  if (addrout->indexRegister != NO_REGISTER) {
+    ctx->freeRegister(addrout->indexRegister);
+  }
+}
+
+void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx);
+
+void compileIndexAccessExpr(
+  IndexAccessExpr* access,
+  registeridopt resultreg,
+  AddrOutput* addr,
+  CompilerContext* ctx
+) {
+  registerid targetreg = ctx->findFreeRegister();
+  ctx->useRegister(targetreg);
+
+  registerid idxreg = ctx->findFreeRegister();
+  ctx->useRegister(idxreg);
+
+  compileExpr(access->target, targetreg, nullptr, ctx);
+  uint32 stackSize = access->resultType->stackSizeBytes();
+
+  if (resultreg != NO_REGISTER) {
+    BytecodeWriter* writer = ctx->writer;
+    BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX)
+    writer->appendU8(targetreg);
+    writer->appendU8(resultreg);
+    writer->appendU8(idxreg);
+    writer->appendPadding(6);
   }
 
-void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx) {
+  if (addr) {
+    addr->outptype = OUTP_IDX;
+    addr->objectRegister = targetreg;
+    addr->indexRegister = idxreg;
+  } else {
+    ctx->freeRegister(targetreg);
+    ctx->freeRegister(idxreg);
+  }
+}
+
+void compilePropertyAccess(
+  PropertyAccessExpr* prop,
+  registeridopt resultreg,
+  AddrOutput* addr,
+  CompilerContext* ctx
+) {
+  ScriptType* type = prop->target->resultType;
+
+  typekind targetkind = type->kind();
+
+  registerid targetreg = ctx->findFreeRegister();
+  ctx->useRegister(targetreg);
+
+  compileExpr(prop->target, targetreg, nullptr, ctx);
+
+  uint32 propoff;
+
+  if (targetkind != TK_STRUCT) {
+    // Only non struct property that is available is the length property on
+    // arrays and strings which is always at offset 0x0
+    propoff = 0;
+  } else {
+    std::string_view view = ctx->stringTable->getview(prop->property->value);
+    ScriptStructType* structType = static_cast<ScriptStructType*>(type);
+
+    propoff = 0;
+
+    for (uint32 p = 0; p < structType->propertyCount; p++) {
+      StructProperty* prop = &structType->properties[p];
+
+      if (prop->propertyName != view) {
+        propoff += prop->type->stackSizeBytes();
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  if (resultreg != NO_REGISTER) {
+    BytecodeWriter* writer = ctx->writer;
+    writer->appendOpCode(OP_READOBJ32);
+    writer->appendU8(targetreg);
+    writer->appendU8(resultreg);
+    writer->appendU8(propoff);
+  }
+
+  if (addr) {
+    addr->outptype = OUTP_PROP;
+    addr->objectRegister = targetreg;
+    addr->memoffset = propoff;
+  } else {
+    ctx->freeRegister(targetreg);
+  }
+}
+
+void compileIdentifier(
+  Identifier* id,
+  registeridopt resultreg,
+  AddrOutput* addr,
+  CompilerContext* ctx
+) {
+  StackSymType type = SSYM_NIL;
+  BytecodeWriter* writer = ctx->writer;
+
+  if (id->resultType->kind() == TK_FUNC) {
+    type = SSYM_FUNC;
+  } else {
+    type = SSYM_VAR;
+  }
+
+  std::pair<StackScope*, StackSymbol*> pair = ctx->findSymbol(id->value, type);
+  StackScope* scope = pair.first;
+  StackSymbol* sym = pair.second;
+
+  StackScope* current = ctx->getScope();
+
+  // Variable declared in current scope
+  if (scope == current) {
+    if (resultreg != NO_REGISTER) {
+      BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD)
+      writer->appendU8(resultreg);
+      writer->appendI64(sym->stackoffset);
+    }
+
+    if (addr) {
+      addr->outptype = OUTP_RSTACK;
+      addr->stackoffset = sym->stackoffset;
+    }
+
+    return;
+  }
+
+  // TODO: Figure out how to read from upper levels of scopes
+  //
+  //   So I think the way this needs to be done (reading from upper scopes) depends on
+  //   which variable or constant is being referenced. If we're referencing a global
+  //   variable declared in the main scope of the script, then we use ASREAD (Absolute
+  //   stack read) which takes in a memory offset relative to the start of the script's
+  //   main scope, or to read ASREAD with a negative number if not.
+  //
+  //   The thing is, a calling function can't reference anything from a caller's stack
+  //   with this methodology because the function doesn't know anything in the above
+  //   scope exists unless this is a function declared within a function, in which
+  //   case... damn, that might cause issues.
+  //
+  //   Nested functions will expect the stack to be offset from where it was declared,
+  //   but it can be declared near the top of the encasing function but be called at
+  //   the end, so the stack can be different. Basically, the negative pointer needs
+  //   to read NOT from the current scope but from a saved stack address... I think?
+  //
+  //   This is s confusing
+  //
+
+  // Main scope, aka, a global variable
+  if (scope->level == 0) {
+    if (resultreg != NO_REGISTER) {
+      BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_ASREAD)
+      writer->appendU8(resultreg);
+      writer->appendU64(sym->stackoffset);
+    }
+
+    if (addr) {
+      addr->outptype = OUTP_RSTACK;
+      addr->stackoffset = sym->stackoffset;
+    }
+
+    return;
+  }
+}
+
+void compileNonReadingExpr(Expr* expr, AddrOutput* addr, CompilerContext* ctx) {
+  astnodetype kind = expr->nodeKind();
+  switch (kind) {
+    case AST_PropertyAccessExpr: {
+      compilePropertyAccess(static_cast<PropertyAccessExpr*>(expr), NO_REGISTER, addr, ctx);
+      return;
+    }
+    case AST_IndexAccessExpr: {
+      compileIndexAccessExpr(static_cast<IndexAccessExpr*>(expr), NO_REGISTER, addr, ctx);
+      return;
+    }
+    case AST_Identifier: {
+      compileIdentifier(static_cast<Identifier*>(expr), NO_REGISTER, addr, ctx);
+      return;
+    }
+    default:
+      break;
+  }
+}
+
+void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, CompilerContext* ctx) {
+  BytecodeWriter* writer = ctx->writer;
+  binaryop bop = bin->op;
+  binaryop nonAssign = bop & ~BOP_ASSIGN_FLAG;
+
+  //
+  // == How this should work ==
+  //
+  // r1 = result register
+  //
+  // 1. General operations:
+  //   - Compile LHS with r1 as it's return register
+  //   - Allocate register, named "r2"
+  //   - Compile RHS with r2 as it's return register
+  //   - Add IR instructions for performing operation itself with r1 and r2, output to r1
+  //
+  // The following operations should run in the above specified way:
+  //   - Comparison operations:
+  //       GT, LT, GTE, LTE
+  //   - Equality checks:
+  //       EQ, NEQ
+  //   - Math:
+  //       ADD, SUB, MUL, DIV, MOD, POW
+  //   - Bitwise operations:
+  //       SHL, SHR, USHR, XOR, BIT_OR, BIT_AND
+  //
+  // 2. Non-assignment boolean logic:
+  //
+  // This includes 2 operations, "OR" and "AND", these should run like this:
+  //
+  // AND Operation execution:
+  //   - Compile LHS with r1 as its register
+  //   - IF FALSE, jump to expression end
+  //   - Compile RHS with r1 as its register
+  //
+  // OR Operation execution:
+  //   - Compile LHS with r1 as its register
+  //   - IF TRUE, jump to expression end
+  //   - Compile RHS with r1 as its register
+  //
+  // 3. Assignment operation (only applies to the ASSIGN operation):
+  //  - Compile a read-only version of LHS (Without reading the value, just get it's location)
+  //  - Allocate a register, named "r2"
+  //  - Compile RHS with r2 as its return register
+  //  - Assign the value in r2 to the location of the value returned by LHS
+  //
+  // This needs to somehow read the address of the LHS without evaluating it, which I haven't
+  // written a way to do yet, so that's interesting.
+  //
+  // 4. Mixed evaluate-and-assign operations (Basically +=, -=, *=, etc):
+  //   - Set up an AddrOutput
+  //   - Compile LHS, RHS and evaluate as mentioned in sections 1 and 2
+  //   - Assign value to LHS' location
+  //
+
+  Expr* lhs = bin->lhs;
+  Expr* rhs = bin->rhs;
+
+  if (bop == BOP_ASSIGN) {
+    AddrOutput out;
+    compileNonReadingExpr(lhs, &out, ctx);
+
+    compileExpr(rhs, r1, nullptr, ctx);
+
+    uint32 stacksize = rhs->resultType->stackSizeBytes();
+    compileWriteOperation(&out, stacksize, ctx, r1);
+
+    return;
+  }
+
+  bool isAssignment = bop & BOP_ASSIGN_FLAG;
+  AddrOutput out;
+
+  if (nonAssign == BOP_LOG_AND || nonAssign == BOP_LOG_OR) {
+    compileExpr(lhs, r1, &out, ctx);
+
+    if (nonAssign == BOP_LOG_AND) {
+      writer->appendOpCode(OP_JMPI0);
+    } else {
+      writer->appendOpCode(OP_JMPN0);
+    }
+
+    uint64 jumpAddrOffset = writer->buflen;
+
+    writer->appendU32(0);
+    writer->appendU8(r1);
+
+    compileExpr(rhs, r1, &out, ctx);
+
+    *reinterpret_cast<uint32*>(writer->buf + jumpAddrOffset) = writer->getInstructionCounter();
+
+    if (isAssignment) {
+      compileWriteOperation(&out, 1, ctx, r1);
+    }
+
+    return;
+  }
+
+  registerid r2 = ctx->findFreeRegister();
+  ctx->useRegister(r2);
+
+  compileExpr(lhs, r2, &out, ctx);
+  compileExpr(rhs, r1, nullptr, ctx);
+
+  ScriptType* ltype = lhs->resultType;
+  ScriptType* rtype = rhs->resultType;
+
+  typekind lkind = ltype->kind();
+  primitivekind pk = PK_NIL;
+
+  if (lkind == TK_PRIMITIVE) {
+    pk = static_cast<PrimitiveScriptType*>(ltype)->primtype;
+  }
+
+  switch (nonAssign) {
+    case BOP_SHL:
+      BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_LSHIFT)
+      BIN_APPEND(PAD_LSHIFT)
+      break;
+    case BOP_SHR:
+    case BOP_USHR:
+      BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_RSHIFT)
+      BIN_APPEND(PAD_RSHIFT)
+      break;
+    case BOP_BIT_OR:
+      writer->appendOpCode(OP_BOR);
+      BIN_APPEND(PAD_BOR)
+      break;
+    case BOP_BIT_AND:
+      writer->appendOpCode(OP_BAND);
+      BIN_APPEND(PAD_BAND)
+      break;
+    case BOP_XOR:
+      if (pk == PK_BOOL) {
+        writer->appendOpCode(OP_BXOR);
+      } else {
+        writer->appendOpCode(OP_LXOR);
+      }
+      BIN_APPEND(PAD_BXOR)
+      break;
+
+
+    EQUALITY_CASE(EQ)
+    EQUALITY_CASE(NEQ)
+
+    MATH_CASE(ADD)
+    MATH_CASE(SUB)
+    MATH_CASE(MUL)
+    MATH_CASE(DIV)
+    MATH_CASE(MOD)
+    MATH_CASE(POW)
+
+    CMP_CASE(GT)
+    CMP_CASE(GTE)
+    CMP_CASE(LT)
+    CMP_CASE(LTE)
+
+    default:
+      break;
+  }
+
+  if (isAssignment) {
+    compileWriteOperation(&out, rtype->stackSizeBytes(), ctx, r1);
+  }
+}
+
+void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx) {
   astnodetype kind = expr->nodeKind();
   BytecodeWriter* writer = ctx->writer;
 
@@ -291,6 +727,11 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
     //  - X UnaryExpr
     //  - X TernaryExpr
 
+    case AST_BinaryExpr: {
+      compileBinaryExpr(static_cast<BinaryExpr*>(expr), resultreg, addr, ctx);
+      return;
+    }
+
     case AST_TernaryExpr: {
       TernaryExpr* ternary = static_cast<TernaryExpr*>(expr);
 
@@ -300,7 +741,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       //     - Jump to left if true
       //     - Jump to right otherwise
 
-      appendExpr(ternary->condition, resultreg, nullptr, ctx);
+      compileExpr(ternary->condition, resultreg, nullptr, ctx);
 
       writer->appendOpCode(OP_JMPI0);
       uint64 firstJumpOff = writer->buflen;
@@ -308,7 +749,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       writer->appendU8(resultreg);
       writer->appendPadding(PAD_JMPI0);
 
-      appendExpr(ternary->left, resultreg, nullptr, ctx);
+      compileExpr(ternary->left, resultreg, nullptr, ctx);
 
       writer->appendOpCode(OP_JMP);
       uint64 secondJumpOff = writer->buflen;
@@ -317,7 +758,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       *reinterpret_cast<uint32*>(writer->buf + firstJumpOff) = writer->getInstructionCounter();
 
-      appendExpr(ternary->right, resultreg, nullptr, ctx);
+      compileExpr(ternary->right, resultreg, nullptr, ctx);
 
       *reinterpret_cast<uint32*>(writer->buf + secondJumpOff) = writer->getInstructionCounter();
 
@@ -325,144 +766,17 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
     }
 
     case AST_PropertyAccessExpr: {
-      PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
-      ScriptType* type = prop->target->resultType;
-
-      typekind targetkind = type->kind();
-
-      registerid targetreg = ctx->findFreeRegister();
-      ctx->useRegister(targetreg);
-
-      appendExpr(prop->target, targetreg, nullptr, ctx);
-
-      uint32 propoff;
-
-      if (targetkind != TK_STRUCT) {
-        // Only non struct property that is available is the length property on
-        // arrays and strings which is always at offset 0x0
-        propoff = 0;
-      } else {
-        std::string_view view = ctx->stringTable->getview(prop->property->value);
-        ScriptStructType* structType = static_cast<ScriptStructType*>(type);
-
-        propoff = 0;
-
-        for (uint32 p = 0; p < structType->propertyCount; p++) {
-          StructProperty* prop = &structType->properties[p];
-
-          if (prop->propertyName != view) {
-            propoff += prop->type->stackSizeBytes();
-            continue;
-          }
-
-          break;
-        }
-      }
-
-      writer->appendOpCode(OP_READOBJ32);
-      writer->appendU8(targetreg);
-      writer->appendU8(resultreg);
-      writer->appendU8(propoff);
-
-      if (addr) {
-        addr->outptype = OUTP_PROP;
-        addr->objectRegister = targetreg;
-        addr->memoffset = propoff;
-      } else {
-        ctx->freeRegister(targetreg);
-      }
-
+      compilePropertyAccess(static_cast<PropertyAccessExpr*>(expr), resultreg, addr, ctx);
       return;
     }
 
     case AST_IndexAccessExpr: {
-      IndexAccessExpr* access = static_cast<IndexAccessExpr*>(expr);
-
-      registerid targetreg = ctx->findFreeRegister();
-      ctx->useRegister(targetreg);
-
-      registerid idxreg = ctx->findFreeRegister();
-      ctx->useRegister(idxreg);
-
-      appendExpr(access->target, targetreg, nullptr, ctx);
-      uint32 stackSize = access->resultType->stackSizeBytes();
-
-      BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX)
-
-      writer->appendU8(targetreg);
-      writer->appendU8(resultreg);
-      writer->appendU8(idxreg);
-      writer->appendPadding(6);
-
-      if (addr) {
-        addr->outptype = OUTP_IDX;
-        addr->objectRegister = targetreg;
-        addr->indexRegister = idxreg;
-      } else {
-        ctx->freeRegister(targetreg);
-        ctx->freeRegister(idxreg);
-      }
-
+      compileIndexAccessExpr(static_cast<IndexAccessExpr*>(expr), resultreg, addr, ctx);
       return;
     }
 
     case AST_Identifier: {
-      Identifier* id = static_cast<Identifier*>(expr);
-      StackSymType type = SSYM_NIL;
-
-      if (id->resultType->kind() == TK_FUNC) {
-        type = SSYM_FUNC;
-      } else {
-        type = SSYM_VAR;
-      }
-
-      std::pair<StackScope*, StackSymbol*> pair = ctx->findSymbol(id->value, type);
-      StackScope* scope = pair.first;
-      StackSymbol* sym = pair.second;
-
-      StackScope* current = ctx->getScope();
-
-      // Variable declared in current scope
-      if (scope == current) {
-        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD)
-
-        writer->appendU8(resultreg);
-        writer->appendU64(sym->stackoffset);
-
-        return;
-      }
-
-      // TODO: Figure out how to read from upper levels of scopes
-      //
-      //   So I think the way this needs to be done (reading from upper scopes) depends on
-      //   which variable or constant is being referenced. If we're referencing a global
-      //   variable declared in the main scope of the script, then we use ASREAD (Absolute
-      //   stack read) which takes in a memory offset relative to the start of the script's
-      //   main scope, or to read ASREAD with a negative number if not.
-      //
-      //   The thing is, a calling function can't reference anything from a caller's stack
-      //   with this methodology because the function doesn't know anything in the above
-      //   scope exists unless this is a function declared within a function, in which
-      //   case... damn, that might cause issues.
-      //
-      //   Nested functions will expect the stack to be offset from where it was declared,
-      //   but it can be declared near the top of the encasing function but be called at
-      //   the end, so the stack can be different. Basically, the negative pointer needs
-      //   to read NOT from the current scope but from a saved stack address... I think?
-      //
-      //   This is s confusing
-      //
-
-      // Main scope, aka, a global variable
-      if (scope->level == 0) {
-        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_ASREAD)
-
-        writer->appendU8(resultreg);
-        writer->appendU64(sym->stackoffset);
-
-        return;
-      }
-
+      compileIdentifier(static_cast<Identifier*>(expr), resultreg, addr, ctx);
       return;
     }
 
@@ -471,16 +785,16 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       unaryop uop = un->op;
 
       if (uop == UOP_POS) {
-        appendExpr(un->target, resultreg, nullptr, ctx);
+        compileExpr(un->target, resultreg, nullptr, ctx);
         return;
       }
 
       switch (uop) {
         case UOP_POS:
-          appendExpr(un->target, resultreg, nullptr, ctx);
+          compileExpr(un->target, resultreg, nullptr, ctx);
           return;
         case UOP_NEG: {
-          appendExpr(un->target, resultreg, nullptr, ctx);
+          compileExpr(un->target, resultreg, nullptr, ctx);
 
           PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
           NUMTYPE_OPCODE(primType->primtype, writer, OP_NEG)
@@ -491,14 +805,14 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           return;
         }
         case UOP_BIT_NOT:
-          appendExpr(un->target, resultreg, nullptr, ctx);
+          compileExpr(un->target, resultreg, nullptr, ctx);
           writer->appendOpCode(OP_BNEGATE);
           writer->appendU8(resultreg);
           writer->appendU8(resultreg);
           writer->appendPadding(7);
           return;
         case UOP_LOG_NOT:
-          appendExpr(un->target, resultreg, nullptr, ctx);
+          compileExpr(un->target, resultreg, nullptr, ctx);
           writer->appendOpCode(OP_LNEGATE);
           writer->appendU8(resultreg);
           writer->appendU8(resultreg);
@@ -540,7 +854,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
         targetRegister = resultreg;
       }
 
-      appendExpr(un->target, targetRegister, &addrout, ctx);
+      compileExpr(un->target, targetRegister, &addrout, ctx);
 
       if (isPostOp) {
         writer->appendInstruction(OP_MOV, targetRegister, resultreg);
@@ -570,35 +884,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           break;
       }
 
-      switch (addrout.outptype) {
-        case OUTP_IDX:
-          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_WRITEIDX)
-          writer->appendU8(addrout.objectRegister);
-          writer->appendU8(targetRegister);
-          writer->appendU8(addrout.indexRegister);
-          writer->appendPadding(PAD_WRITEIDX);
-          break;
-        case OUTP_PROP:
-          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_WRITEOBJ)
-          writer->appendU8(addrout.objectRegister);
-          writer->appendU8(targetRegister);
-          writer->appendU32(addrout.memoffset);
-          writer->appendPadding(PAD_WRITEOBJ);
-          break;
-        case OUTP_RSTACK:
-          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_RSWRITE)
-          writer->appendU8(targetRegister);
-          writer->appendU64(addrout.stackoffset);
-          break;
-        case OUTP_ASTACK:
-          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_ASWRITE)
-          writer->appendU8(targetRegister);
-          writer->appendU64(addrout.stackoffset);
-          break;
-        default:
-          break;
-      }
-
+      compileWriteOperation(&addrout, primType->stackSizeBytes(), ctx, targetRegister);
       return;
     }
 
