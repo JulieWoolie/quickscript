@@ -41,6 +41,8 @@ struct BytecodeWriter {
   void appendF64(float64 f64);
   void appendPadding(uint64 bytes);
 
+  void appendInstruction(opcode code, ...);
+
   template<typename T>
   T* currentAddrAs();
 };

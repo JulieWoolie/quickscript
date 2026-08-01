@@ -1,4 +1,8 @@
 #include "compiler.h"
+
+#include <stdarg.h>
+
+#include "opcodespec.h"
 #include "../interpreter/opcodes.h"
 
 #define ALL_REGISTERS_USED 0xFFFFFFFFFFFFFFFF
@@ -126,15 +130,17 @@ struct CompilerContext {
 };
 
 #define OUTP_NIL    0
-#define OUTP_STACK  1
-#define OUTP_PROP   2
-#define OUTP_IDX    3
+#define OUTP_ASTACK 1
+#define OUTP_RSTACK 2
+#define OUTP_PROP   3
+#define OUTP_IDX    4
 
 struct AddrOutput {
   uint8 outptype = OUTP_NIL;
-  registeridopt reg1 = NIL_REGISTER;
-  registeridopt reg2 = NIL_REGISTER;
-  uint64 memoffset = 0;
+  registeridopt objectRegister = NIL_REGISTER;
+  registeridopt indexRegister = NIL_REGISTER;
+  uint32 memoffset = 0;
+  uint64 stackoffset = 0;
 };
 
 #define APPEND_METHOD(name, bytes, type) \
@@ -175,9 +181,28 @@ void BytecodeWriter::reserveSpace(uint64 memsize) {
 }
 
 void BytecodeWriter::appendPadding(uint64 bytes) {
+  if (!bytes) {
+    return;
+  }
+
   reserveSpace(bytes);
   memset(buf + buflen, 0, bytes);
   buflen += bytes;
+}
+
+void BytecodeWriter::appendInstruction(opcode code, ...) {
+  va_list list;
+  va_start(list, code);
+
+  reserveSpace(LENGTH_INSTRUCTION);
+
+  uint8* d = buf + buflen;
+  *((opcode*) d) = code;
+
+  d += LENGTH_OPCODE;
+
+  appendOpCodeData(d, code, list);
+  va_end(list);
 }
 
 uint64 measureStackSize(Statement* s) {
@@ -207,20 +232,26 @@ void appendStatement(Statement* stat, CompilerContext* ctx) {
   }
 }
 
-#define BYTEWIDTH_SWITCH(size, u8, u16, u32, u64) \
+#define BYTEWIDTH_OPCODE(size, writer, opcode) \
   switch (size) {\
-    case 1: u8 break;\
-    case 2: u16 break;\
-    case 4: u32 break;\
-    default: u64 break;\
+    case 1: writer->appendOpCode(opcode##8); break;\
+    case 2: writer->appendOpCode(opcode##16); break;\
+    case 4: writer->appendOpCode(opcode##32); break;\
+    default: writer->appendOpCode(opcode##64); break;\
   }
 
-#define BYTEWIDTH_OPCODE(size, writer, u8, u16, u32, u64) \
-  switch (size) {\
-    case 1: writer->appendOpCode(u8); break;\
-    case 2: writer->appendOpCode(u16); break;\
-    case 4: writer->appendOpCode(u32); break;\
-    default: writer->appendOpCode(u64); break;\
+#define NUMTYPE_OPCODE(primkind, writer, opcode) \
+  switch (primkind) { \
+    case PK_UINT8: writer->appendOpCode(opcode##U8); break; \
+    case PK_INT8: writer->appendOpCode(opcode##I8); break; \
+    case PK_UINT16: writer->appendOpCode(opcode##U16); break; \
+    case PK_INT16: writer->appendOpCode(opcode##I16); break; \
+    case PK_UINT32: writer->appendOpCode(opcode##U32); break; \
+    case PK_INT32: writer->appendOpCode(opcode##I32); break; \
+    case PK_UINT64: writer->appendOpCode(opcode##U64); break; \
+    case PK_INT64: writer->appendOpCode(opcode##I64); break; \
+    case PK_FLOAT32: writer->appendOpCode(opcode##F32); break; \
+    default: writer->appendOpCode(opcode##F64); break; \
   }
 
 void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx) {
@@ -239,7 +270,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
     //  - X IntLiteral
     //  - X FloatLiteral
     //  -   BinaryExpr
-    //  -   UnaryExpr
+    //  - X UnaryExpr
     //  -   TernaryExpr
 
     case AST_PropertyAccessExpr: {
@@ -253,7 +284,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       appendExpr(prop->target, targetreg, nullptr, ctx);
 
-      uint64 propoff;
+      uint32 propoff;
 
       if (targetkind != TK_STRUCT) {
         // Only non struct property that is available is the length property on
@@ -284,7 +315,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       if (addr) {
         addr->outptype = OUTP_PROP;
-        addr->reg1 = targetreg;
+        addr->objectRegister = targetreg;
         addr->memoffset = propoff;
       } else {
         ctx->freeRegister(targetreg);
@@ -305,7 +336,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       appendExpr(access->target, targetreg, nullptr, ctx);
       uint32 stackSize = access->resultType->stackSizeBytes();
 
-      BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX8, OP_READIDX16, OP_READIDX32, OP_READIDX64)
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX)
 
       writer->appendU8(targetreg);
       writer->appendU8(resultreg);
@@ -314,8 +345,8 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       if (addr) {
         addr->outptype = OUTP_IDX;
-        addr->reg1 = targetreg;
-        addr->reg2 = idxreg;
+        addr->objectRegister = targetreg;
+        addr->indexRegister = idxreg;
       } else {
         ctx->freeRegister(targetreg);
         ctx->freeRegister(idxreg);
@@ -342,7 +373,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       // Variable declared in current scope
       if (scope == current) {
-        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD8, OP_RSREAD16, OP_RSREAD32, OP_RSREAD64)
+        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD)
 
         writer->appendU8(resultreg);
         writer->appendU64(sym->stackoffset);
@@ -373,7 +404,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       // Main scope, aka, a global variable
       if (scope->level == 0) {
-        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_ASREAD8, OP_ASREAD16, OP_ASREAD32, OP_ASREAD64)
+        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_ASREAD)
 
         writer->appendU8(resultreg);
         writer->appendU64(sym->stackoffset);
@@ -401,19 +432,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           appendExpr(un->target, resultreg, nullptr, ctx);
 
           PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
-
-          switch (primType->primtype) {
-            case PK_UINT8: writer->appendOpCode(OP_NEGU8); break;
-            case PK_INT8: writer->appendOpCode(OP_NEGI8); break;
-            case PK_UINT16: writer->appendOpCode(OP_NEGU16); break;
-            case PK_INT16: writer->appendOpCode(OP_NEGI16); break;
-            case PK_UINT32: writer->appendOpCode(OP_NEGU32); break;
-            case PK_INT32: writer->appendOpCode(OP_NEGI32); break;
-            case PK_UINT64: writer->appendOpCode(OP_NEGU64); break;
-            case PK_INT64: writer->appendOpCode(OP_NEGI64); break;
-            case PK_FLOAT32: writer->appendOpCode(OP_NEGF32); break;
-            default: writer->appendOpCode(OP_NEGF64); break;
-          }
+          NUMTYPE_OPCODE(primType->primtype, writer, OP_NEG)
 
           writer->appendU8(resultreg);
           writer->appendU8(resultreg);
@@ -439,10 +458,95 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       }
 
       // uop is now one of: preinc, postinc, predec, postdec
+
+      // How these should work:
+      //   PREINC / PREDEC:
+      //     - Run opcodes for target
+      //     - Increment/Decrement resulting value
+      //     - Write value to address
+      //     - Done
+      //   POSTINC / POSTDEC:
+      //     - Find 2nd register for target expression
+      //     - Run opcodes for target, using 2nd register as target
+      //     - Copy value from 2nd register to result register
+      //     - Increment/Decrement resulting value in 2nd register
+      //     - Write value in 2nd register to address
+      //     - Done
+      //
+      // What seems to change is that for POSTINC and POSTDEC we use a 2nd
+      // temporary register to hold the value and copy it over to the actual one
+      // before changing the stored value in memory
+      //
+
       AddrOutput addrout;
-      appendExpr(un->target, resultreg, &addrout, ctx);
+      registerid targetRegister;
+      bool isPostOp = uop == UOP_POSTINC || uop == UOP_POSTDEC;
 
+      if (isPostOp) {
+        targetRegister = ctx->findFreeRegister();
+        ctx->useRegister(targetRegister);
+      } else {
+        targetRegister = resultreg;
+      }
 
+      appendExpr(un->target, targetRegister, &addrout, ctx);
+
+      if (isPostOp) {
+        writer->appendInstruction(OP_MOV, targetRegister, resultreg);
+      }
+
+      PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
+      primitivekind primkind = primType->primtype;
+
+      switch (uop) {
+        case UOP_PREINC:
+        case UOP_POSTINC:
+          NUMTYPE_OPCODE(primkind, writer, OP_INC)
+          writer->appendU8(targetRegister);
+          writer->appendU8(targetRegister);
+          writer->appendPadding(7);
+          break;
+
+        case UOP_PREDEC:
+        case UOP_POSTDEC:
+          NUMTYPE_OPCODE(primkind, writer, OP_DEC)
+          writer->appendU8(targetRegister);
+          writer->appendU8(targetRegister);
+          writer->appendPadding(7);
+          break;
+
+        default:
+          break;
+      }
+
+      switch (addrout.outptype) {
+        case OUTP_IDX:
+          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_WRITEIDX)
+          writer->appendU8(addrout.objectRegister);
+          writer->appendU8(targetRegister);
+          writer->appendU8(addrout.indexRegister);
+          writer->appendPadding(PAD_WRITEIDX);
+          break;
+        case OUTP_PROP:
+          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_WRITEOBJ)
+          writer->appendU8(addrout.objectRegister);
+          writer->appendU8(targetRegister);
+          writer->appendU32(addrout.memoffset);
+          writer->appendPadding(PAD_WRITEOBJ);
+          break;
+        case OUTP_RSTACK:
+          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_RSWRITE)
+          writer->appendU8(targetRegister);
+          writer->appendU64(addrout.stackoffset);
+          break;
+        case OUTP_ASTACK:
+          BYTEWIDTH_OPCODE(primType->stackSizeBytes(), writer, OP_ASWRITE)
+          writer->appendU8(targetRegister);
+          writer->appendU64(addrout.stackoffset);
+          break;
+        default:
+          break;
+      }
 
       return;
     }
@@ -466,7 +570,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
         writer->appendOpCode(OP_LOADCONST32);
         writer->appendU8(resultreg);
         writer->appendF32(val);
-        writer->appendPadding(3);
+        writer->appendPadding(PAD_LOADCONST32);
       } else {
         writer->appendOpCode(OP_LOADCONST64);
         writer->appendU8(resultreg);
@@ -480,7 +584,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       writer->appendOpCode(OP_LOADCONST8);
       writer->appendU8(resultreg);
       writer->appendU8(val);
-      writer->appendPadding(5);
+      writer->appendPadding(PAD_LOADCONST8);
       return;
     }
     case AST_IntLiteral: {
@@ -497,7 +601,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           } else {
             writer->appendU8(0);
           }
-          writer->appendPadding(5);
+          writer->appendPadding(PAD_LOADCONST8);
           break;
 
         case PK_INT8:
@@ -505,7 +609,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           writer->appendOpCode(OP_LOADCONST8);
           writer->appendU8(resultreg);
           writer->appendU8(il->value);
-          writer->appendPadding(5);
+          writer->appendPadding(PAD_LOADCONST8);
           break;
 
         case PK_UINT16:
@@ -513,7 +617,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           writer->appendOpCode(OP_LOADCONST16);
           writer->appendU8(resultreg);
           writer->appendU16(il->value);
-          writer->appendPadding(6);
+          writer->appendPadding(PAD_LOADCONST16);
           break;
 
         case PK_UINT32:
@@ -521,7 +625,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
           writer->appendOpCode(OP_LOADCONST32);
           writer->appendU8(resultreg);
           writer->appendU32(il->value);
-          writer->appendPadding(4);
+          writer->appendPadding(PAD_LOADCONST32);
           break;
 
         case PK_UINT64:
