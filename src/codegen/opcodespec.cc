@@ -508,6 +508,62 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_POW_U64:
     case OP_POW_F32:
     case OP_POW_F64:
+    case OP_EQ8:
+    case OP_EQ16:
+    case OP_EQ32:
+    case OP_EQ64:
+    case OP_EQARR:
+    case OP_EQSTRUCT:
+    case OP_NEQ8:
+    case OP_NEQ16:
+    case OP_NEQ32:
+    case OP_NEQ64:
+    case OP_NEQARR:
+    case OP_NEQSTRUCT:
+    case OP_GTI8:
+    case OP_GTU8:
+    case OP_GTI16:
+    case OP_GTU16:
+    case OP_GTI32:
+    case OP_GTU32:
+    case OP_GTI64:
+    case OP_GTU64:
+    case OP_GTF32:
+    case OP_GTF64:
+    case OP_GTARR:
+    case OP_GTEI8:
+    case OP_GTEU8:
+    case OP_GTEI16:
+    case OP_GTEU16:
+    case OP_GTEI32:
+    case OP_GTEU32:
+    case OP_GTEI64:
+    case OP_GTEU64:
+    case OP_GTEF32:
+    case OP_GTEF64:
+    case OP_GTEARR:
+    case OP_LTI8:
+    case OP_LTU8:
+    case OP_LTI16:
+    case OP_LTU16:
+    case OP_LTI32:
+    case OP_LTU32:
+    case OP_LTI64:
+    case OP_LTU64:
+    case OP_LTF32:
+    case OP_LTF64:
+    case OP_LTARR:
+    case OP_LTEI8:
+    case OP_LTEU8:
+    case OP_LTEI16:
+    case OP_LTEU16:
+    case OP_LTEI32:
+    case OP_LTEU32:
+    case OP_LTEI64:
+    case OP_LTEU64:
+    case OP_LTEF32:
+    case OP_LTEF64:
+    case OP_LTEARR:
       *buf = static_cast<uint8>(va_arg(list, int32));
       *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
       *(buf + 2) = static_cast<uint8>(va_arg(list, int32));
