@@ -284,6 +284,25 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       }
 
       // TODO: Figure out how to read from upper levels of scopes
+      //
+      //   So I think the way this needs to be done (reading from upper scopes) depends on
+      //   which variable or constant is being referenced. If we're referencing a global
+      //   variable declared in the main scope of the script, then we use ASREAD (Absolute
+      //   read) which takes in a memory offset relative to the start of the script's main
+      //   scope, or to read ASREAD with a negative number if not.
+      //
+      //   The thing is, a calling function can't reference anything from a caller's stack
+      //   with this methodology because the function doesn't know anything in the above
+      //   scope exists unless this is a function declared within a function, in which
+      //   case... damn, that might cause issues.
+      //
+      //   Nested functions will expect the stack to be offset from where it was declared,
+      //   but it can be declared near the top of the encasing function but be called at
+      //   the end, so the stack can be different. Basically, the negative pointer needs
+      //   to read NOT from the current scope but from a saved stack address... I think?
+      //
+      //   This is s confusing
+      //
       return;
     }
 
