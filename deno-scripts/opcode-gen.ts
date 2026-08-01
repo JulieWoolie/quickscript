@@ -112,6 +112,9 @@ function generateOpCodes(): OpCodeGenResult {
   function binParams(): InstructionParam[] {
     return [reg("lhs"), reg("rhs"), reg("out")]
   }
+  function unaryParams(): InstructionParam[] {
+    return [reg("in"), reg("out")]
+  }
 
   currentCategory = "4.3.1 General Purpose OP Codes"
   opCode("NOP")
@@ -171,27 +174,32 @@ function generateOpCodes(): OpCodeGenResult {
   ]
 
   currentCategory = "4.3.5 Conversion Instructions"
+  const unaryPad = getPadding(unaryParams())
+
   for (const f of typeShorthands) {
     for (const t of typeShorthands) {
       if (f == t) {
         continue
       }
-      opCode(`${f}T${t}`, reg("from"), reg("out"))
+      opCode(`${f}T${t}`, ...unaryParams())
     }
   }
 
   currentCategory = "4.3.6 Unary Operations"
-  opCode("BNEGATE", reg("in"), reg("out"))
-  opCode("LNEGATE", reg("in"), reg("out"))
-  for (const ts of typeShorthands) {
-    opCode(`NEG${ts}`, reg("in"), reg("out"))
+
+  opCode("BNEGATE", ...unaryParams())
+  opCode("LNEGATE", ...unaryParams())
+
+  const numberUnaryOperations = ["NEG", "INC", "DEC"]
+
+  addToPadding = false;
+  for (const op of numberUnaryOperations) {
+    paddings.push({opcode: op, padding: unaryPad})
+    for (const ts of typeShorthands) {
+      opCode(`${op}${ts}`, ...unaryParams())
+    }
   }
-  for (const ts of typeShorthands) {
-    opCode(`INC${ts}`, reg("in"), reg("out"))
-  }
-  for (const ts of typeShorthands) {
-    opCode(`DEC${ts}`, reg("in"), reg("out"))
-  }
+  addToPadding = true
 
   currentCategory = "4.3.7.1 Integer-only Binary Operations"
   byteSizedOpCode("LSHIFT", ...binParams())

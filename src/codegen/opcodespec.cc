@@ -286,7 +286,7 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //
     // Padding: 7
     // Arguments:
-    //   [0] from: register
+    //   [0] in: register
     //   [1] out: register
     //
     case OP_I8TU8:
@@ -379,17 +379,6 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_F64TI64:
     case OP_F64TU64:
     case OP_F64TF32:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 2, 0, 7);
-      break;
-
-    //
-    // Padding: 7
-    // Arguments:
-    //   [0] in: register
-    //   [1] out: register
-    //
     case OP_BNEGATE:
     case OP_LNEGATE:
     case OP_NEGI8:
