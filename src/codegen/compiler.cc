@@ -83,7 +83,9 @@ struct CompilerContext {
       if (!ndata) {
         throw std::runtime_error("Failed to resize string const pool buffer");
       }
+
       stringPool->data = ndata;
+      stringPool->cap = requiredcap;
     }
 
     uint8* writeptr = stringPool->data + stringPool->len;
@@ -93,6 +95,12 @@ struct CompilerContext {
 
     char* charptr = reinterpret_cast<char*>(writeptr);
     stringTable->copychars(id, charptr, len);
+    
+    uint64 off = stringPool->len;
+    stringPool->len += sizeof(uint32) + len;
+    map->emplace(id, off);
+
+    return off;
   }
 
   registeridopt findFreeRegister() const {
