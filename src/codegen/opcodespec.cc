@@ -425,6 +425,11 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_LTEF32:
     case OP_LTEF64:
     case OP_LTEARR:
+    case OP_STRCONCAT:
+    case OP_STRREP8:
+    case OP_STRREP16:
+    case OP_STRREP32:
+    case OP_STRREP64:
       *buf = static_cast<uint8>(va_arg(list, int32));
       *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
       *(buf + 2) = static_cast<uint8>(va_arg(list, int32));

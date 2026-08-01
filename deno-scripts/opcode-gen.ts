@@ -245,6 +245,12 @@ function generateOpCodes(): OpCodeGenResult {
     paddings.push({opcode: cmpOp, padding: binPadding})
   }
 
+  currentCategory = "4.3.7.5 String/Array Operations"
+  addToPadding = true
+
+  opCode("STRCONCAT", ...binParams())
+  byteSizedOpCode("STRREP", ...binParams())
+
   return {opcodes, paddings}
 }
 

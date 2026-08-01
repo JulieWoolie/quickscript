@@ -344,6 +344,13 @@
 #define OP_LTEF64          0x0132
 #define OP_LTEARR          0x0133
 
+// 4.3.7.5 String/Array Operations
+#define OP_STRCONCAT       0x0134
+#define OP_STRREP8         0x0135
+#define OP_STRREP16        0x0136
+#define OP_STRREP32        0x0137
+#define OP_STRREP64        0x0138
+
 #define PAD_NOP            9
 #define PAD_PUSHLINE       5
 #define PAD_RET            9
@@ -488,6 +495,8 @@
 #define PAD_GTE            6
 #define PAD_LT             6
 #define PAD_LTE            6
+#define PAD_STRCONCAT      6
+#define PAD_STRREP         6
 
 typedef uint16 opcode;
 

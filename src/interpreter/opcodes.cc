@@ -314,6 +314,11 @@ conststring opcode_name(opcode code) {
     case OP_LTEF32: return "LTEF32";
     case OP_LTEF64: return "LTEF64";
     case OP_LTEARR: return "LTEARR";
+    case OP_STRCONCAT: return "STRCONCAT";
+    case OP_STRREP8: return "STRREP8";
+    case OP_STRREP16: return "STRREP16";
+    case OP_STRREP32: return "STRREP32";
+    case OP_STRREP64: return "STRREP64";
     default: return "NOP";
   }
 }

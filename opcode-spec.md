@@ -309,3 +309,8 @@
 |`LTEF32`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`LTEF64`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`LTEARR`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`STRCONCAT`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`STRREP8`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`STRREP16`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`STRREP32`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`STRREP64`|6|`lhs: register`, `rhs: register`, `out: register`|

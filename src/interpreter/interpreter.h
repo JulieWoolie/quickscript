@@ -4,7 +4,7 @@
 #include "nativeinterface.h"
 #include "../common.h"
 
-#define REGISTERS_COUNT 8
+#define REGISTERS_COUNT 64
 #define MAX_CALL_DEPTH 128
 
 struct CallFrame {
