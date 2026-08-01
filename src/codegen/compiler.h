@@ -45,6 +45,8 @@ struct BytecodeWriter {
 
   template<typename T>
   T* currentAddrAs();
+
+  uint32 getInstructionCounter() const;
 };
 
 template<typename T>

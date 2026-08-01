@@ -161,7 +161,6 @@ APPEND_METHOD(appendU64, 8, uint64)
 APPEND_METHOD(appendI64, 8, int64)
 APPEND_METHOD(appendF32, 4, float32)
 APPEND_METHOD(appendF64, 8, float64)
-APPEND_METHOD(appendOpCode, LENGTH_OPCODE, opcode)
 
 void BytecodeWriter::reserveSpace(uint64 memsize) {
   uint64 nsize = buflen + memsize;
@@ -178,6 +177,13 @@ void BytecodeWriter::reserveSpace(uint64 memsize) {
 
   buf = ndata;
   bufcap = ncap;
+}
+
+void BytecodeWriter::appendOpCode(opcode code) {
+  reserveSpace(LENGTH_INSTRUCTION);
+  opcode* ptr = (opcode*) (buf + buflen);
+  *ptr = code;
+  buflen += LENGTH_OPCODE;
 }
 
 void BytecodeWriter::appendPadding(uint64 bytes) {
@@ -203,6 +209,10 @@ void BytecodeWriter::appendInstruction(opcode code, ...) {
 
   appendOpCodeData(d, code, list);
   va_end(list);
+}
+
+uint32 BytecodeWriter::getInstructionCounter() const {
+  return buflen / LENGTH_INSTRUCTION;
 }
 
 uint64 measureStackSize(Statement* s) {
@@ -271,7 +281,40 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
     //  - X FloatLiteral
     //  -   BinaryExpr
     //  - X UnaryExpr
-    //  -   TernaryExpr
+    //  - X TernaryExpr
+
+    case AST_TernaryExpr: {
+      TernaryExpr* ternary = static_cast<TernaryExpr*>(expr);
+
+      // How it should work:
+      //   - Evaluate condition:
+      //   - Depending on result:
+      //     - Jump to left if true
+      //     - Jump to right otherwise
+
+      appendExpr(ternary->condition, resultreg, nullptr, ctx);
+
+      writer->appendOpCode(OP_JMPI0);
+      uint64 firstJumpOff = writer->buflen;
+      writer->appendU32(0);
+      writer->appendU8(resultreg);
+      writer->appendPadding(PAD_JMPI0);
+
+      appendExpr(ternary->left, resultreg, nullptr, ctx);
+
+      writer->appendOpCode(OP_JMP);
+      uint64 secondJumpOff = writer->buflen;
+      writer->appendU32(0);
+      writer->appendPadding(PAD_JMP);
+
+      *reinterpret_cast<uint32*>(writer->buf + firstJumpOff) = writer->getInstructionCounter();
+
+      appendExpr(ternary->right, resultreg, nullptr, ctx);
+
+      *reinterpret_cast<uint32*>(writer->buf + secondJumpOff) = writer->getInstructionCounter();
+
+      return;
+    }
 
     case AST_PropertyAccessExpr: {
       PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
