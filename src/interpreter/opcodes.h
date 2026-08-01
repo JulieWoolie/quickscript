@@ -1,12 +1,11 @@
-
 #ifndef QUICKSCRIPT_OPCODES_H
 #define QUICKSCRIPT_OPCODES_H
 
 #include "../common.h"
 
-#define LENGTH_OPCODE 2
+#define LENGTH_OPCODE 1
 #define LENGTH_ARGS 9
-#define LENGTH_INSTRUCTION (LENGTH_OPCODE+LENGTH_ARGS)
+#define LENGTH_INSTRUCTION 10
 
 //
 // Section numbers that you see here are references to this:
@@ -168,89 +167,118 @@
 // 4.3.6 Unary Operations
 #define OP_BNEGATE         0x008D
 #define OP_LNEGATE         0x008E
-#define OP_NEG             0x008F
+#define OP_NEGI8           0x008F
+#define OP_NEGU8           0x0090
+#define OP_NEGI16          0x0091
+#define OP_NEGU16          0x0092
+#define OP_NEGI32          0x0093
+#define OP_NEGU32          0x0094
+#define OP_NEGI64          0x0095
+#define OP_NEGU64          0x0096
+#define OP_NEGF32          0x0097
+#define OP_NEGF64          0x0098
+#define OP_INCI8           0x0099
+#define OP_INCU8           0x009A
+#define OP_INCI16          0x009B
+#define OP_INCU16          0x009C
+#define OP_INCI32          0x009D
+#define OP_INCU32          0x009E
+#define OP_INCI64          0x009F
+#define OP_INCU64          0x00A0
+#define OP_INCF32          0x00A1
+#define OP_INCF64          0x00A2
+#define OP_DECI8           0x00A3
+#define OP_DECU8           0x00A4
+#define OP_DECI16          0x00A5
+#define OP_DECU16          0x00A6
+#define OP_DECI32          0x00A7
+#define OP_DECU32          0x00A8
+#define OP_DECI64          0x00A9
+#define OP_DECU64          0x00AA
+#define OP_DECF32          0x00AB
+#define OP_DECF64          0x00AC
 
 // 4.3.7.1 Integer-only Binary Operations
-#define OP_LSHIFT8         0x0090
-#define OP_LSHIFT16        0x0091
-#define OP_LSHIFT32        0x0092
-#define OP_LSHIFT64        0x0093
-#define OP_URSHIFT8        0x0094
-#define OP_URSHIFT16       0x0095
-#define OP_URSHIFT32       0x0096
-#define OP_URSHIFT64       0x0097
+#define OP_LSHIFT8         0x00AD
+#define OP_LSHIFT16        0x00AE
+#define OP_LSHIFT32        0x00AF
+#define OP_LSHIFT64        0x00B0
+#define OP_URSHIFT8        0x00B1
+#define OP_URSHIFT16       0x00B2
+#define OP_URSHIFT32       0x00B3
+#define OP_URSHIFT64       0x00B4
 
 // 4.3.7.2 Boolean-only Binary Operations
-#define OP_BAND            0x0098
-#define OP_BOR             0x0099
-#define OP_BXOR            0x009A
-#define OP_LAND            0x009B
-#define OP_LOR             0x009C
-#define OP_LXOR            0x009D
+#define OP_BAND            0x00B5
+#define OP_BOR             0x00B6
+#define OP_BXOR            0x00B7
+#define OP_LAND            0x00B8
+#define OP_LOR             0x00B9
+#define OP_LXOR            0x00BA
 
 // 4.3.7.3 General Number Binary Operations
-#define OP_ADD_I8          0x009E
-#define OP_ADD_U8          0x009F
-#define OP_ADD_I16         0x00A0
-#define OP_ADD_U16         0x00A1
-#define OP_ADD_I32         0x00A2
-#define OP_ADD_U32         0x00A3
-#define OP_ADD_I64         0x00A4
-#define OP_ADD_U64         0x00A5
-#define OP_ADD_F32         0x00A6
-#define OP_ADD_F64         0x00A7
-#define OP_SUB_I8          0x00A8
-#define OP_SUB_U8          0x00A9
-#define OP_SUB_I16         0x00AA
-#define OP_SUB_U16         0x00AB
-#define OP_SUB_I32         0x00AC
-#define OP_SUB_U32         0x00AD
-#define OP_SUB_I64         0x00AE
-#define OP_SUB_U64         0x00AF
-#define OP_SUB_F32         0x00B0
-#define OP_SUB_F64         0x00B1
-#define OP_DIV_I8          0x00B2
-#define OP_DIV_U8          0x00B3
-#define OP_DIV_I16         0x00B4
-#define OP_DIV_U16         0x00B5
-#define OP_DIV_I32         0x00B6
-#define OP_DIV_U32         0x00B7
-#define OP_DIV_I64         0x00B8
-#define OP_DIV_U64         0x00B9
-#define OP_DIV_F32         0x00BA
-#define OP_DIV_F64         0x00BB
-#define OP_MUL_I8          0x00BC
-#define OP_MUL_U8          0x00BD
-#define OP_MUL_I16         0x00BE
-#define OP_MUL_U16         0x00BF
-#define OP_MUL_I32         0x00C0
-#define OP_MUL_U32         0x00C1
-#define OP_MUL_I64         0x00C2
-#define OP_MUL_U64         0x00C3
-#define OP_MUL_F32         0x00C4
-#define OP_MUL_F64         0x00C5
-#define OP_MOD_I8          0x00C6
-#define OP_MOD_U8          0x00C7
-#define OP_MOD_I16         0x00C8
-#define OP_MOD_U16         0x00C9
-#define OP_MOD_I32         0x00CA
-#define OP_MOD_U32         0x00CB
-#define OP_MOD_I64         0x00CC
-#define OP_MOD_U64         0x00CD
-#define OP_MOD_F32         0x00CE
-#define OP_MOD_F64         0x00CF
-#define OP_EXP_I8          0x00D0
-#define OP_EXP_U8          0x00D1
-#define OP_EXP_I16         0x00D2
-#define OP_EXP_U16         0x00D3
-#define OP_EXP_I32         0x00D4
-#define OP_EXP_U32         0x00D5
-#define OP_EXP_I64         0x00D6
-#define OP_EXP_U64         0x00D7
-#define OP_EXP_F32         0x00D8
-#define OP_EXP_F64         0x00D9
+#define OP_ADD_I8          0x00BB
+#define OP_ADD_U8          0x00BC
+#define OP_ADD_I16         0x00BD
+#define OP_ADD_U16         0x00BE
+#define OP_ADD_I32         0x00BF
+#define OP_ADD_U32         0x00C0
+#define OP_ADD_I64         0x00C1
+#define OP_ADD_U64         0x00C2
+#define OP_ADD_F32         0x00C3
+#define OP_ADD_F64         0x00C4
+#define OP_SUB_I8          0x00C5
+#define OP_SUB_U8          0x00C6
+#define OP_SUB_I16         0x00C7
+#define OP_SUB_U16         0x00C8
+#define OP_SUB_I32         0x00C9
+#define OP_SUB_U32         0x00CA
+#define OP_SUB_I64         0x00CB
+#define OP_SUB_U64         0x00CC
+#define OP_SUB_F32         0x00CD
+#define OP_SUB_F64         0x00CE
+#define OP_DIV_I8          0x00CF
+#define OP_DIV_U8          0x00D0
+#define OP_DIV_I16         0x00D1
+#define OP_DIV_U16         0x00D2
+#define OP_DIV_I32         0x00D3
+#define OP_DIV_U32         0x00D4
+#define OP_DIV_I64         0x00D5
+#define OP_DIV_U64         0x00D6
+#define OP_DIV_F32         0x00D7
+#define OP_DIV_F64         0x00D8
+#define OP_MUL_I8          0x00D9
+#define OP_MUL_U8          0x00DA
+#define OP_MUL_I16         0x00DB
+#define OP_MUL_U16         0x00DC
+#define OP_MUL_I32         0x00DD
+#define OP_MUL_U32         0x00DE
+#define OP_MUL_I64         0x00DF
+#define OP_MUL_U64         0x00E0
+#define OP_MUL_F32         0x00E1
+#define OP_MUL_F64         0x00E2
+#define OP_MOD_I8          0x00E3
+#define OP_MOD_U8          0x00E4
+#define OP_MOD_I16         0x00E5
+#define OP_MOD_U16         0x00E6
+#define OP_MOD_I32         0x00E7
+#define OP_MOD_U32         0x00E8
+#define OP_MOD_I64         0x00E9
+#define OP_MOD_U64         0x00EA
+#define OP_MOD_F32         0x00EB
+#define OP_MOD_F64         0x00EC
+#define OP_EXP_I8          0x00ED
+#define OP_EXP_U8          0x00EE
+#define OP_EXP_I16         0x00EF
+#define OP_EXP_U16         0x00F0
+#define OP_EXP_I32         0x00F1
+#define OP_EXP_U32         0x00F2
+#define OP_EXP_I64         0x00F3
+#define OP_EXP_U64         0x00F4
+#define OP_EXP_F32         0x00F5
+#define OP_EXP_F64         0x00F6
 
-typedef uint16 opcode;
+typedef uint8 opcode;
 
 conststring opcode_name(opcode code);
 

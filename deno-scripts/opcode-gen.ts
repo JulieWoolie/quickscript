@@ -36,15 +36,7 @@ const typeShorthands: string[] = [
 let counter = 0
 let opcodes: string[] = []
 
-let out = `
-#ifndef QUICKSCRIPT_OPCODES_H
-#define QUICKSCRIPT_OPCODES_H
-
-#include "../common.h"
-
-#define LENGTH_OPCODE 2
-#define LENGTH_ARGS 9
-#define LENGTH_INSTRUCTION (LENGTH_OPCODE+LENGTH_ARGS)`
+let out = ``
 
 out += `\n\n//`
 out += `\n// Section numbers that you see here are references to this:`
@@ -92,7 +84,15 @@ conversionCodes()
 out += `\n\n// 4.3.6 Unary Operations`
 appendCode("BNEGATE")
 appendCode("LNEGATE")
-appendCode("NEG")
+for (const ts of typeShorthands) {
+  appendCode(`NEG${ts}`)
+}
+for (const ts of typeShorthands) {
+  appendCode(`INC${ts}`)
+}
+for (const ts of typeShorthands) {
+  appendCode(`DEC${ts}`)
+}
 
 out += `\n\n// 4.3.7.1 Integer-only Binary Operations`
 byteSizedOpCode("LSHIFT")
@@ -108,6 +108,29 @@ appendCode("LXOR")
 
 out += `\n\n// 4.3.7.3 General Number Binary Operations`
 mathOpCodes()
+
+let opcodeLen: number
+let instructionLen: number
+let basetype: string
+
+if (counter < 256) {
+  opcodeLen = 1
+  basetype = "uint8"
+} else {
+  opcodeLen = 2
+  basetype = "uint16"
+}
+
+instructionLen = opcodeLen + 9
+
+out = `#ifndef QUICKSCRIPT_OPCODES_H
+#define QUICKSCRIPT_OPCODES_H
+
+#include "../common.h"
+
+#define LENGTH_OPCODE ${opcodeLen}
+#define LENGTH_ARGS 9
+#define LENGTH_INSTRUCTION ${instructionLen}` + out
 
 function nextOpCode(): string {
   return `0x${(counter++).toString(16).toUpperCase().padStart(4, "0")}`
@@ -144,7 +167,7 @@ function mathOpCodes() {
   }
 }
 
-out += `\n\ntypedef uint16 opcode;\n\nconststring opcode_name(opcode code);`
+out += `\n\ntypedef ${basetype} opcode;\n\nconststring opcode_name(opcode code);`
 out += `\n\n#endif //QUICKSCRIPT_OPCODES_H`
 
 await writeToFile("../src/interpreter/opcodes.h")
