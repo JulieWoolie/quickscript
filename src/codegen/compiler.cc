@@ -155,7 +155,7 @@ APPEND_METHOD(appendU64, 8, uint64)
 APPEND_METHOD(appendI64, 8, int64)
 APPEND_METHOD(appendF32, 4, float32)
 APPEND_METHOD(appendF64, 8, float64)
-APPEND_METHOD(appendOpCode, 2, opcode)
+APPEND_METHOD(appendOpCode, LENGTH_OPCODE, opcode)
 
 void BytecodeWriter::reserveSpace(uint64 memsize) {
   uint64 nsize = buflen + memsize;
@@ -397,13 +397,29 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
         case UOP_POS:
           appendExpr(un->target, resultreg, nullptr, ctx);
           return;
-        case UOP_NEG:
+        case UOP_NEG: {
           appendExpr(un->target, resultreg, nullptr, ctx);
-          writer->appendOpCode(OP_NEG);
+
+          PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
+
+          switch (primType->primtype) {
+            case PK_UINT8: writer->appendOpCode(OP_NEGU8); break;
+            case PK_INT8: writer->appendOpCode(OP_NEGI8); break;
+            case PK_UINT16: writer->appendOpCode(OP_NEGU16); break;
+            case PK_INT16: writer->appendOpCode(OP_NEGI16); break;
+            case PK_UINT32: writer->appendOpCode(OP_NEGU32); break;
+            case PK_INT32: writer->appendOpCode(OP_NEGI32); break;
+            case PK_UINT64: writer->appendOpCode(OP_NEGU64); break;
+            case PK_INT64: writer->appendOpCode(OP_NEGI64); break;
+            case PK_FLOAT32: writer->appendOpCode(OP_NEGF32); break;
+            default: writer->appendOpCode(OP_NEGF64); break;
+          }
+
           writer->appendU8(resultreg);
           writer->appendU8(resultreg);
           writer->appendPadding(7);
           return;
+        }
         case UOP_BIT_NOT:
           appendExpr(un->target, resultreg, nullptr, ctx);
           writer->appendOpCode(OP_BNEGATE);
