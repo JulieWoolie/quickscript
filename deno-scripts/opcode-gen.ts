@@ -24,6 +24,7 @@ const ARGUMENTS_LENGTH = 9
 
 function generateOpCodes(): OpCodeGenResult {
   let currentCategory: string = ""
+  let addToPadding = true
 
   const opcodes: Instruction[] = []
   const paddings: OpCodePadding[] = []
@@ -49,7 +50,10 @@ function generateOpCodes(): OpCodeGenResult {
     }
 
     opcodes.push(instr)
-    paddings.push(instr)
+
+    if (addToPadding) {
+      paddings.push(instr)
+    }
   }
 
   function byteSizedOpCode(name: string, ...params: InstructionParam[]): void {
@@ -64,7 +68,7 @@ function generateOpCodes(): OpCodeGenResult {
       }
     }
 
-    if (!hasTypeVariance) {
+    if (!hasTypeVariance && addToPadding) {
       paddings.push({
         opcode: name,
         padding: getPadding(params)
@@ -202,7 +206,12 @@ function generateOpCodes(): OpCodeGenResult {
   opCode("LXOR", ...binParams())
 
   currentCategory = "4.3.7.3 General Number Binary Operations"
+  addToPadding = false
+
+  const binPadding = getPadding(binParams())
+
   for (const mathOp of mathOperations) {
+    paddings.push({opcode: mathOp.toUpperCase(), padding: binPadding})
     for (const type of typeShorthands) {
       opCode(`${mathOp.toUpperCase()}${type}`, ...binParams())
     }
@@ -211,6 +220,7 @@ function generateOpCodes(): OpCodeGenResult {
   currentCategory = "4.3.7.4 Comparison Operations"
   const equalityOperators = ["EQ", "NEQ"]
   for (const eqOp of equalityOperators) {
+    paddings.push({opcode: eqOp, padding: binPadding})
     byteSizedOpCode(eqOp, ...binParams())
     opCode(`${eqOp}ARR`, ...binParams())
     opCode(`${eqOp}STRUCT`, ...binParams())
@@ -223,6 +233,7 @@ function generateOpCodes(): OpCodeGenResult {
       opCode(`${cmpOp}${ts}`, ...binParams())
     }
     opCode(`${cmpOp}ARR`, ...binParams())
+    paddings.push({opcode: cmpOp, padding: binPadding})
   }
 
   return {opcodes, paddings}
