@@ -730,5 +730,8 @@ Bytecode compile(ScriptFileStatement* sfs, StringTable* table) {
   ctx.stringTable = table;
   ctx.writer = &writer;
 
-
+  return {
+    .data = nullptr,
+    .len = 0
+  };
 }
