@@ -40,7 +40,15 @@ struct BytecodeWriter {
   void appendF32(float32 f32);
   void appendF64(float64 f64);
   void appendPadding(uint64 bytes);
+
+  template<typename T>
+  T* currentAddrAs();
 };
+
+template<typename T>
+T* BytecodeWriter::currentAddrAs() {
+  return (T*) (buf + buflen);
+}
 
 Bytecode compile(ScriptFileStatement* sfs);
 
