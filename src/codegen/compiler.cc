@@ -662,7 +662,15 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
 Bytecode compile(ScriptFileStatement* sfs, StringTable* table) {
   BytecodeWriter writer;
-  writer.reserveSpace(1024);
+
+  const uint64 initcap = LENGTH_INSTRUCTION * 1024;
+
+  writer.buf = static_cast<uint8*>(malloc(initcap));
+  writer.bufcap = initcap;
+
+  if (!writer.buf) {
+    throw std::runtime_error("Failed to allocate initial bytecode buffer");
+  }
 
   ConstStringPoolWriter stringPool;
 
