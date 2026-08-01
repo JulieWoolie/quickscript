@@ -558,5 +558,8 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
       *(buf + 2) = static_cast<uint8>(va_arg(list, int32));
       memset(buf + 3, 0, 6);
       break;
+
+    default:
+      break;
   }
 }

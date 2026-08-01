@@ -476,7 +476,7 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
   }
 
 
-  out += `\n  }\n}`
+  out += `\n\n    default:\n      break;\n  }\n}`
 
   await writeToFile(out, "../src/codegen/opcodespec.cc")
 }
