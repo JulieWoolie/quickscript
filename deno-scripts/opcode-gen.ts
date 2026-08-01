@@ -181,6 +181,13 @@ function generateOpCodes(): OpCodeGenResult {
       if (f == t) {
         continue
       }
+
+      if (f.startsWith("U") && t.startsWith("U")) {
+        // No converting between unsigned types, just
+        // truncate bits or add extra leading bits
+        continue
+      }
+
       opCode(`${f}T${t}`, ...unaryParams())
     }
   }
@@ -506,6 +513,33 @@ async function generateMarkdownSpec(opcodes: Instruction[]): Promise<void> {
   await writeToFile(out, "../opcode-spec.md")
 }
 
+function printHtmlSpec(opcodes: Instruction[]): void {
+  let out = `<table>
+  <caption>OP Codes</captions>
+  <thead><tr>
+    <th>OP Code</th>
+    <th>Padding</th>
+    <th>Arguments</th>
+  </tr></thead>
+  <tbody>`
+
+  for (const code of opcodes) {
+    let paramStr = ""
+    code.params.forEach((v, i) => {
+      if (i != 0) {
+        paramStr += ", "
+      }
+      paramStr += `${v.name}: ${v.typename}`
+    })
+
+    out += `
+    <tr><td><code>${code.opcode}</code></td><td>${code.padding}</td><td><code>${paramStr}</code></td></tr>`
+  }
+
+  out += `\n  </tbody>\n</table>`
+  console.log(out)
+}
+
 async function main(): Promise<void> {
   const res = generateOpCodes()
   const codes = res.opcodes
@@ -517,6 +551,8 @@ async function main(): Promise<void> {
   await createSpecSourceFile(codes)
 
   await generateMarkdownSpec(codes)
+
+  printHtmlSpec(codes)
 }
 
 function endsWith(str: string, ...suffixes: string[]): boolean {

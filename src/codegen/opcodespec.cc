@@ -61,11 +61,8 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_I8TF64:
     case OP_U8TI8:
     case OP_U8TI16:
-    case OP_U8TU16:
     case OP_U8TI32:
-    case OP_U8TU32:
     case OP_U8TI64:
-    case OP_U8TU64:
     case OP_U8TF32:
     case OP_U8TF64:
     case OP_I16TI8:
@@ -78,12 +75,9 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_I16TF32:
     case OP_I16TF64:
     case OP_U16TI8:
-    case OP_U16TU8:
     case OP_U16TI16:
     case OP_U16TI32:
-    case OP_U16TU32:
     case OP_U16TI64:
-    case OP_U16TU64:
     case OP_U16TF32:
     case OP_U16TF64:
     case OP_I32TI8:
@@ -96,12 +90,9 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_I32TF32:
     case OP_I32TF64:
     case OP_U32TI8:
-    case OP_U32TU8:
     case OP_U32TI16:
-    case OP_U32TU16:
     case OP_U32TI32:
     case OP_U32TI64:
-    case OP_U32TU64:
     case OP_U32TF32:
     case OP_U32TF64:
     case OP_I64TI8:
@@ -114,11 +105,8 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_I64TF32:
     case OP_I64TF64:
     case OP_U64TI8:
-    case OP_U64TU8:
     case OP_U64TI16:
-    case OP_U64TU16:
     case OP_U64TI32:
-    case OP_U64TU32:
     case OP_U64TI64:
     case OP_U64TF32:
     case OP_U64TF64:
