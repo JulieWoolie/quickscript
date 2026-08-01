@@ -206,6 +206,22 @@ void appendStatement(Statement* stat, CompilerContext* ctx) {
   }
 }
 
+#define BYTEWIDTH_SWITCH(size, u8, u16, u32, u64) \
+  switch (size) {\
+    case 1: u8 break;\
+    case 2: u16 break;\
+    case 4: u32 break;\
+    default: u64 break;\
+  }
+
+#define BYTEWIDTH_OPCODE(size, writer, u8, u16, u32, u64) \
+  switch (size) {\
+    case 1: writer->appendOpCode(u8); break;\
+    case 2: writer->appendOpCode(u16); break;\
+    case 4: writer->appendOpCode(u32); break;\
+    default: writer->appendOpCode(u64); break;\
+  }
+
 void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx) {
   astnodetype kind = expr->nodeKind();
   BytecodeWriter* writer = ctx->writer;
@@ -213,7 +229,31 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
   switch (kind) {
     case AST_IndexAccessExpr: {
       IndexAccessExpr* access = static_cast<IndexAccessExpr*>(expr);
-      
+
+      registerid targetreg = ctx->findFreeRegister();
+      ctx->useRegister(targetreg);
+
+      registerid idxreg = ctx->findFreeRegister();
+      ctx->useRegister(idxreg);
+
+      appendExpr(access->target, targetreg, nullptr, ctx);
+      uint32 stackSize = access->resultType->stackSizeBytes();
+
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX8, OP_READIDX16, OP_READIDX32, OP_READIDX64)
+
+      writer->appendU8(targetreg);
+      writer->appendU8(resultreg);
+      writer->appendU8(idxreg);
+      writer->appendPadding(6);
+
+      if (addr) {
+        addr->outptype = OUTP_IDX;
+        addr->reg1 = targetreg;
+        addr->reg2 = idxreg;
+      } else {
+        ctx->freeRegister(targetreg);
+        ctx->freeRegister(idxreg);
+      }
 
       return;
     }
@@ -235,20 +275,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       StackScope* current = ctx->getScope();
 
       if (scope == current) {
-        switch (sym->stacksize) {
-          case 1:
-            writer->appendOpCode(OP_RSREAD8);
-            break;
-          case 2:
-            writer->appendOpCode(OP_RSREAD16);
-            break;
-          case 4:
-            writer->appendOpCode(OP_RSREAD32);
-            break;
-          default:
-            writer->appendOpCode(OP_RSREAD64);
-            break;
-        }
+        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD8, OP_RSREAD16, OP_RSREAD32, OP_RSREAD64)
 
         writer->appendU8(resultreg);
         writer->appendU64(sym->stackoffset);
