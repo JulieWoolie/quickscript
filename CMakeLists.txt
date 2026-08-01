@@ -39,4 +39,6 @@ add_executable(quickscript src/main.cpp
         src/analysis/ast_optimizer.h
         src/analysis/ast_optimizer.cc
         src/codegen/compiler.h
-        src/codegen/compiler.cc)
+        src/codegen/compiler.cc
+        src/codegen/opcodespec.h
+        src/codegen/opcodespec.cc)
