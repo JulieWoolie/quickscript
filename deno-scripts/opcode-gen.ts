@@ -204,7 +204,7 @@ function generateOpCodes(): OpCodeGenResult {
   currentCategory = "4.3.7.3 General Number Binary Operations"
   for (const mathOp of mathOperations) {
     for (const type of typeShorthands) {
-      opCode(`${mathOp.toUpperCase()}_${type}`, ...binParams())
+      opCode(`${mathOp.toUpperCase()}${type}`, ...binParams())
     }
   }
 
