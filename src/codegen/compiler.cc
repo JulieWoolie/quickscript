@@ -303,6 +303,17 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       //
       //   This is s confusing
       //
+
+      // Main scope, aka, a global variable
+      if (scope->level == 0) {
+        BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_ASREAD8, OP_ASREAD16, OP_ASREAD32, OP_ASREAD64)
+
+        writer->appendU8(resultreg);
+        writer->appendU64(sym->stackoffset);
+
+        return;
+      }
+
       return;
     }
 
