@@ -427,6 +427,23 @@ function getOffsetVar(off: number): string {
 // @ts-ignore
 await writeToFile("../src/codegen/opcodespec.cc")
 
+out = `# OP Code specification Table
+| OP Code | Padding | Arguments |
+|--|--|--|`
+for (const code of opcodes) {
+  out += `\n|\`${code.opcode}\`|${code.padding}|`
+  code.params.forEach((v, i) => {
+    if (i != 0) {
+      out += `, `
+    }
+    out += `\`${v.name}: ${v.typename}\``
+  })
+  out += "|"
+}
+
+// @ts-ignore
+await writeToFile("../opcode-spec.md")
+
 // @ts-ignore
 async function writeToFile(fname: string): Promise<void> {
   // @ts-ignore
