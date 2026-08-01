@@ -490,7 +490,7 @@ void compileIdentifier(
   //   which variable or constant is being referenced. If we're referencing a global
   //   variable declared in the main scope of the script, then we use ASREAD (Absolute
   //   stack read) which takes in a memory offset relative to the start of the script's
-  //   main scope, or to read ASREAD with a negative number if not.
+  //   main scope, or to read RSREAD with a negative number if not.
   //
   //   The thing is, a calling function can't reference anything from a caller's stack
   //   with this methodology because the function doesn't know anything in the above
@@ -501,6 +501,11 @@ void compileIdentifier(
   //   but it can be declared near the top of the encasing function but be called at
   //   the end, so the stack can be different. Basically, the negative pointer needs
   //   to read NOT from the current scope but from a saved stack address... I think?
+  //
+  //   A nested function could also be called from within a loop, in which case,
+  //   the stack will again be different because of fucking course it will be, loop's
+  //   cause stack alloc calls and stack free calls meaning the stack pointer will
+  //   change
   //
   //   This is s confusing
   //
