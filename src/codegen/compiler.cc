@@ -683,13 +683,27 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
       BIN_APPEND(PAD_BXOR)
       break;
 
+    case BOP_ADD:
+      if (lkind == TK_STRING) {
+        writer->appendOpCode(OP_STRCONCAT);
+      } else {
+        NUMTYPE_OPCODE(pk, writer, OP_ADD)
+      }
+      BIN_APPEND(PAD_ADD)
+      break;
+    case BOP_MUL:
+      if (lkind == TK_STRING) {
+        BYTEWIDTH_OPCODE(rtype->stackSizeBytes(), writer, OP_STRREP)
+      } else {
+        NUMTYPE_OPCODE(pk, writer, OP_ADD)
+      }
+      BIN_APPEND(PAD_ADD)
+      break;
 
     EQUALITY_CASE(EQ)
     EQUALITY_CASE(NEQ)
 
-    MATH_CASE(ADD)
     MATH_CASE(SUB)
-    MATH_CASE(MUL)
     MATH_CASE(DIV)
     MATH_CASE(MOD)
     MATH_CASE(POW)
@@ -723,7 +737,7 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
     //  - X StringLiteral
     //  - X IntLiteral
     //  - X FloatLiteral
-    //  -   BinaryExpr
+    //  - X BinaryExpr
     //  - X UnaryExpr
     //  - X TernaryExpr
 
