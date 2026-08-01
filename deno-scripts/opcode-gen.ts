@@ -382,7 +382,7 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
       if (i != 0) {
         sig += ","
       }
-      sig += `${v.name}:${v.typename}`
+      sig += `${v.typename}`
     })
 
     let arr: Instruction[] | undefined = opcodeGroups[sig]
@@ -405,7 +405,7 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     out += `\n    // Arguments:`
 
     c.params.forEach((v, i) => {
-      out += `\n    //   [${i}] ${v.name}: ${v.typename}`
+      out += `\n    //   [${i}] ${v.typename}`
     })
     out += `\n    //`
 

@@ -21,18 +21,9 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //
     // Padding: 5
     // Arguments:
-    //   [0] lineno: uint32
+    //   [0] uint32
     //
     case OP_PUSHLINE:
-      *reinterpret_cast<uint32*>(buf) = va_arg(list, uint32);
-      memset(buf + 4, 0, 5);
-      break;
-
-    //
-    // Padding: 5
-    // Arguments:
-    //   [0] to: uint32
-    //
     case OP_JMP:
       *reinterpret_cast<uint32*>(buf) = va_arg(list, uint32);
       memset(buf + 4, 0, 5);
@@ -41,8 +32,8 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //
     // Padding: 4
     // Arguments:
-    //   [0] to: uint32
-    //   [1] condition: register
+    //   [0] uint32
+    //   [1] register
     //
     case OP_JMPI0:
     case OP_JMPN0:
@@ -54,241 +45,11 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //
     // Padding: 7
     // Arguments:
-    //   [0] from: register
-    //   [1] to: register
+    //   [0] register
+    //   [1] register
     //
     case OP_MOV:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 2, 0, 7);
-      break;
-
-    //
-    // Padding: 7
-    // Arguments:
-    //   [0] out: register
-    //   [1] val: uint8
-    //
-    case OP_LOADCONST8:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 2, 0, 7);
-      break;
-
-    //
-    // Padding: 6
-    // Arguments:
-    //   [0] out: register
-    //   [1] val: uint16
-    //
-    case OP_LOADCONST16:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint16*>(buf + 1) = va_arg(list, int32);
-      memset(buf + 3, 0, 6);
-      break;
-
-    //
-    // Padding: 4
-    // Arguments:
-    //   [0] out: register
-    //   [1] val: uint32
-    //
-    case OP_LOADCONST32:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint32*>(buf + 1) = va_arg(list, uint32);
-      memset(buf + 5, 0, 4);
-      break;
-
-    //
-    // Padding: 2
-    // Arguments:
-    //   [0] out: register
-    //   [1] val: uint64
-    //
-    case OP_LOADCONST64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
-      memset(buf + 7, 0, 2);
-      break;
-
-    //
-    // Padding: 0
-    // Arguments:
-    //   [0] out: register
-    //   [1] straddr: uint64
-    //
-    case OP_LOADCONSTSTR:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
-      break;
-
-    //
-    // Padding: 1
-    // Arguments:
-    //   [0] bytes: uint64
-    //
-    case OP_STACKALLOC:
-    case OP_STACKFREE:
-      *reinterpret_cast<uint64*>(buf) = va_arg(list, uint64);
-      memset(buf + 8, 0, 1);
-      break;
-
-    //
-    // Padding: 0
-    // Arguments:
-    //   [0] out: register
-    //   [1] offset: uint64
-    //
-    case OP_RSREAD8:
-    case OP_RSREAD16:
-    case OP_RSREAD32:
-    case OP_RSREAD64:
-    case OP_ASREAD8:
-    case OP_ASREAD16:
-    case OP_ASREAD32:
-    case OP_ASREAD64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
-      break;
-
-    //
-    // Padding: 0
-    // Arguments:
-    //   [0] val: register
-    //   [1] offset: uint64
-    //
-    case OP_RSWRITE8:
-    case OP_RSWRITE16:
-    case OP_RSWRITE32:
-    case OP_RSWRITE64:
-    case OP_ASWRITE8:
-    case OP_ASWRITE16:
-    case OP_ASWRITE32:
-    case OP_ASWRITE64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
-      break;
-
-    //
-    // Padding: 0
-    // Arguments:
-    //   [0] out: register
-    //   [1] bytes: uint64
-    //
-    case OP_HEAPALLOC:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
-      break;
-
-    //
-    // Padding: 0
-    // Arguments:
-    //   [0] addr: register
-    //   [1] bytes: uint64
-    //
-    case OP_HEAPFREE:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
-      break;
-
-    //
-    // Padding: 3
-    // Arguments:
-    //   [0] obj: register
-    //   [1] out: register
-    //   [2] off: uint32
-    //
-    case OP_READOBJ8:
-    case OP_READOBJ16:
-    case OP_READOBJ32:
-    case OP_READOBJ64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint32*>(buf + 2) = va_arg(list, uint32);
-      memset(buf + 6, 0, 3);
-      break;
-
-    //
-    // Padding: 3
-    // Arguments:
-    //   [0] obj: register
-    //   [1] val: register
-    //   [2] off: uint32
-    //
-    case OP_WRITEOBJ8:
-    case OP_WRITEOBJ16:
-    case OP_WRITEOBJ32:
-    case OP_WRITEOBJ64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      *reinterpret_cast<uint32*>(buf + 2) = va_arg(list, uint32);
-      memset(buf + 6, 0, 3);
-      break;
-
-    //
-    // Padding: 6
-    // Arguments:
-    //   [0] obj: register
-    //   [1] out: register
-    //   [2] idx: register
-    //
-    case OP_READIDX8:
-    case OP_READIDX16:
-    case OP_READIDX32:
-    case OP_READIDX64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 2) = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 3, 0, 6);
-      break;
-
-    //
-    // Padding: 6
-    // Arguments:
-    //   [0] obj: register
-    //   [1] val: register
-    //   [2] idx: register
-    //
-    case OP_WRITEIDX8:
-    case OP_WRITEIDX16:
-    case OP_WRITEIDX32:
-    case OP_WRITEIDX64:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 2) = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 3, 0, 6);
-      break;
-
-    //
-    // Padding: 8
-    // Arguments:
-    //   [0] val: register
-    //
-    case OP_PUSHARG:
-    case OP_SETRV:
-    case OP_VINVOKE:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 1, 0, 8);
-      break;
-
-    //
-    // Padding: 7
-    // Arguments:
-    //   [0] val: register
-    //   [1] out: register
-    //
     case OP_INVOKE:
-      *buf = static_cast<uint8>(va_arg(list, int32));
-      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
-      memset(buf + 2, 0, 7);
-      break;
-
-    //
-    // Padding: 7
-    // Arguments:
-    //   [0] in: register
-    //   [1] out: register
-    //
     case OP_I8TU8:
     case OP_I8TI16:
     case OP_I8TU16:
@@ -417,12 +178,119 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
       break;
 
     //
+    // Padding: 7
+    // Arguments:
+    //   [0] register
+    //   [1] uint8
+    //
+    case OP_LOADCONST8:
+      *buf = static_cast<uint8>(va_arg(list, int32));
+      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
+      memset(buf + 2, 0, 7);
+      break;
+
+    //
     // Padding: 6
     // Arguments:
-    //   [0] lhs: register
-    //   [1] rhs: register
-    //   [2] out: register
+    //   [0] register
+    //   [1] uint16
     //
+    case OP_LOADCONST16:
+      *buf = static_cast<uint8>(va_arg(list, int32));
+      *reinterpret_cast<uint16*>(buf + 1) = va_arg(list, int32);
+      memset(buf + 3, 0, 6);
+      break;
+
+    //
+    // Padding: 4
+    // Arguments:
+    //   [0] register
+    //   [1] uint32
+    //
+    case OP_LOADCONST32:
+      *buf = static_cast<uint8>(va_arg(list, int32));
+      *reinterpret_cast<uint32*>(buf + 1) = va_arg(list, uint32);
+      memset(buf + 5, 0, 4);
+      break;
+
+    //
+    // Padding: 2
+    // Arguments:
+    //   [0] register
+    //   [1] uint64
+    //
+    case OP_LOADCONST64:
+    case OP_LOADCONSTSTR:
+    case OP_RSREAD8:
+    case OP_RSREAD16:
+    case OP_RSREAD32:
+    case OP_RSREAD64:
+    case OP_RSWRITE8:
+    case OP_RSWRITE16:
+    case OP_RSWRITE32:
+    case OP_RSWRITE64:
+    case OP_ASREAD8:
+    case OP_ASREAD16:
+    case OP_ASREAD32:
+    case OP_ASREAD64:
+    case OP_ASWRITE8:
+    case OP_ASWRITE16:
+    case OP_ASWRITE32:
+    case OP_ASWRITE64:
+    case OP_HEAPALLOC:
+    case OP_HEAPFREE:
+      *buf = static_cast<uint8>(va_arg(list, int32));
+      *reinterpret_cast<uint64*>(buf + 1) = va_arg(list, uint64);
+      memset(buf + 7, 0, 2);
+      break;
+
+    //
+    // Padding: 1
+    // Arguments:
+    //   [0] uint64
+    //
+    case OP_STACKALLOC:
+    case OP_STACKFREE:
+      *reinterpret_cast<uint64*>(buf) = va_arg(list, uint64);
+      memset(buf + 8, 0, 1);
+      break;
+
+    //
+    // Padding: 3
+    // Arguments:
+    //   [0] register
+    //   [1] register
+    //   [2] uint32
+    //
+    case OP_READOBJ8:
+    case OP_READOBJ16:
+    case OP_READOBJ32:
+    case OP_READOBJ64:
+    case OP_WRITEOBJ8:
+    case OP_WRITEOBJ16:
+    case OP_WRITEOBJ32:
+    case OP_WRITEOBJ64:
+      *buf = static_cast<uint8>(va_arg(list, int32));
+      *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
+      *reinterpret_cast<uint32*>(buf + 2) = va_arg(list, uint32);
+      memset(buf + 6, 0, 3);
+      break;
+
+    //
+    // Padding: 6
+    // Arguments:
+    //   [0] register
+    //   [1] register
+    //   [2] register
+    //
+    case OP_READIDX8:
+    case OP_READIDX16:
+    case OP_READIDX32:
+    case OP_READIDX64:
+    case OP_WRITEIDX8:
+    case OP_WRITEIDX16:
+    case OP_WRITEIDX32:
+    case OP_WRITEIDX64:
     case OP_LSHIFT8:
     case OP_LSHIFT16:
     case OP_LSHIFT32:
@@ -557,6 +425,18 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
       *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
       *(buf + 2) = static_cast<uint8>(va_arg(list, int32));
       memset(buf + 3, 0, 6);
+      break;
+
+    //
+    // Padding: 8
+    // Arguments:
+    //   [0] register
+    //
+    case OP_PUSHARG:
+    case OP_SETRV:
+    case OP_VINVOKE:
+      *buf = static_cast<uint8>(va_arg(list, int32));
+      memset(buf + 1, 0, 8);
       break;
 
     default:
