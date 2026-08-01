@@ -228,6 +228,20 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
   BytecodeWriter* writer = ctx->writer;
 
   switch (kind) {
+    // TODO: Expressions
+    //  - X ID
+    //  -   Call
+    //  - X PropAccess
+    //  - X IndexAccess
+    //  - X BooleanLiteral
+    //  - X CharLiteral
+    //  - X StringLiteral
+    //  - X IntLiteral
+    //  - X FloatLiteral
+    //  -   BinaryExpr
+    //  -   UnaryExpr
+    //  -   TernaryExpr
+
     case AST_PropertyAccessExpr: {
       PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
       ScriptType* type = prop->target->resultType;
