@@ -350,6 +350,8 @@ for (const code of opcodes) {
   arr.push(code)
 }
 
+const castingRequiredTypes = ["uint8", "uint16"]
+
 for (const sig in opcodeGroups) {
   let arr = opcodeGroups[sig]
   const c = arr[0]
@@ -394,11 +396,16 @@ for (const sig in opcodeGroups) {
       out += `)`
     }
 
+    let vaArgCallType: string = typename
+    if (castingRequiredTypes.includes(typename)) {
+      vaArgCallType = "int32"
+    }
+
     out += ` = `
     if (mustCastArg) {
       out += `static_cast<${typename}>(`
     }
-    out += `va_arg(list, ${typename})`
+    out += `va_arg(list, ${vaArgCallType})`
     if (mustCastArg) {
       out += `)`
     }
