@@ -179,6 +179,10 @@
 |`LSHIFT16`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`LSHIFT32`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`LSHIFT64`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`RSHIFT8`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`RSHIFT16`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`RSHIFT32`|6|`lhs: register`, `rhs: register`, `out: register`|
+|`RSHIFT64`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`URSHIFT8`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`URSHIFT16`|6|`lhs: register`, `rhs: register`, `out: register`|
 |`URSHIFT32`|6|`lhs: register`, `rhs: register`, `out: register`|

@@ -184,6 +184,10 @@ conststring opcode_name(opcode code) {
     case OP_LSHIFT16: return "LSHIFT16";
     case OP_LSHIFT32: return "LSHIFT32";
     case OP_LSHIFT64: return "LSHIFT64";
+    case OP_RSHIFT8: return "RSHIFT8";
+    case OP_RSHIFT16: return "RSHIFT16";
+    case OP_RSHIFT32: return "RSHIFT32";
+    case OP_RSHIFT64: return "RSHIFT64";
     case OP_URSHIFT8: return "URSHIFT8";
     case OP_URSHIFT16: return "URSHIFT16";
     case OP_URSHIFT32: return "URSHIFT32";

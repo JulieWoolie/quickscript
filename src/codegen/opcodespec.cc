@@ -295,6 +295,10 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_LSHIFT16:
     case OP_LSHIFT32:
     case OP_LSHIFT64:
+    case OP_RSHIFT8:
+    case OP_RSHIFT16:
+    case OP_RSHIFT32:
+    case OP_RSHIFT64:
     case OP_URSHIFT8:
     case OP_URSHIFT16:
     case OP_URSHIFT32:

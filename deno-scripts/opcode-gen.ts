@@ -203,6 +203,7 @@ function generateOpCodes(): OpCodeGenResult {
 
   currentCategory = "4.3.7.1 Integer-only Binary Operations"
   byteSizedOpCode("LSHIFT", ...binParams())
+  byteSizedOpCode("RSHIFT", ...binParams())
   byteSizedOpCode("URSHIFT", ...binParams())
 
   currentCategory = "4.3.7.2 Boolean-only Binary Operations"
