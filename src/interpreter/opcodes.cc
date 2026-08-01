@@ -244,16 +244,16 @@ conststring opcode_name(opcode code) {
     case OP_MOD_U64: return "MOD_U64";
     case OP_MOD_F32: return "MOD_F32";
     case OP_MOD_F64: return "MOD_F64";
-    case OP_EXP_I8: return "EXP_I8";
-    case OP_EXP_U8: return "EXP_U8";
-    case OP_EXP_I16: return "EXP_I16";
-    case OP_EXP_U16: return "EXP_U16";
-    case OP_EXP_I32: return "EXP_I32";
-    case OP_EXP_U32: return "EXP_U32";
-    case OP_EXP_I64: return "EXP_I64";
-    case OP_EXP_U64: return "EXP_U64";
-    case OP_EXP_F32: return "EXP_F32";
-    case OP_EXP_F64: return "EXP_F64";
+    case OP_POW_I8: return "POW_I8";
+    case OP_POW_U8: return "POW_U8";
+    case OP_POW_I16: return "POW_I16";
+    case OP_POW_U16: return "POW_U16";
+    case OP_POW_I32: return "POW_I32";
+    case OP_POW_U32: return "POW_U32";
+    case OP_POW_I64: return "POW_I64";
+    case OP_POW_U64: return "POW_U64";
+    case OP_POW_F32: return "POW_F32";
+    case OP_POW_F64: return "POW_F64";
     default: return "NOP";
   }
 }

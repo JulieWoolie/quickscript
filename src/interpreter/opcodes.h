@@ -271,16 +271,16 @@
 #define OP_MOD_U64         0x00EB
 #define OP_MOD_F32         0x00EC
 #define OP_MOD_F64         0x00ED
-#define OP_EXP_I8          0x00EE
-#define OP_EXP_U8          0x00EF
-#define OP_EXP_I16         0x00F0
-#define OP_EXP_U16         0x00F1
-#define OP_EXP_I32         0x00F2
-#define OP_EXP_U32         0x00F3
-#define OP_EXP_I64         0x00F4
-#define OP_EXP_U64         0x00F5
-#define OP_EXP_F32         0x00F6
-#define OP_EXP_F64         0x00F7
+#define OP_POW_I8          0x00EE
+#define OP_POW_U8          0x00EF
+#define OP_POW_I16         0x00F0
+#define OP_POW_U16         0x00F1
+#define OP_POW_I32         0x00F2
+#define OP_POW_U32         0x00F3
+#define OP_POW_I64         0x00F4
+#define OP_POW_U64         0x00F5
+#define OP_POW_F32         0x00F6
+#define OP_POW_F64         0x00F7
 
 #define PAD_NOP            9
 #define PAD_PUSHLINE       5
@@ -490,16 +490,16 @@
 #define PAD_MOD_U64        6
 #define PAD_MOD_F32        6
 #define PAD_MOD_F64        6
-#define PAD_EXP_I8         6
-#define PAD_EXP_U8         6
-#define PAD_EXP_I16        6
-#define PAD_EXP_U16        6
-#define PAD_EXP_I32        6
-#define PAD_EXP_U32        6
-#define PAD_EXP_I64        6
-#define PAD_EXP_U64        6
-#define PAD_EXP_F32        6
-#define PAD_EXP_F64        6
+#define PAD_POW_I8         6
+#define PAD_POW_U8         6
+#define PAD_POW_I16        6
+#define PAD_POW_U16        6
+#define PAD_POW_I32        6
+#define PAD_POW_U32        6
+#define PAD_POW_I64        6
+#define PAD_POW_U64        6
+#define PAD_POW_F32        6
+#define PAD_POW_F64        6
 
 typedef uint8 opcode;
 

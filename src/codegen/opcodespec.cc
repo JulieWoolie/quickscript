@@ -498,16 +498,16 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     case OP_MOD_U64:
     case OP_MOD_F32:
     case OP_MOD_F64:
-    case OP_EXP_I8:
-    case OP_EXP_U8:
-    case OP_EXP_I16:
-    case OP_EXP_U16:
-    case OP_EXP_I32:
-    case OP_EXP_U32:
-    case OP_EXP_I64:
-    case OP_EXP_U64:
-    case OP_EXP_F32:
-    case OP_EXP_F64:
+    case OP_POW_I8:
+    case OP_POW_U8:
+    case OP_POW_I16:
+    case OP_POW_U16:
+    case OP_POW_I32:
+    case OP_POW_U32:
+    case OP_POW_I64:
+    case OP_POW_U64:
+    case OP_POW_F32:
+    case OP_POW_F64:
       *buf = static_cast<uint8>(va_arg(list, int32));
       *(buf + 1) = static_cast<uint8>(va_arg(list, int32));
       *(buf + 2) = static_cast<uint8>(va_arg(list, int32));

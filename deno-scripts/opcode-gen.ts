@@ -17,7 +17,7 @@ const mathOperations = [
   "div",
   "mul",
   "mod",
-  "exp",
+  "pow",
 ]
 
 const typeShorthands: string[] = [
