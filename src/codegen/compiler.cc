@@ -134,6 +134,7 @@ struct AddrOutput {
   uint8 outptype = OUTP_NIL;
   registeridopt reg1 = NIL_REGISTER;
   registeridopt reg2 = NIL_REGISTER;
+  uint64 memoffset = 0;
 };
 
 #define APPEND_METHOD(name, bytes, type) \
@@ -227,6 +228,57 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
   BytecodeWriter* writer = ctx->writer;
 
   switch (kind) {
+    case AST_PropertyAccessExpr: {
+      PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
+      ScriptType* type = prop->target->resultType;
+
+      typekind targetkind = type->kind();
+
+      registerid targetreg = ctx->findFreeRegister();
+      ctx->useRegister(targetreg);
+
+      appendExpr(prop->target, targetreg, nullptr, ctx);
+
+      uint64 propoff;
+
+      if (targetkind != TK_STRUCT) {
+        // Only non struct property that is available is the length property on
+        // arrays and strings which is always at offset 0x0
+        propoff = 0;
+      } else {
+        std::string_view view = ctx->stringTable->getview(prop->property->value);
+        ScriptStructType* structType = static_cast<ScriptStructType*>(type);
+
+        propoff = 0;
+
+        for (uint32 p = 0; p < structType->propertyCount; p++) {
+          StructProperty* prop = &structType->properties[p];
+
+          if (prop->propertyName != view) {
+            propoff += prop->type->stackSizeBytes();
+            continue;
+          }
+
+          break;
+        }
+      }
+
+      writer->appendOpCode(OP_READOBJ32);
+      writer->appendU8(targetreg);
+      writer->appendU8(resultreg);
+      writer->appendU8(propoff);
+
+      if (addr) {
+        addr->outptype = OUTP_PROP;
+        addr->reg1 = targetreg;
+        addr->memoffset = propoff;
+      } else {
+        ctx->freeRegister(targetreg);
+      }
+
+      return;
+    }
+
     case AST_IndexAccessExpr: {
       IndexAccessExpr* access = static_cast<IndexAccessExpr*>(expr);
 
