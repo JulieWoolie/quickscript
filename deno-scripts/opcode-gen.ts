@@ -60,6 +60,7 @@ appendCode("RET")
 appendCode("JMP")
 appendCode("JMPI0")
 appendCode("JMPN0")
+appendCode("MOV")
 
 byteSizedOpCode("LOADCONST")
 appendCode("LOADCONSTSTR")
@@ -77,6 +78,8 @@ appendCode("HEAPALLOC")
 appendCode("HEAPFREE")
 byteSizedOpCode("READOBJ")
 byteSizedOpCode("WRITEOBJ")
+byteSizedOpCode("READIDX")
+byteSizedOpCode("WRITEIDX")
 
 out += `\n\n// 4.3.4 Function Call Instructions`
 appendCode("PUSHARG")

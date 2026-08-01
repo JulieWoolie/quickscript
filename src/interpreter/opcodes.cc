@@ -8,6 +8,7 @@ conststring opcode_name(opcode code) {
     case OP_JMP: return "JMP";
     case OP_JMPI0: return "JMPI0";
     case OP_JMPN0: return "JMPN0";
+    case OP_MOV: return "MOV";
     case OP_LOADCONST8: return "LOADCONST8";
     case OP_LOADCONST16: return "LOADCONST16";
     case OP_LOADCONST32: return "LOADCONST32";
@@ -41,6 +42,14 @@ conststring opcode_name(opcode code) {
     case OP_WRITEOBJ16: return "WRITEOBJ16";
     case OP_WRITEOBJ32: return "WRITEOBJ32";
     case OP_WRITEOBJ64: return "WRITEOBJ64";
+    case OP_READIDX8: return "READIDX8";
+    case OP_READIDX16: return "READIDX16";
+    case OP_READIDX32: return "READIDX32";
+    case OP_READIDX64: return "READIDX64";
+    case OP_WRITEIDX8: return "WRITEIDX8";
+    case OP_WRITEIDX16: return "WRITEIDX16";
+    case OP_WRITEIDX32: return "WRITEIDX32";
+    case OP_WRITEIDX64: return "WRITEIDX64";
     case OP_PUSHARG: return "PUSHARG";
     case OP_SETRV: return "SETRV";
     case OP_INVOKE: return "INVOKE";
