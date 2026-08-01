@@ -274,6 +274,7 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
 
       StackScope* current = ctx->getScope();
 
+      // Variable declared in current scope
       if (scope == current) {
         BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD8, OP_RSREAD16, OP_RSREAD32, OP_RSREAD64)
 
@@ -288,8 +289,8 @@ void appendExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCont
       //   So I think the way this needs to be done (reading from upper scopes) depends on
       //   which variable or constant is being referenced. If we're referencing a global
       //   variable declared in the main scope of the script, then we use ASREAD (Absolute
-      //   read) which takes in a memory offset relative to the start of the script's main
-      //   scope, or to read ASREAD with a negative number if not.
+      //   stack read) which takes in a memory offset relative to the start of the script's
+      //   main scope, or to read ASREAD with a negative number if not.
       //
       //   The thing is, a calling function can't reference anything from a caller's stack
       //   with this methodology because the function doesn't know anything in the above
