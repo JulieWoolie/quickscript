@@ -499,6 +499,33 @@ ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, b
   // Clear the assignment flag
   op &= ~BOP_ASSIGN_FLAG;
 
+  // Operations and allowed operand types and their resulting types:
+  //
+  // - GT, GTE, LT, LTE => bool:
+  //     - Any two numerical operands are allowed
+  //     - Any two array operands are allowed
+  //     - Any two string operands are allowed
+  // - EQ, NEQ => bool:
+  //     - Any two operands of the same type are allowed
+  //     - Any two numerical operands are allowed
+  // - ADD:
+  //     - Two string operands are a allowed => string
+  //     - String and any type are allowed => concatenated string
+  //     - Any two numerical operands are allowed => wider number type
+  // - MUL:
+  //     - String and any integer operand area allowed => repeated string
+  //     - Any two numerical operands are allowed => wider number type
+  // - SUB, MUL, DIV, POW:
+  //     - Any two numerical operands are allowed => wider number type
+  // - SHL, SHR, USHR, BIT_OR, BIT_AND
+  //     - Any two integer operands are allowed => wider number type
+  // - XOR:
+  //     - Any two integer operands are allowed => wider number type
+  //     - Two boolean operands are allowed => bool
+  // - LOG_AND, LOG_OR => bool:
+  //     - Two boolean operands area allowed
+  //
+
   if (op == BOP_EQ || op == BOP_NEQ) {
     if (left->kind() != right->kind()) {
       return nullptr;
