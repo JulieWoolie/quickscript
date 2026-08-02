@@ -497,10 +497,10 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
 
 async function generateMarkdownSpec(opcodes: Instruction[]): Promise<void> {
   let out = `# OP Code specification Table
-| OP Code | Padding | Arguments |
-|--|--|--|`
+| OP Code | Value | Padding | Arguments |
+|--|--|--|--|`
   for (const code of opcodes) {
-    out += `\n|\`${code.opcode}\`|${code.padding}|`
+    out += `\n|\`${code.opcode}\`|\`${code.value}\`|${code.padding}|`
     code.params.forEach((v, i) => {
       if (i != 0) {
         out += `, `
@@ -515,9 +515,10 @@ async function generateMarkdownSpec(opcodes: Instruction[]): Promise<void> {
 
 function printHtmlSpec(opcodes: Instruction[]): void {
   let out = `<table>
-  <caption>OP Codes</captions>
+  <caption>OP Codes</caption>
   <thead><tr>
     <th>OP Code</th>
+    <th>Value</th>
     <th>Padding</th>
     <th>Arguments</th>
   </tr></thead>
@@ -533,7 +534,7 @@ function printHtmlSpec(opcodes: Instruction[]): void {
     })
 
     out += `
-    <tr><td><code>${code.opcode}</code></td><td>${code.padding}</td><td><code>${paramStr}</code></td></tr>`
+    <tr><td><code>${code.opcode}</code></td><td><code>${code.value}</code></td><td>${code.padding}</td><td><code>${paramStr}</code></td></tr>`
   }
 
   out += `\n  </tbody>\n</table>`
