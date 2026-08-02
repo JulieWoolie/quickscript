@@ -240,6 +240,8 @@ bool isIntegerType(ScriptType* type);
 
 bool pkIsIntegerType(primitivekind kind);
 
+bool isBooleanType(ScriptType* type);
+
 bool pkIsSignedType(primitivekind kind);
 
 PrimitiveScriptType* widestNumberType(PrimitiveScriptType* l, PrimitiveScriptType* r);
@@ -277,6 +279,8 @@ class TypeLookup {
     ScriptType* findReferencedType(const std::string& str);
 
     ScriptArrayType* getArrayType(ScriptType* componentType);
+
+    PrimitiveScriptType* boolType();
 
     ScriptStringType* getStringType();
 

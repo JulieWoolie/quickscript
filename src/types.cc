@@ -176,6 +176,14 @@ bool pkIsIntegerType(const primitivekind kind) {
   }
 }
 
+bool isBooleanType(ScriptType* type) {
+  if (type->kind() != TK_PRIMITIVE) {
+    return false;
+  }
+  PrimitiveScriptType* prim = static_cast<PrimitiveScriptType*>(type);
+  return prim->primtype == PK_BOOL;
+}
+
 TypeLookup::TypeLookup(NoFreeAllocator *alloc) {
   m_alloc = alloc;
 
@@ -279,6 +287,10 @@ ScriptArrayType* TypeLookup::getArrayType(ScriptType *componentType) {
     return emplaced;
   }
   return (ScriptArrayType*) m_typeLookup[name];
+}
+
+PrimitiveScriptType* TypeLookup::boolType() {
+  return &typeBool;
 }
 
 ScriptStringType* TypeLookup::getStringType() {

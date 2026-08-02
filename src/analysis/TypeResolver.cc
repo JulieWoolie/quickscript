@@ -495,91 +495,175 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
   v->resultType = type;
 }
 
+bool isArrayTypeComparable(ScriptArrayType* type) {
+  ScriptType* ctype = type->componentType;
+  switch (ctype->kind()) {
+    case TK_PRIMITIVE:
+    case TK_STRING:
+      return true;
+    case TK_ARRAY:
+      return isArrayTypeComparable(static_cast<ScriptArrayType*>(ctype));
+    default:
+      return false;
+  }
+}
+
+// Operations and allowed operand types and their resulting types:
+//
+// - GT, GTE, LT, LTE => bool:
+//     - Any two numerical operands are allowed
+//     - Any two arrays with comparable component types operands are allowed
+//     - Any two string operands are allowed
+// - EQ, NEQ => bool:
+//     - Any two operands of the same type are allowed
+//     - Any two numerical operands are allowed
+// - ADD:
+//     - Two string operands are a allowed => string
+//     - String and any type are allowed => concatenated string
+//     - Any two numerical operands are allowed => wider number type
+// - MUL:
+//     - String and any integer operand are allowed => repeated string
+//     - Any two numerical operands are allowed => wider number type
+// - SUB, MOD, DIV, POW:
+//     - Any two numerical operands are allowed => wider number type
+// - SHL, SHR, USHR, BIT_OR, BIT_AND
+//     - Any two integer operands are allowed => wider number type
+// - XOR:
+//     - Any two integer operands are allowed => wider number type
+//     - Two boolean operands are allowed => bool
+// - LOG_AND, LOG_OR => bool:
+//     - Two boolean operands area allowed
+//
+// If the ASSIGN flag is set, meaning the operation will assign the
+// right operand to the left side, the left side must be able to hold
+// the right's value, but the right side's type will be returned as
+// the result.
+//
+// That is, unless this is one of the exceptions carved out for
+// strings ('+' for string concatenating, or '*' for repeating strings)
+//
 ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) const {
+  bool isAssign = op & BOP_ASSIGN_FLAG;
+
+  if (op == BOP_ASSIGN) {
+    if (isAssignableTo(left, right)) {
+      return right;
+    }
+    return nullptr;
+  }
+
   // Clear the assignment flag
   op &= ~BOP_ASSIGN_FLAG;
 
-  // Operations and allowed operand types and their resulting types:
-  //
-  // - GT, GTE, LT, LTE => bool:
-  //     - Any two numerical operands are allowed
-  //     - Any two array operands are allowed
-  //     - Any two string operands are allowed
-  // - EQ, NEQ => bool:
-  //     - Any two operands of the same type are allowed
-  //     - Any two numerical operands are allowed
-  // - ADD:
-  //     - Two string operands are a allowed => string
-  //     - String and any type are allowed => concatenated string
-  //     - Any two numerical operands are allowed => wider number type
-  // - MUL:
-  //     - String and any integer operand area allowed => repeated string
-  //     - Any two numerical operands are allowed => wider number type
-  // - SUB, MUL, DIV, POW:
-  //     - Any two numerical operands are allowed => wider number type
-  // - SHL, SHR, USHR, BIT_OR, BIT_AND
-  //     - Any two integer operands are allowed => wider number type
-  // - XOR:
-  //     - Any two integer operands are allowed => wider number type
-  //     - Two boolean operands are allowed => bool
-  // - LOG_AND, LOG_OR => bool:
-  //     - Two boolean operands area allowed
-  //
-
-  if (op == BOP_EQ || op == BOP_NEQ) {
-    if (left->kind() != right->kind()) {
-      return nullptr;
-    }
-    if (left->kind() == TK_STRUCT && left != right) {
-      return nullptr;
-    }
-
-    return m_lookup->getPrimitiveType(PK_BOOL);
-  }
-
-  if (left->kind() == TK_STRING) {
-    if ((right->kind() == TK_STRING || right->kind() == TK_PRIMITIVE) && op == BOP_ADD) {
-      return m_lookup->getStringType();
-    }
-    if (isIntegerType(right) && op == BOP_MUL) {
-      return m_lookup->getStringType();
-    }
-    return nullptr;
-  }
-
-  if (left->kind() != TK_PRIMITIVE || right->kind() != TK_PRIMITIVE) {
-    if (op == BOP_EQ || op == BOP_NEQ) {
-      if (left == right) {
-        return left;
-      }
-      return nullptr;
-    }
-
-    return nullptr;
-  }
-
-  PrimitiveScriptType* pl = (PrimitiveScriptType*) left;
-  PrimitiveScriptType* pr = (PrimitiveScriptType*) right;
-
-  primitivekind lkind = pl->primtype;
-  primitivekind rkind = pr->primtype;
+  typekind lkind = left->kind();
+  typekind rkind = right->kind();
 
   switch (op) {
-    case BOP_LOG_AND:
-    case BOP_LOG_OR:
+    case BOP_GT:
+    case BOP_GTE:
+    case BOP_LT:
+    case BOP_LTE:
+      if (isNumberType(left) && isNumberType(right)) {
+        return m_lookup->boolType();
+      }
+      if (lkind == TK_STRING && rkind == TK_STRING) {
+        return m_lookup->boolType();
+      }
+      if (lkind == TK_ARRAY && rkind == TK_ARRAY) {
+        ScriptArrayType* larr = static_cast<ScriptArrayType*>(left);
+        ScriptArrayType* rarr = static_cast<ScriptArrayType*>(right);
+
+        if (larr != rarr || !isArrayTypeComparable(larr)) {
+          return nullptr;
+        }
+
+        return m_lookup->boolType();
+      }
+      return nullptr;
+
+    case BOP_EQ:
+    case BOP_NEQ:
+      if (lkind == TK_PRIMITIVE && rkind == TK_PRIMITIVE) {
+        return m_lookup->boolType();
+      }
+      if (left == right) {
+        return m_lookup->boolType();
+      }
+      return nullptr;
+
+    case BOP_ADD:
+      if (lkind == TK_STRING) {
+        return left;
+      }
+    case BOP_MUL:
+      // Holy nesting, but kinda needed for pass through from above case
+      if (op == BOP_MUL) {
+        if (lkind == TK_STRING) {
+          if (isIntegerType(right)) {
+            return left;
+          }
+          return nullptr;
+        }
+      }
+    case BOP_SUB:
+    case BOP_DIV:
+    case BOP_POW:
+    case BOP_MOD:
+      if (lkind != TK_PRIMITIVE || rkind != TK_PRIMITIVE) {
+        return nullptr;
+      }
+      if (isAssign) {
+        if (isAssignableTo(left, right)) {
+          return right;
+        }
+        return nullptr;
+      }
+      return widestNumberType(
+        static_cast<PrimitiveScriptType*>(left),
+        static_cast<PrimitiveScriptType*>(right)
+      );
+
     case BOP_SHL:
     case BOP_SHR:
     case BOP_USHR:
-    case BOP_BIT_AND:
     case BOP_BIT_OR:
-    case BOP_XOR:
-      if (!(pkIsIntegerType(lkind) || lkind == PK_BOOL)
-        || !(pkIsIntegerType(rkind) || rkind == PK_BOOL)
-      ) {
+    case BOP_BIT_AND:
+      if (!isIntegerType(left) || !isIntegerType(right)) {
         return nullptr;
       }
+      if (isAssign) {
+        if (isAssignableTo(left, right)) {
+          return right;
+        }
+        return nullptr;
+      }
+      return widestNumberType(
+        static_cast<PrimitiveScriptType*>(left),
+        static_cast<PrimitiveScriptType*>(right)
+      );
+
+    case BOP_XOR:
+    case BOP_LOG_AND:
+    case BOP_LOG_OR:
+      if (isIntegerType(left) && isIntegerType(right)) {
+        if (isAssign) {
+          if (isAssignableTo(left, right)) {
+            return right;
+          }
+          return nullptr;
+        }
+        return widestNumberType(
+          static_cast<PrimitiveScriptType*>(left),
+          static_cast<PrimitiveScriptType*>(right)
+        );
+      }
+      if (isBooleanType(left) && isBooleanType(right)) {
+        return left;
+      }
+      return nullptr;
+
     default:
-      return widestNumberType(pl, pr);
+      return nullptr;
   }
 }
 
@@ -600,14 +684,15 @@ bool isLiteral(astnodetype type) {
 void checkAssignability(Expr* expr, CompilerErrors* errors) {
   astnodetype kind = expr->nodeKind();
 
-  if (isLiteral(kind)) {
-    errors->error(expr->location, "Cannot assign a value to a literal");
-    return;
-  }
+  switch (kind) {
+    case AST_Identifier:
+    case AST_PropertyAccessExpr:
+    case AST_IndexAccessExpr:
+      break;
 
-  if (kind == AST_TernaryExpr) {
-    errors->error(expr->location, "Cannot assign value to ternary expression");
-    return;
+    default:
+      errors->error(expr->location, "Invalid left-hand-side expression; cannot be assigned to");
+      break;
   }
 }
 
@@ -663,44 +748,61 @@ void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
 
   if (v->op & BOP_ASSIGN_FLAG) {
     checkAssignability(v->lhs, m_errors);
-
-    if (!isAssignableTo(ltype, rtype)) {
-      m_errors->error(v->location, "Cannot assign value of type %s to %s",
-        rtype->typeName(),
-        ltype->typeName()
-      );
-    }
     testTypeAssignability(v->lhs, m_errors);
   }
 
   v->resultType = res;
 }
 
-bool unaryOpIsValidFor(unaryop op, ScriptType* type) {
+ScriptType* checkUnaryOperation(unaryop op, ScriptType* type, TypeLookup* lookup) {
   if (type->kind() != TK_PRIMITIVE) {
-    return false;
+    return nullptr;
   }
 
   PrimitiveScriptType* p = (PrimitiveScriptType*) type;
 
   switch (op) {
     case UOP_BIT_NOT:
-      return isIntegerType(p);
+      if (isIntegerType(p)) {
+        return type;
+      }
     case UOP_LOG_NOT:
-      return isIntegerType(p) || p->primtype == PK_BOOL;
+      if (isIntegerType(p) || p->primtype == PK_BOOL) {
+        return type;
+      }
+    case UOP_NEG:
+      // Unsigned type becomes signed
+      switch (p->primtype) {
+        case PK_UINT8:
+          return lookup->getPrimitiveType(PK_INT8);
+        case PK_UINT16:
+          return lookup->getPrimitiveType(PK_INT16);
+        case PK_UINT32:
+          return lookup->getPrimitiveType(PK_INT32);
+        case PK_UINT64:
+          return lookup->getPrimitiveType(PK_INT64);
+        case PK_BOOL:
+          return nullptr;
+        default:
+          return type;
+      }
     default:
-      return true;
+      return type;
   }
 }
 
 void TypeResolver::acceptUnaryExpr(UnaryExpr* v) {
   v->target->acceptVisit(this);
-  v->resultType = v->target->resultType;
 
-  if (unaryOpIsValidFor(v->op, v->resultType)) {
+  ScriptType* resType = checkUnaryOperation(v->op, v->target->resultType, m_lookup);
+
+  if (resType) {
     testTypeAssignability(v->target, m_errors);
+    v->resultType = resType;
     return;
   }
+
+  v->resultType = v->target->resultType;
 
   m_errors->error(v->location, "Cannot use %s operator on %s",
     unaryop_name(v->op),
