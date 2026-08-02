@@ -1,5 +1,5 @@
-# ERROR line=5 message="Cannot assign a value to a literal"
-# ERROR line=6 message="Cannot assign a value to a literal"
+# ERROR line=5 message="Invalid left-hand-side expression; cannot be assigned to"
+# ERROR line=6 message="Invalid left-hand-side expression; cannot be assigned to"
 
 int32 main() {
   12 = 10
