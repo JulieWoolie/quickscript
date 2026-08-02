@@ -43,6 +43,8 @@ struct BytecodeWriter {
 
   void appendInstruction(opcode code, ...);
 
+  void writeInstructionCounter(uint64 offset) const;
+
   template<typename T>
   T* currentAddrAs();
 

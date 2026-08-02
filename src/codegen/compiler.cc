@@ -95,15 +95,34 @@ struct StackScope {
   }
 };
 
+struct CompiledFunction {
+  FunctionSignature* signature = nullptr;
+  uint32 bodystart = 0;
+  uint64 nameOffset = 0;
+};
+
 struct CompilerContext {
   std::vector<ScriptType*> expectedType;
   std::vector<StackScope> scopes;
 
+  std::unordered_map<ScriptStructType*, uint32> declaredStructConstructors;
+  std::vector<ScriptStructType*> declaredStructs;
+
+  std::vector<CompiledFunction> functions;
+  std::vector<FunctionDeclStatement*> funcQueue;
+
   BytecodeWriter* writer = nullptr;
   ConstStringPoolWriter* stringPool = nullptr;
   StringTable* stringTable = nullptr;
+  TypeLookup* types = nullptr;
 
-  uint64 registersInUse = 0;
+  uint64* registersInUse = nullptr;
+
+  uint32 pushCompiledFunction(FunctionSignature* sign, uint32 start, uint64 nameOff) {
+    uint32 idx = functions.size();
+    functions.emplace_back(sign, start, nameOff);
+    return idx;
+  }
 
   StackScope* getScope() {
     return &scopes.back();
@@ -114,6 +133,10 @@ struct CompilerContext {
     scope.level = scopes.size();
     scopes.push_back(scope);
     return &scopes.back();
+  }
+
+  void popScope() {
+    scopes.pop_back();
   }
 
   std::pair<StackScope*, StackSymbol*> findSymbol(stringid id, StackSymType symType) {
@@ -163,20 +186,24 @@ struct CompilerContext {
     return off;
   }
 
-  registeridopt findFreeRegister() const {
-    if (registersInUse == ALL_REGISTERS_USED) {
+  registeridopt acquireRegister() const {
+    uint64 used = *registersInUse;
+
+    if (used == ALL_REGISTERS_USED) {
       return NO_REGISTER;
     }
-    if (registersInUse == 0) {
+    if (used == 0) {
       return 0;
     }
 
     uint64 m;
     for (int8 i = 0; i < 64; i++) {
       m = 1 << i;
-      if (m & registersInUse) {
+      if (m & used) {
         continue;
       }
+
+      *registersInUse |= m;
       return i;
     }
 
@@ -185,15 +212,15 @@ struct CompilerContext {
 
   bool registerInUse(const registerid id) const {
     uint64 m = 1L << id;
-    return registersInUse & m;
+    return *registersInUse & m;
   }
 
-  void useRegister(const registerid id) {
-    registersInUse |= (1L << id);
+  void useRegister(const registerid id) const {
+    *registersInUse |= (1L << id);
   }
 
-  void freeRegister(const registerid id) {
-    registersInUse &= ~(1L << id);
+  void freeRegister(const registerid id) const {
+    *registersInUse &= ~(1L << id);
   }
 };
 
@@ -279,35 +306,13 @@ void BytecodeWriter::appendInstruction(opcode code, ...) {
   va_end(list);
 }
 
+void BytecodeWriter::writeInstructionCounter(const uint64 offset) const {
+  uint32* ptr = reinterpret_cast<uint32*>(buf + offset);
+  *ptr = getInstructionCounter();
+}
+
 uint32 BytecodeWriter::getInstructionCounter() const {
   return buflen / LENGTH_INSTRUCTION;
-}
-
-uint64 measureStackSize(Statement* s) {
-  astnodetype kind = s->nodeKind();
-
-  switch (kind) {
-    case AST_LexicalDeclaration:
-      return static_cast<LexicalDeclaration*>(s)->typeExpr->getReferencedType()->stackSizeBytes();
-    default:
-      return 0;
-  }
-}
-
-void appendStatement(Statement* stat, CompilerContext* ctx) {
-  astnodetype kind = stat->nodeKind();
-
-  if (kind == AST_LexicalDeclaration) {
-    LexicalDeclaration* lex = static_cast<LexicalDeclaration*>(stat);
-
-    ScriptType* stype = lex->typeExpr->getReferencedType();
-
-    StackScope* scope = ctx->getScope();
-    StackSymbol* sym = scope->pushSymbol(lex->variableName->value, SSYM_VAR);
-    sym->stacksize = stype->stackSizeBytes();
-
-    return;
-  }
 }
 
 void compileWriteOperation(
@@ -363,11 +368,8 @@ void compileIndexAccessExpr(
   AddrOutput* addr,
   CompilerContext* ctx
 ) {
-  registerid targetreg = ctx->findFreeRegister();
-  ctx->useRegister(targetreg);
-
-  registerid idxreg = ctx->findFreeRegister();
-  ctx->useRegister(idxreg);
+  registerid targetreg = ctx->acquireRegister();
+  registerid idxreg = ctx->acquireRegister();
 
   compileExpr(access->target, targetreg, nullptr, ctx);
   uint32 stackSize = access->resultType->stackSizeBytes();
@@ -400,9 +402,7 @@ void compilePropertyAccess(
   ScriptType* type = prop->target->resultType;
 
   typekind targetkind = type->kind();
-
-  registerid targetreg = ctx->findFreeRegister();
-  ctx->useRegister(targetreg);
+  registerid targetreg = ctx->acquireRegister();
 
   compileExpr(prop->target, targetreg, nullptr, ctx);
 
@@ -636,7 +636,7 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
 
     compileExpr(rhs, r1, &out, ctx);
 
-    *reinterpret_cast<uint32*>(writer->buf + jumpAddrOffset) = writer->getInstructionCounter();
+    writer->writeInstructionCounter(jumpAddrOffset);
 
     if (isAssignment) {
       compileWriteOperation(&out, 1, ctx, r1);
@@ -645,8 +645,7 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
     return;
   }
 
-  registerid r2 = ctx->findFreeRegister();
-  ctx->useRegister(r2);
+  registerid r2 = ctx->acquireRegister();
 
   compileExpr(lhs, r2, &out, ctx);
   compileExpr(rhs, r1, nullptr, ctx);
@@ -727,6 +726,8 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
   }
 }
 
+void compileRValue(ScriptType* type, Expr* val, CompilerContext* ctx, registerid out);
+
 void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx) {
   astnodetype kind = expr->nodeKind();
   BytecodeWriter* writer = ctx->writer;
@@ -742,6 +743,8 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
     //  - X StringLiteral
     //  - X IntLiteral
     //  - X FloatLiteral
+    //  - X ObjectLiteral
+    //  - X ArrayLiteral
     //  - X BinaryExpr
     //  - X UnaryExpr
     //  - X TernaryExpr
@@ -775,11 +778,11 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
       writer->appendU32(0);
       writer->appendPadding(PAD_JMP);
 
-      *reinterpret_cast<uint32*>(writer->buf + firstJumpOff) = writer->getInstructionCounter();
+      writer->writeInstructionCounter(firstJumpOff);
 
       compileExpr(ternary->right, resultreg, nullptr, ctx);
 
-      *reinterpret_cast<uint32*>(writer->buf + secondJumpOff) = writer->getInstructionCounter();
+      writer->writeInstructionCounter(secondJumpOff);
 
       return;
     }
@@ -796,6 +799,106 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
 
     case AST_Identifier: {
       compileIdentifier(static_cast<Identifier*>(expr), resultreg, addr, ctx);
+      return;
+    }
+
+    case AST_ArrayLiteral: {
+      ArrayLiteral* lit = static_cast<ArrayLiteral*>(expr);
+      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
+
+      uint64 csize = arrType->componentType->stackSizeBytes();
+      uint64 count = lit->values.size();
+      uint64 memsize = sizeof(uint32) + (csize * count);
+
+      writer->appendOpCode(OP_HEAPALLOC);
+      writer->appendU8(resultreg);
+      writer->appendU64(memsize);
+      writer->appendPadding(PAD_HEAPALLOC);
+
+      registerid valreg = ctx->acquireRegister();
+      registerid idxreg = ctx->acquireRegister();
+
+      for (uint32 i = 0; i < count; i++) {
+        Expr* expr = lit->values[i];
+        compileRValue(arrType->componentType, expr, ctx, valreg);
+
+        writer->appendOpCode(OP_LOADCONST32);
+        writer->appendU8(idxreg);
+        writer->appendU32(i);
+        writer->appendPadding(PAD_LOADCONST32);
+
+        BYTEWIDTH_OPCODE(arrType->componentType->stackSizeBytes(), writer, OP_WRITEIDX)
+        writer->appendU8(resultreg);
+        writer->appendU8(valreg);
+        writer->appendU8(idxreg);
+        writer->appendPadding(PAD_WRITEIDX);
+      }
+
+      ctx->freeRegister(valreg);
+      ctx->freeRegister(idxreg);
+
+      return;
+    }
+
+    case AST_ObjectLiteral: {
+      //
+      // Here we have to assume that resultreg already contains an allocated object of this value
+      // structype name = {property = false}
+      // ^ a variable of type structype will be
+      //   allocated regardless of if the value is there or not,
+      //   generated constructor called as well
+      //
+      // Really the only thing that worries me is call arguments like this:
+      // someFunction({prop = true})
+      //
+      // Because it could also be
+      // structtype x = {prop = false}
+      // someFunction(x)
+      //
+      // And in the 2nd case no value allocation is required, but in the 1st one a
+      // value must be allocated beforehand, on the plus side, the value can also
+      // instantly be freed
+      //
+      // Yeah whatever, resultreg already contains the allocated object
+      //
+      ObjectLiteral* lit = static_cast<ObjectLiteral*>(expr);
+      ScriptStructType* stype = static_cast<ScriptStructType*>(lit->resultType);
+
+      registerid propreg = ctx->acquireRegister();
+
+      for (ObjectLiteralProperty* prop : lit->properties) {
+        std::string_view propName = ctx->stringTable->getview(prop->propertyName->value);
+        ScriptType* ptype = nullptr;
+        uint32 off = 0;
+
+        for (uint32 i = 0; i < stype->propertyCount; i++) {
+          StructProperty* prop = &stype->properties[i];
+          if (prop->propertyName == propName) {
+            ptype = prop->type;
+            break;
+          }
+          off += prop->type->stackSizeBytes();
+        }
+
+        if (ptype->kind() == TK_STRUCT) {
+          writer->appendOpCode(OP_READOBJ64);
+          writer->appendU8(resultreg);
+          writer->appendU8(propreg);
+          writer->appendU32(off);
+          writer->appendPadding(PAD_READOBJ);
+        }
+        compileExpr(prop->value, propreg, nullptr, ctx);
+
+        if (ptype->kind() != TK_STRUCT) {
+          BYTEWIDTH_OPCODE(ptype->stackSizeBytes(), writer, OP_WRITEOBJ)
+          writer->appendU8(resultreg);
+          writer->appendU8(propreg);
+          writer->appendU32(off);
+          writer->appendPadding(PAD_WRITEOBJ);
+        }
+      }
+
+      ctx->freeRegister(propreg);
       return;
     }
 
@@ -867,8 +970,7 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
       bool isPostOp = uop == UOP_POSTINC || uop == UOP_POSTDEC;
 
       if (isPostOp) {
-        targetRegister = ctx->findFreeRegister();
-        ctx->useRegister(targetRegister);
+        targetRegister = ctx->acquireRegister();
       } else {
         targetRegister = resultreg;
       }
@@ -1016,6 +1118,258 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
   }
 }
 
+void compileStructInitCall(ScriptStructType* type, CompilerContext* ctx, registerid out) {
+  BytecodeWriter* writer = ctx->writer;
+
+  uint32 funcTableIndex = ctx->declaredStructConstructors[type];
+  uint64 heapsize = type->heapSize();
+
+  writer->appendOpCode(OP_HEAPALLOC);
+  writer->appendU8(out);
+  writer->appendU64(heapsize);
+
+  writer->appendOpCode(OP_PUSHARG);
+  writer->appendU8(out);
+  writer->appendPadding(PAD_PUSHARG);
+
+  writer->appendOpCode(OP_VINVOKE);
+  writer->appendU32(funcTableIndex);
+  writer->appendPadding(PAD_VINVOKE);
+}
+
+void compileValueInitialiser(ScriptType* type, CompilerContext* ctx, registerid out) {
+  BytecodeWriter* writer = ctx->writer;
+
+  switch (type->kind()) {
+    case TK_PRIMITIVE:
+    case TK_STRING:
+    case TK_ARRAY:
+      BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_LOADCONST)
+      writer->appendU8(out);
+      writer->appendU64(0);
+      break;
+
+    case TK_STRUCT:
+      compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
+      break;
+
+    default:
+      break;
+  }
+}
+
+uint64 measureBlock(Block* block) {
+  uint64 bsize = 0;
+  for (Statement* stat : block->statements) {
+    if (stat->nodeKind() != AST_LexicalDeclaration) {
+      continue;
+    }
+    bsize += static_cast<LexicalDeclaration*>(stat)->typeExpr->referencedType->stackSizeBytes();
+  }
+  return bsize;
+}
+
+uint32 blockBegin(BytecodeWriter* writer, uint64 bytes, uint64* addrOut) {
+  uint32 instr = writer->getInstructionCounter();
+
+  writer->appendOpCode(OP_STACKALLOC);
+
+  if (addrOut) {
+    *addrOut = writer->buflen;
+  }
+
+  writer->appendU64(bytes);
+  writer->appendPadding(PAD_STACKALLOC);
+
+  return instr;
+}
+
+void blockEnd(BytecodeWriter* writer, uint64 bytes) {
+  writer->appendOpCode(OP_STACKFREE);
+  writer->appendU64(bytes);
+  writer->appendPadding(PAD_STACKFREE);
+
+  writer->appendOpCode(OP_RET);
+  writer->appendPadding(PAD_RET);
+}
+
+void compileStatement(Statement* stat, CompilerContext* ctx);
+
+void compileBlock(Block* block, CompilerContext* ctx, uint64 size = 0) {
+  blockBegin(ctx->writer, size, nullptr);
+  for (Statement* statement : block->statements) {
+    compileStatement(statement, ctx);
+  }
+  blockEnd(ctx->writer, size);
+}
+
+void compileLexDecl(LexicalDeclaration* lex, CompilerContext* ctx) {
+  ScriptType* stype = lex->typeExpr->referencedType;
+
+  StackScope* scope = ctx->getScope();
+  StackSymbol* sym = scope->pushSymbol(lex->variableName->value, SSYM_VAR);
+  sym->stacksize = stype->stackSizeBytes();
+
+  BytecodeWriter* writer = ctx->writer;
+
+  registerid valreg = ctx->acquireRegister();
+  compileRValue(stype, lex->value, ctx, valreg);
+
+  BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_RSWRITE)
+  writer->appendU8(valreg);
+  writer->appendU64(sym->stackoffset);
+
+  ctx->freeRegister(valreg);
+}
+
+void compileIfStatement(IfStatement* stat, CompilerContext* ctx) {
+  registerid reg = ctx->acquireRegister();
+  BytecodeWriter* writer = ctx->writer;
+
+  compileExpr(stat->condition, reg, nullptr, ctx);
+
+  writer->appendOpCode(OP_JMPI0);
+  uint64 condFailedJumpAddr = writer->buflen;
+
+  writer->appendU32(0);
+  writer->appendU8(reg);
+  writer->appendPadding(PAD_JMPI0);
+
+  compileStatement(stat->body, ctx);
+
+  if (stat->elseBody) {
+    writer->appendOpCode(OP_JMP);
+    uint64 afterElseAddr = writer->buflen;
+    writer->appendU32(0);
+    writer->appendPadding(PAD_JMP);
+
+    writer->writeInstructionCounter(condFailedJumpAddr);
+
+    compileStatement(stat->elseBody, ctx);
+
+    writer->writeInstructionCounter(afterElseAddr);
+  } else {
+    writer->writeInstructionCounter(condFailedJumpAddr);
+  }
+}
+
+void compileFuncDecl(FunctionDeclStatement* stat, CompilerContext* ctx) {
+  uint64 stacksize = 0;
+  for (FunctionParam* p : stat->arguments) {
+    stacksize += p->paramType->referencedType->stackSizeBytes();
+  }
+  stacksize += measureBlock(stat->functionBody);
+
+  uint32 start = blockBegin(ctx->writer, stacksize, nullptr);
+
+
+
+  blockEnd(ctx->writer, stacksize);
+}
+
+void compileStatement(Statement* stat, CompilerContext* ctx) {
+  astnodetype kind = stat->nodeKind();
+  BytecodeWriter* writer = ctx->writer;
+
+  switch (kind) {
+    case AST_LexicalDeclaration:
+      compileLexDecl(static_cast<LexicalDeclaration*>(stat), ctx);
+      return;
+    case AST_FunctionDeclStatement:
+      ctx->funcQueue.push_back(static_cast<FunctionDeclStatement*>(stat));
+      return;
+    case AST_IfStatement:
+      compileIfStatement(static_cast<IfStatement*>(stat), ctx);
+      return;
+
+    case AST_Block: {
+      Block* b = static_cast<Block*>(stat);
+      uint64 size = measureBlock(b);
+      compileBlock(b, ctx, size);
+      return;
+    }
+
+    default:
+      return;
+  }
+}
+
+void compileRValue(ScriptType* type, Expr* val, CompilerContext* ctx, registerid out) {
+  if (!val) {
+    compileValueInitialiser(type, ctx, out);
+    return;
+  }
+
+  if (type->kind() == TK_STRUCT) {
+    compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
+  }
+
+  compileExpr(val, out, nullptr, ctx);
+}
+
+void compileStructDecl(StructDecl* decl, CompilerContext* ctx) {
+  ScriptStructType* stype = decl->type;
+  ctx->declaredStructs.push_back(stype);
+
+  BytecodeWriter* writer = ctx->writer;
+  uint32 pcount = decl->properties.size();
+  uint64 stacksize = sizeof(uint64);
+
+  ctx->pushScope();
+
+  uint32 start = blockBegin(writer, stacksize, nullptr);
+
+  registerid selfreg = ctx->acquireRegister();
+  registerid propreg = ctx->acquireRegister();
+
+  writer->appendOpCode(OP_RSREAD64);
+  writer->appendU8(selfreg);
+  writer->appendU64(0);
+  writer->appendPadding(PAD_RSREAD);
+
+  uint32 off = 0;
+  for (uint32 i = 0; i < pcount; i++) {
+    StructPropertyDecl* pdecl = decl->properties.at(i);
+    StructProperty* ptype = &stype->properties[i];
+
+    compileRValue(ptype->type, pdecl->value, ctx, propreg);
+
+    BYTEWIDTH_OPCODE(ptype->type->stackSizeBytes(), writer, OP_WRITEOBJ)
+    writer->appendU8(selfreg);
+    writer->appendU8(propreg);
+    writer->appendU32(off);
+
+    off += ptype->type->stackSizeBytes();
+  }
+
+  ctx->popScope();
+  ctx->freeRegister(selfreg);
+  ctx->freeRegister(propreg);
+
+  blockEnd(writer, stacksize);
+
+  std::string fname;
+  fname.append(stype->structName);
+  fname.append(".<init>");
+
+  stringid id = ctx->stringTable->allocate(fname);
+  uint64 constPoolOff = ctx->emplaceConstString(id);
+
+  FunctionSignatureParam param = {
+    .type = stype,
+    .varargs = false
+  };
+  FunctionSignature sign = FunctionSignature();
+  sign.returnType = ctx->types->getVoidType();
+  sign.paramCount = 1;
+  sign.params = &param;
+
+  FunctionSignature* emplaced = ctx->types->emplaceFunctionType(&sign);
+  uint32 funcIdx = ctx->pushCompiledFunction(emplaced, start, constPoolOff);
+
+  ctx->declaredStructConstructors[stype] = funcIdx;
+}
+
 Bytecode compile(ScriptFileStatement* sfs, StringTable* table) {
   BytecodeWriter writer;
 
@@ -1029,11 +1383,24 @@ Bytecode compile(ScriptFileStatement* sfs, StringTable* table) {
   }
 
   ConstStringPoolWriter stringPool;
+  uint64 registersInUse = 0;
 
   CompilerContext ctx;
   ctx.stringPool = &stringPool;
   ctx.stringTable = table;
   ctx.writer = &writer;
+  ctx.registersInUse = &registersInUse;
+
+  ctx.pushScope();
+
+  for (Statement* stat : sfs->statements) {
+    if (stat->nodeKind() != AST_LexicalDeclaration) {
+      continue;
+    }
+    compileStructDecl(static_cast<StructDecl*>(stat), &ctx);
+  }
+
+  ctx.popScope();
 
   return {
     .data = nullptr,
