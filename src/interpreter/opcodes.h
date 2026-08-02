@@ -365,8 +365,8 @@
 #define PAD_WRITEIDX       6
 #define PAD_PUSHARG        8
 #define PAD_SETRV          8
-#define PAD_INVOKE         7
-#define PAD_VINVOKE        8
+#define PAD_INVOKE         4
+#define PAD_VINVOKE        5
 #define PAD_I8TU8          7
 #define PAD_I8TI16         7
 #define PAD_I8TU16         7

@@ -51,8 +51,8 @@
 |`WRITEIDX64`|`0x002F`|6|`obj: register`, `val: register`, `idx: register`|
 |`PUSHARG`|`0x0030`|8|`val: register`|
 |`SETRV`|`0x0031`|8|`val: register`|
-|`INVOKE`|`0x0032`|7|`val: register`, `out: register`|
-|`VINVOKE`|`0x0033`|8|`val: register`|
+|`INVOKE`|`0x0032`|4|`funcidx: uint32`, `out: register`|
+|`VINVOKE`|`0x0033`|5|`funcidx: uint32`|
 |`I8TU8`|`0x0034`|7|`in: register`, `out: register`|
 |`I8TI16`|`0x0035`|7|`in: register`, `out: register`|
 |`I8TU16`|`0x0036`|7|`in: register`, `out: register`|

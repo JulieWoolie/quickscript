@@ -148,8 +148,8 @@ function generateOpCodes(): OpCodeGenResult {
   currentCategory = "4.3.4 Function Call Instructions"
   opCode("PUSHARG", reg("val"))
   opCode("SETRV", reg("val"))
-  opCode("INVOKE", reg("val"), reg("out"))
-  opCode("VINVOKE", reg("val"))
+  opCode("INVOKE", uint32("funcidx"), reg("out"))
+  opCode("VINVOKE", uint32("funcidx"))
 
   const mathOperations = [
     "add",
