@@ -166,7 +166,7 @@ struct ScriptArrayType: ScriptType {
 };
 
 struct StructProperty {
-  std::string propertyName = "";
+  std::string propertyName;
   ScriptType* type = nullptr;
 };
 
@@ -177,6 +177,14 @@ struct ScriptStructType: ScriptType {
 
   conststring typeName() override {
     return structName.c_str();
+  }
+
+  uint64 heapSize() const {
+    uint64 c = 0;
+    for (uint32 i = 0; i < propertyCount; i++) {
+      c += properties[i].type->stackSizeBytes();
+    }
+    return c;
   }
 
   uint32 stackSizeBytes() const override {
