@@ -63,7 +63,7 @@ void TypeResolver::acceptTypeNameExpr(TypeNameExpr* v) {
 
 void TypeResolver::acceptArrayTypeExpr(ArrayTypeExpr* v) {
   v->componentType->acceptVisit(this);
-  ScriptType* compType = v->componentType->getReferencedType();
+  ScriptType* compType = v->componentType->referencedType;
 
   if (!compType) {
     compType = m_lookup->getVoidType();
@@ -883,14 +883,14 @@ void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
   STATPUSH;
 
   v->typeExpr->acceptVisit(this);
-  ScriptType* declType = v->typeExpr->getReferencedType();
+  ScriptType* declType = v->typeExpr->referencedType;
 
   if (v->value) {
     m_expectedTypes.push_back(declType);
     v->value->acceptVisit(this);
     m_expectedTypes.pop_back();
 
-    ScriptType* vartype = v->typeExpr->getReferencedType();
+    ScriptType* vartype = v->typeExpr->referencedType;
     ScriptType* valtype = v->value->resultType;
 
     if (!isAssignableTo(vartype, valtype)) {
@@ -902,7 +902,7 @@ void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
     }
   }
 
-  pushSymbol(v->variableName->value, v->typeExpr->getReferencedType());
+  pushSymbol(v->variableName->value, v->typeExpr->referencedType);
 
   STATPOP;
 }
@@ -996,14 +996,14 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   const uint32 paramCount = v->arguments.size();
 
   FunctionSignature sign;
-  sign.returnType = v->returnType->getReferencedType();
+  sign.returnType = v->returnType->referencedType;
   sign.paramCount = paramCount;
 
   FunctionSignatureParam params[paramCount];
   sign.params = params;
 
   pushScope();
-  getScope()->expectedReturnType = v->returnType->getReferencedType();
+  getScope()->expectedReturnType = v->returnType->referencedType;
 
   for (uint32 i = 0; i < v->arguments.size(); i++) {
     FunctionParam* p = v->arguments.at(i);
@@ -1015,9 +1015,9 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
     p->paramType->acceptVisit(this);
 
     if (varargs) {
-      trueType = m_lookup->getArrayType(p->paramType->getReferencedType());
+      trueType = m_lookup->getArrayType(p->paramType->referencedType);
     } else {
-      trueType = p->paramType->getReferencedType();
+      trueType = p->paramType->referencedType;
     }
 
     sp->type = trueType;
@@ -1068,7 +1068,7 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
     prop->propertyType->acceptVisit(this);
 
     std::string pname = m_strings->getstring(prop->name->value);
-    ScriptType* ptype = prop->propertyType->getReferencedType();
+    ScriptType* ptype = prop->propertyType->referencedType;
 
     if (prop->value) {
       prop->value->acceptVisit(this);

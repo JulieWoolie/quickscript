@@ -282,7 +282,7 @@ void LexicalAnalyzer::acceptLexicalDeclaration(LexicalDeclaration* v) {
     );
   } else {
     Symbol* sym = getScope()->pushSymbol(v->variableName->value, symType);
-    sym->scriptType = v->typeExpr->getReferencedType();
+    sym->scriptType = v->typeExpr->referencedType;
   }
 
   if (v->value) {
@@ -406,7 +406,7 @@ void LexicalAnalyzer::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
     param->paramType->acceptVisit(this);
 
     Symbol* psym = fscope->pushSymbol(param->name->value, SYM_VAR);
-    psym->scriptType = param->paramType->getReferencedType();
+    psym->scriptType = param->paramType->referencedType;
   }
 
   for (Statement* s : v->functionBody->statements) {
@@ -445,7 +445,7 @@ void LexicalAnalyzer::acceptStructDecl(StructDecl* v) {
     stringid combinedId = m_strings->allocate(propSym);
 
     Symbol* spropsym = scope->pushSymbol(combinedId, SYM_PROP);
-    spropsym->scriptType = prop->propertyType->getReferencedType();
+    spropsym->scriptType = prop->propertyType->referencedType;
 
     prop->propertyType->acceptVisit(this);
   }

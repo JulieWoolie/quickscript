@@ -157,7 +157,7 @@ struct Node {
 // ==============================
 
 struct TypeExpr: Node {
-  virtual ScriptType* getReferencedType() = 0;
+  ScriptType* referencedType;
 };
 
 #define PPT_NIL      0
@@ -181,29 +181,14 @@ conststring parsedprimitivetype_name(parsedprimitivetype pt);
 
 AST_TYPE(PrimitiveTypeExpr, TypeExpr,
   parsedprimitivetype primType = PPT_NIL;
-  ScriptType* referencedType = nullptr;
-
-  ScriptType* getReferencedType() override {
-    return referencedType;
-  }
 )
 
 AST_TYPE(TypeNameExpr, TypeExpr,
   stringid typeName = EMPTY_STRING;
-  ScriptType* referencedType = nullptr;
-
-  ScriptType* getReferencedType() override {
-    return referencedType;
-  }
 )
 
 AST_TYPE(ArrayTypeExpr, TypeExpr,
   TypeExpr* componentType = nullptr;
-  ScriptType* referencedType = nullptr;
-
-  ScriptType* getReferencedType() override {
-    return referencedType;
-  }
 )
 
 // ========================
