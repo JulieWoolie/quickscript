@@ -196,6 +196,7 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //   [1] uint32
     //
     case OP_LOADCONST32:
+    case OP_FUNCLOOKUP:
       *buf = static_cast<uint8>(va_arg(list, int32));
       *reinterpret_cast<uint32*>(buf + 1) = va_arg(list, uint32);
       memset(buf + 5, 0, 4);

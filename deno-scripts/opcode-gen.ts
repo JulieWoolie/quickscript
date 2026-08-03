@@ -170,6 +170,7 @@ function generateOpCodes(): OpCodeGenResult {
   opCode("PUSHARG", reg("val"))
   opCode("SETRV", reg("val"))
   opCode("INVOKE", reg("func"), reg("out"))
+  opCode("FUNCLOOKUP", reg("out"), uint32("index"))
 
   const mathOperations = [
     "add",

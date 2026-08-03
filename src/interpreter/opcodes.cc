@@ -57,6 +57,7 @@ conststring opcode_name(opcode code) {
     case OP_PUSHARG: return "PUSHARG";
     case OP_SETRV: return "SETRV";
     case OP_INVOKE: return "INVOKE";
+    case OP_FUNCLOOKUP: return "FUNCLOOKUP";
     case OP_I8TU8: return "I8TU8";
     case OP_I8TI16: return "I8TI16";
     case OP_I8TU16: return "I8TU16";
