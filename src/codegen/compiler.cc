@@ -1,50 +1,51 @@
 #include "compiler.h"
 
-#include <stdarg.h>
-
-#include "opcodespec.h"
+#include "CompilerContext.h"
+#include "type_conv.h"
+#include "../interpreter/interpreter.h"
+#include "../interpreter/ir_file.h"
 #include "../interpreter/opcodes.h"
 
 #define BYTEWIDTH_OPCODE(size, writer, opcode) \
   switch (size) {\
-    case 1: writer->appendOpCode(opcode##8); break;\
-    case 2: writer->appendOpCode(opcode##16); break;\
-    case 4: writer->appendOpCode(opcode##32); break;\
-    default: writer->appendOpCode(opcode##64); break;\
+    case 1: writer.startInstr(opcode##8); break;\
+    case 2: writer.startInstr(opcode##16); break;\
+    case 4: writer.startInstr(opcode##32); break;\
+    default: writer.startInstr(opcode##64); break;\
   }
 
 #define NUMTYPE_OPCODE(primkind, writer, opcode) \
   switch (primkind) { \
     case PK_BOOL:\
-    case PK_UINT8: writer->appendOpCode(opcode##U8); break; \
-    case PK_INT8: writer->appendOpCode(opcode##I8); break; \
-    case PK_UINT16: writer->appendOpCode(opcode##U16); break; \
-    case PK_INT16: writer->appendOpCode(opcode##I16); break; \
-    case PK_UINT32: writer->appendOpCode(opcode##U32); break; \
-    case PK_INT32: writer->appendOpCode(opcode##I32); break; \
-    case PK_UINT64: writer->appendOpCode(opcode##U64); break; \
-    case PK_INT64: writer->appendOpCode(opcode##I64); break; \
-    case PK_FLOAT32: writer->appendOpCode(opcode##F32); break; \
-    default: writer->appendOpCode(opcode##F64); break; \
+    case PK_UINT8: writer.startInstr(opcode##U8); break; \
+    case PK_INT8: writer.startInstr(opcode##I8); break; \
+    case PK_UINT16: writer.startInstr(opcode##U16); break; \
+    case PK_INT16: writer.startInstr(opcode##I16); break; \
+    case PK_UINT32: writer.startInstr(opcode##U32); break; \
+    case PK_INT32: writer.startInstr(opcode##I32); break; \
+    case PK_UINT64: writer.startInstr(opcode##U64); break; \
+    case PK_INT64: writer.startInstr(opcode##I64); break; \
+    case PK_FLOAT32: writer.startInstr(opcode##F32); break; \
+    default: writer.startInstr(opcode##F64); break; \
   }
 
 #define BIN_APPEND(pad) \
-      writer->appendU8(r1);\
-      writer->appendU8(r2);\
-      writer->appendU8(r1);\
-      writer->appendPadding(pad);
+      writer.appendU8(r1);\
+      writer.appendU8(r2);\
+      writer.appendU8(r1);\
+      writer.endInstr();
 
 #define CMP_CASE(cmptype) \
   case BOP_##cmptype: \
     if (lkind == TK_PRIMITIVE) { \
-      NUMTYPE_OPCODE(pk, writer, OP_##cmptype) \
+      NUMTYPE_OPCODE(lpk, writer, OP_##cmptype) \
     } else { \
-      writer->appendOpCode(OP_##cmptype##ARR); \
+      writer.startInstr(OP_##cmptype##ARR); \
     } \
-    writer->appendU8(r1); \
-    writer->appendU8(r2); \
-    writer->appendU8(r1); \
-    writer->appendPadding(PAD_##cmptype); \
+    writer.appendU8(r1); \
+    writer.appendU8(r2); \
+    writer.appendU8(r1); \
+    writer.endInstr(); \
     break;
 
 #define EQUALITY_CASE(type)\
@@ -52,177 +53,18 @@
     if (lkind == TK_PRIMITIVE) {\
       BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_##type)\
     } else if (lkind == TK_ARRAY || lkind == TK_STRING) {\
-      writer->appendOpCode(OP_##type##ARR);\
+      writer.startInstr(OP_##type##ARR);\
     } else if (lkind == TK_STRUCT) {\
-      writer->appendOpCode(OP_##type##STRUCT);\
+      writer.startInstr(OP_##type##STRUCT);\
     }\
     BIN_APPEND(PAD_##type)\
     break;
 
 #define MATH_CASE(type)\
   case BOP_##type:\
-    NUMTYPE_OPCODE(pk, writer, OP_##type)\
+    NUMTYPE_OPCODE(lpk, writer, OP_##type)\
     BIN_APPEND(PAD_##type)\
     break;
-
-#define ALL_REGISTERS_USED 0xFFFFFFFFFFFFFFFF
-#define NO_REGISTER -1
-
-#define SSYM_NIL 0
-#define SSYM_VAR 1
-#define SSYM_FUNC 2
-
-typedef uint8 StackSymType;
-
-struct StackSymbol {
-  stringid name = EMPTY_STRING;
-  StackSymType type = SSYM_NIL;
-  uint64 stackoffset = 0;
-  uint64 stacksize = 0;
-};
-
-struct StackScope {
-  std::vector<StackSymbol> symbols;
-  uint64 stacksize = 0;
-  uint32 level = 0;
-
-  StackSymbol* pushSymbol(stringid name, StackSymType symType) {
-    uint64 off = 0;
-    for (const StackSymbol& sym : symbols) {
-      off += sym.stacksize;
-    }
-    return &symbols.emplace_back(name, symType, off, 0);
-  }
-};
-
-struct CompiledFunction {
-  FunctionSignature* signature = nullptr;
-  uint32 bodystart = 0;
-  uint64 nameOffset = 0;
-};
-
-struct CompilerContext {
-  std::vector<ScriptType*> expectedType;
-  std::vector<StackScope> scopes;
-
-  std::unordered_map<ScriptStructType*, uint32> declaredStructConstructors;
-  std::vector<ScriptStructType*> declaredStructs;
-
-  std::vector<CompiledFunction> functions;
-  std::vector<FunctionDeclStatement*> funcQueue;
-
-  BytecodeWriter* writer = nullptr;
-  ConstStringPoolWriter* stringPool = nullptr;
-  StringTable* stringTable = nullptr;
-  TypeLookup* types = nullptr;
-
-  uint64* registersInUse = nullptr;
-
-  uint32 pushCompiledFunction(FunctionSignature* sign, uint32 start, uint64 nameOff) {
-    uint32 idx = functions.size();
-    functions.emplace_back(sign, start, nameOff);
-    return idx;
-  }
-
-  StackScope* getScope() {
-    return &scopes.back();
-  }
-
-  StackScope* pushScope() {
-    StackScope scope = StackScope();
-    scope.level = scopes.size();
-    scopes.push_back(scope);
-    return &scopes.back();
-  }
-
-  void popScope() {
-    scopes.pop_back();
-  }
-
-  std::pair<StackScope*, StackSymbol*> findSymbol(stringid id, StackSymType symType) {
-    for (StackScope& scope : scopes) {
-      for (StackSymbol& sym : scope.symbols) {
-        if (sym.name != id || sym.type != symType) {
-          continue;
-        }
-        return {&scope, &sym};
-      }
-    }
-    return {nullptr, nullptr};
-  }
-
-  uint64 emplaceConstString(stringid id) {
-    std::unordered_map<stringid, uint64>* map = &stringPool->idToPoolOffset;
-
-    if (map->contains(id)) {
-      return map->at(id);
-    }
-
-    int32 len = stringTable->getlen(id);
-    uint64 requiredcap = len + sizeof(uint32) + stringPool->len;
-
-    if (requiredcap > stringPool->cap) {
-      uint8* ndata = static_cast<uint8*>(malloc(requiredcap));
-      if (!ndata) {
-        throw std::runtime_error("Failed to resize string const pool buffer");
-      }
-
-      stringPool->data = ndata;
-      stringPool->cap = requiredcap;
-    }
-
-    uint8* writeptr = stringPool->data + stringPool->len;
-
-    *reinterpret_cast<uint32*>(writeptr) = len;
-    writeptr += sizeof(uint32);
-
-    char* charptr = reinterpret_cast<char*>(writeptr);
-    stringTable->copychars(id, charptr, len);
-
-    uint64 off = stringPool->len;
-    stringPool->len += sizeof(uint32) + len;
-    map->emplace(id, off);
-
-    return off;
-  }
-
-  registeridopt acquireRegister() const {
-    uint64 used = *registersInUse;
-
-    if (used == ALL_REGISTERS_USED) {
-      return NO_REGISTER;
-    }
-    if (used == 0) {
-      return 0;
-    }
-
-    uint64 m;
-    for (int8 i = 0; i < 64; i++) {
-      m = 1 << i;
-      if (m & used) {
-        continue;
-      }
-
-      *registersInUse |= m;
-      return i;
-    }
-
-    return NO_REGISTER;
-  }
-
-  bool registerInUse(const registerid id) const {
-    uint64 m = 1L << id;
-    return *registersInUse & m;
-  }
-
-  void useRegister(const registerid id) const {
-    *registersInUse |= (1L << id);
-  }
-
-  void freeRegister(const registerid id) const {
-    *registersInUse &= ~(1L << id);
-  }
-};
 
 #define OUTP_NIL    0
 #define OUTP_ASTACK 1
@@ -238,191 +80,114 @@ struct AddrOutput {
   int64 stackoffset = 0;
 };
 
-#define APPEND_METHOD(name, bytes, type) \
-  void BytecodeWriter::name(type v) {\
-    reserveSpace(bytes);\
-    type* ptr = (type*) (buf + buflen);\
-    *ptr = v;\
-    buflen += bytes;\
-  }
-
-APPEND_METHOD(appendU8, 1, uint8)
-APPEND_METHOD(appendI8, 1, int8)
-APPEND_METHOD(appendU16, 2, uint16)
-APPEND_METHOD(appendI16, 2, int16)
-APPEND_METHOD(appendU32, 4, uint32)
-APPEND_METHOD(appendI32, 4, int32)
-APPEND_METHOD(appendU64, 8, uint64)
-APPEND_METHOD(appendI64, 8, int64)
-APPEND_METHOD(appendF32, 4, float32)
-APPEND_METHOD(appendF64, 8, float64)
-
-void BytecodeWriter::reserveSpace(uint64 memsize) {
-  uint64 nsize = buflen + memsize;
-  if (nsize < bufcap) {
-    return;
-  }
-
-  const uint64 ncap = bufcap + 1024;
-  uint8* ndata = static_cast<uint8*>(realloc(buf, ncap));
-
-  if (!ndata) {
-    throw std::runtime_error("Failed to grow bytecode buffer");
-  }
-
-  buf = ndata;
-  bufcap = ncap;
-}
-
-void BytecodeWriter::appendOpCode(opcode code) {
-  reserveSpace(LENGTH_INSTRUCTION);
-  opcode* ptr = (opcode*) (buf + buflen);
-  *ptr = code;
-  buflen += LENGTH_OPCODE;
-}
-
-void BytecodeWriter::appendPadding(uint64 bytes) {
-  if (!bytes) {
-    return;
-  }
-
-  reserveSpace(bytes);
-  memset(buf + buflen, 0, bytes);
-  buflen += bytes;
-}
-
-void BytecodeWriter::appendInstruction(opcode code, ...) {
-  va_list list;
-  va_start(list, code);
-
-  reserveSpace(LENGTH_INSTRUCTION);
-
-  uint8* d = buf + buflen;
-  *((opcode*) d) = code;
-
-  d += LENGTH_OPCODE;
-
-  appendOpCodeData(d, code, list);
-  va_end(list);
-}
-
-void BytecodeWriter::writeInstructionCounter(const uint64 offset) const {
-  uint32* ptr = reinterpret_cast<uint32*>(buf + offset);
-  *ptr = getInstructionCounter();
-}
-
-uint32 BytecodeWriter::getInstructionCounter() const {
-  return buflen / LENGTH_INSTRUCTION;
-}
-
-void compileWriteOperation(
-  AddrOutput* addrout,
-  uint32 stacksize,
-  CompilerContext* ctx,
-  registerid valueRegister
+static void compileWriteOperation(
+  const AddrOutput* addrout,
+  const uint32 stackSize,
+  CompilerContext& ctx,
+  const registerid valueRegister
 ) {
-  BytecodeWriter* writer = ctx->writer;
+  BytecodeWriter& writer = ctx.getWriter();
 
   switch (addrout->outptype) {
     case OUTP_IDX:
-      BYTEWIDTH_OPCODE(stacksize, writer, OP_WRITEIDX)
-      writer->appendU8(addrout->objectRegister);
-      writer->appendU8(valueRegister);
-      writer->appendU8(addrout->indexRegister);
-      writer->appendPadding(PAD_WRITEIDX);
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_WRITEIDX)
+      writer.appendU8(addrout->objectRegister);
+      writer.appendU8(valueRegister);
+      writer.appendU8(addrout->indexRegister);
+      writer.endInstr();
       break;
     case OUTP_PROP:
-      BYTEWIDTH_OPCODE(stacksize, writer, OP_WRITEOBJ)
-      writer->appendU8(addrout->objectRegister);
-      writer->appendU8(valueRegister);
-      writer->appendU32(addrout->memoffset);
-      writer->appendPadding(PAD_WRITEOBJ);
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_WRITEOBJ)
+      writer.appendU8(addrout->objectRegister);
+      writer.appendU8(valueRegister);
+      writer.appendU32(addrout->memoffset);
+      writer.endInstr();
       break;
     case OUTP_RSTACK:
-      BYTEWIDTH_OPCODE(stacksize, writer, OP_RSWRITE)
-      writer->appendU8(valueRegister);
-      writer->appendU64(addrout->stackoffset);
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_RSWRITE)
+      writer.appendU8(valueRegister);
+      writer.appendU64(addrout->stackoffset);
       break;
     case OUTP_ASTACK:
-      BYTEWIDTH_OPCODE(stacksize, writer, OP_ASWRITE)
-      writer->appendU8(valueRegister);
-      writer->appendU64(addrout->stackoffset);
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_ASWRITE)
+      writer.appendU8(valueRegister);
+      writer.appendU64(addrout->stackoffset);
       break;
     default:
       break;
   }
 
   if (addrout->objectRegister != NO_REGISTER) {
-    ctx->freeRegister(addrout->objectRegister);
+    ctx.freeRegister(addrout->objectRegister);
   }
   if (addrout->indexRegister != NO_REGISTER) {
-    ctx->freeRegister(addrout->indexRegister);
+    ctx.freeRegister(addrout->indexRegister);
   }
 }
 
-void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx);
+static void compileExpr(Expr* expr, registerid out, AddrOutput* addr, CompilerContext& ctx);
 
-void compileIndexAccessExpr(
-  IndexAccessExpr* access,
-  registeridopt resultreg,
+static void compileIndexAccessExpr(
+  const IndexAccessExpr* access,
+  const registeridopt out,
   AddrOutput* addr,
-  CompilerContext* ctx
+  CompilerContext& ctx
 ) {
-  registerid targetreg = ctx->acquireRegister();
-  registerid idxreg = ctx->acquireRegister();
+  const registerid targetReg = ctx.acquireRegister();
+  const registerid idxReg = ctx.acquireRegister();
 
-  compileExpr(access->target, targetreg, nullptr, ctx);
+  compileExpr(access->target, targetReg, nullptr, ctx);
   uint32 stackSize = access->resultType->stackSizeBytes();
 
-  if (resultreg != NO_REGISTER) {
-    BytecodeWriter* writer = ctx->writer;
+  if (out != NO_REGISTER) {
+    BytecodeWriter& writer = ctx.getWriter();
     BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX)
-    writer->appendU8(targetreg);
-    writer->appendU8(resultreg);
-    writer->appendU8(idxreg);
-    writer->appendPadding(6);
+    writer.appendU8(targetReg);
+    writer.appendU8(out);
+    writer.appendU8(idxReg);
+    writer.endInstr();
   }
 
   if (addr) {
     addr->outptype = OUTP_IDX;
-    addr->objectRegister = targetreg;
-    addr->indexRegister = idxreg;
+    addr->objectRegister = targetReg;
+    addr->indexRegister = idxReg;
   } else {
-    ctx->freeRegister(targetreg);
-    ctx->freeRegister(idxreg);
+    ctx.freeRegister(targetReg);
+    ctx.freeRegister(idxReg);
   }
 }
 
-void compilePropertyAccess(
-  PropertyAccessExpr* prop,
-  registeridopt resultreg,
+static void compilePropertyAccess(
+  const PropertyAccessExpr* prop,
+  const registeridopt out,
   AddrOutput* addr,
-  CompilerContext* ctx
+  CompilerContext& ctx
 ) {
   ScriptType* type = prop->target->resultType;
 
-  typekind targetkind = type->kind();
-  registerid targetreg = ctx->acquireRegister();
+  const typekind targetKind = type->kind();
+  const registerid targetReg = ctx.acquireRegister();
 
-  compileExpr(prop->target, targetreg, nullptr, ctx);
+  compileExpr(prop->target, targetReg, nullptr, ctx);
 
-  uint32 propoff;
+  uint32 propertyOffset;
 
-  if (targetkind != TK_STRUCT) {
+  if (targetKind != TK_STRUCT) {
     // Only non struct property that is available is the length property on
     // arrays and strings which is always at offset 0x0
-    propoff = 0;
+    propertyOffset = 0;
   } else {
-    std::string_view view = ctx->stringTable->getview(prop->property->value);
+    std::string_view view = ctx.getStrings()->getview(prop->property->value);
     ScriptStructType* structType = static_cast<ScriptStructType*>(type);
 
-    propoff = 0;
+    propertyOffset = 0;
 
     for (uint32 p = 0; p < structType->propertyCount; p++) {
-      StructProperty* prop = &structType->properties[p];
+      const StructProperty* structProp = &structType->properties[p];
 
-      if (prop->propertyName != view) {
-        propoff += prop->type->stackSizeBytes();
+      if (structProp->propertyName != view) {
+        propertyOffset += structProp->type->stackSizeBytes();
         continue;
       }
 
@@ -430,55 +195,65 @@ void compilePropertyAccess(
     }
   }
 
-  if (resultreg != NO_REGISTER) {
-    BytecodeWriter* writer = ctx->writer;
-    writer->appendOpCode(OP_READOBJ32);
-    writer->appendU8(targetreg);
-    writer->appendU8(resultreg);
-    writer->appendU8(propoff);
+  if (out != NO_REGISTER) {
+    BytecodeWriter& writer = ctx.getWriter();
+    writer.startInstr(OP_READOBJ32);
+    writer.appendU8(targetReg);
+    writer.appendU8(out);
+    writer.appendU8(propertyOffset);
   }
 
   if (addr) {
     addr->outptype = OUTP_PROP;
-    addr->objectRegister = targetreg;
-    addr->memoffset = propoff;
+    addr->objectRegister = targetReg;
+    addr->memoffset = propertyOffset;
   } else {
-    ctx->freeRegister(targetreg);
+    ctx.freeRegister(targetReg);
   }
 }
 
-void compileIdentifier(
-  Identifier* id,
-  registeridopt resultreg,
+static void compileIdentifier(
+  const Identifier* id,
+  const registeridopt out,
   AddrOutput* addr,
-  CompilerContext* ctx
+  CompilerContext& ctx
 ) {
-  StackSymType type = SSYM_NIL;
-  BytecodeWriter* writer = ctx->writer;
+  BytecodeWriter& writer = ctx.getWriter();
 
   if (id->resultType->kind() == TK_FUNC) {
-    type = SSYM_FUNC;
-  } else {
-    type = SSYM_VAR;
+    FunctionSignature* sign = static_cast<FunctionSignature*>(id->resultType);
+    const stringid name = id->value;
+
+    const int32 funcIdx = ctx.findFunctionIndex(name, sign);
+
+    writer.startInstr(OP_FUNCLOOKUP);
+    writer.appendU8(out);
+
+    if (funcIdx == -1) {
+      const uint64 idxAddr = writer.getAddress();
+      writer.appendU32(0);
+      ctx.pushIncompleteCall(name, sign, idxAddr);
+    } else {
+      writer.appendU32(funcIdx);
+    }
+
+    writer.endInstr();
   }
 
-  std::pair<StackScope*, StackSymbol*> pair = ctx->findSymbol(id->value, type);
-  StackScope* scope = pair.first;
-  StackSymbol* sym = pair.second;
-
-  StackScope* current = ctx->getScope();
+  const auto [scope, sym] = ctx.findSymbol(id->value);
+  const StackScope* current = ctx.getScope();
 
   // Variable declared in current scope
   if (scope == current) {
-    if (resultreg != NO_REGISTER) {
-      BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_RSREAD)
-      writer->appendU8(resultreg);
-      writer->appendI64(sym->stackoffset);
+    if (out != NO_REGISTER) {
+      BYTEWIDTH_OPCODE(sym->stackSize, writer, OP_RSREAD)
+      writer.appendU8(out);
+      writer.appendU64(sym->stackOffset);
     }
 
     if (addr) {
       addr->outptype = OUTP_RSTACK;
-      addr->stackoffset = sym->stackoffset;
+      addr->stackoffset = sym->stackOffset;
     }
 
     return;
@@ -511,23 +286,23 @@ void compileIdentifier(
   //
 
   // Main scope, aka, a global variable
-  if (scope->level == 0) {
-    if (resultreg != NO_REGISTER) {
-      BYTEWIDTH_OPCODE(sym->stacksize, writer, OP_ASREAD)
-      writer->appendU8(resultreg);
-      writer->appendU64(sym->stackoffset);
+  if (scope->getLevel() == 0) {
+    if (out != NO_REGISTER) {
+      BYTEWIDTH_OPCODE(sym->stackSize, writer, OP_ASREAD)
+      writer.appendU8(out);
+      writer.appendU64(sym->stackOffset);
     }
 
     if (addr) {
       addr->outptype = OUTP_RSTACK;
-      addr->stackoffset = sym->stackoffset;
+      addr->stackoffset = sym->stackOffset;
     }
 
     return;
   }
 }
 
-void compileNonReadingExpr(Expr* expr, AddrOutput* addr, CompilerContext* ctx) {
+static void compileNonReadingExpr(Expr* expr, AddrOutput* addr, CompilerContext& ctx) {
   astnodetype kind = expr->nodeKind();
   switch (kind) {
     case AST_PropertyAccessExpr: {
@@ -547,10 +322,15 @@ void compileNonReadingExpr(Expr* expr, AddrOutput* addr, CompilerContext* ctx) {
   }
 }
 
-void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, CompilerContext* ctx) {
-  BytecodeWriter* writer = ctx->writer;
-  binaryop bop = bin->op;
-  binaryop nonAssign = bop & ~BOP_ASSIGN_FLAG;
+static void compileBinaryExpr(
+  const BinaryExpr* bin,
+  const registerid r1,
+  CompilerContext& ctx
+) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  const binaryop bop = bin->op;
+  const binaryop nonAssign = bop & ~BOP_ASSIGN_FLAG;
 
   //
   // == How this should work ==
@@ -611,32 +391,32 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
 
     compileExpr(rhs, r1, nullptr, ctx);
 
-    uint32 stacksize = rhs->resultType->stackSizeBytes();
-    compileWriteOperation(&out, stacksize, ctx, r1);
+    uint32 stackSize = rhs->resultType->stackSizeBytes();
+    compileWriteOperation(&out, stackSize, ctx, r1);
 
     return;
   }
 
-  bool isAssignment = bop & BOP_ASSIGN_FLAG;
+  const bool isAssignment = bop & BOP_ASSIGN_FLAG;
   AddrOutput out;
 
   if (nonAssign == BOP_LOG_AND || nonAssign == BOP_LOG_OR) {
     compileExpr(lhs, r1, &out, ctx);
 
     if (nonAssign == BOP_LOG_AND) {
-      writer->appendOpCode(OP_JMPI0);
+      writer.startInstr(OP_JMPI0);
     } else {
-      writer->appendOpCode(OP_JMPN0);
+      writer.startInstr(OP_JMPN0);
     }
 
-    uint64 jumpAddrOffset = writer->buflen;
+    const uint64 jumpAddrOffset = writer.getAddress();
 
-    writer->appendU32(0);
-    writer->appendU8(r1);
+    writer.appendU32(0);
+    writer.appendU8(r1);
 
     compileExpr(rhs, r1, &out, ctx);
 
-    writer->writeInstructionCounter(jumpAddrOffset);
+    writer.writeInstructionCounter(jumpAddrOffset);
 
     if (isAssignment) {
       compileWriteOperation(&out, 1, ctx, r1);
@@ -645,19 +425,23 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
     return;
   }
 
-  registerid r2 = ctx->acquireRegister();
+  ScriptType* ltype = lhs->resultType;
+  ScriptType* rtype = rhs->resultType;
+
+  const registerid r2 = ctx.acquireRegister();
 
   compileExpr(lhs, r2, &out, ctx);
   compileExpr(rhs, r1, nullptr, ctx);
 
-  ScriptType* ltype = lhs->resultType;
-  ScriptType* rtype = rhs->resultType;
-
-  typekind lkind = ltype->kind();
-  primitivekind pk = PK_NIL;
+  const typekind lkind = ltype->kind();
+  primitivekind lpk = PK_NIL;
+  primitivekind rpk = PK_NIL;
 
   if (lkind == TK_PRIMITIVE) {
-    pk = static_cast<PrimitiveScriptType*>(ltype)->primtype;
+    lpk = static_cast<PrimitiveScriptType*>(ltype)->primtype;
+  }
+  if (rtype->kind() == TK_PRIMITIVE) {
+    rpk = static_cast<PrimitiveScriptType*>(rtype)->primtype;
   }
 
   switch (nonAssign) {
@@ -671,27 +455,27 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
       BIN_APPEND(PAD_RSHIFT)
       break;
     case BOP_BIT_OR:
-      writer->appendOpCode(OP_BOR);
+      writer.startInstr(OP_BOR);
       BIN_APPEND(PAD_BOR)
       break;
     case BOP_BIT_AND:
-      writer->appendOpCode(OP_BAND);
+      writer.startInstr(OP_BAND);
       BIN_APPEND(PAD_BAND)
       break;
     case BOP_XOR:
-      if (pk == PK_BOOL) {
-        writer->appendOpCode(OP_BXOR);
+      if (lpk == PK_BOOL) {
+        writer.startInstr(OP_BXOR);
       } else {
-        writer->appendOpCode(OP_LXOR);
+        writer.startInstr(OP_LXOR);
       }
       BIN_APPEND(PAD_BXOR)
       break;
 
     case BOP_ADD:
       if (lkind == TK_STRING) {
-        writer->appendOpCode(OP_STRCONCAT);
+        writer.startInstr(OP_STRCONCAT);
       } else {
-        NUMTYPE_OPCODE(pk, writer, OP_ADD)
+        NUMTYPE_OPCODE(lpk, writer, OP_ADD)
       }
       BIN_APPEND(PAD_ADD)
       break;
@@ -699,7 +483,7 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
       if (lkind == TK_STRING) {
         BYTEWIDTH_OPCODE(rtype->stackSizeBytes(), writer, OP_STRREP)
       } else {
-        NUMTYPE_OPCODE(pk, writer, OP_ADD)
+        NUMTYPE_OPCODE(lpk, writer, OP_ADD)
       }
       BIN_APPEND(PAD_ADD)
       break;
@@ -726,11 +510,11 @@ void compileBinaryExpr(BinaryExpr* bin, registerid r1, AddrOutput* addr, Compile
   }
 }
 
-void compileRValue(ScriptType* type, Expr* val, CompilerContext* ctx, registerid out);
+static void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid out);
 
-void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerContext* ctx) {
-  astnodetype kind = expr->nodeKind();
-  BytecodeWriter* writer = ctx->writer;
+static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, CompilerContext& ctx) {
+  const astnodetype kind = expr->nodeKind();
+  BytecodeWriter& writer = ctx.getWriter();
 
   switch (kind) {
     // TODO: Expressions
@@ -750,12 +534,12 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
     //  - X TernaryExpr
 
     case AST_BinaryExpr: {
-      compileBinaryExpr(static_cast<BinaryExpr*>(expr), resultreg, addr, ctx);
+      compileBinaryExpr(static_cast<BinaryExpr*>(expr), out, ctx);
       return;
     }
 
     case AST_TernaryExpr: {
-      TernaryExpr* ternary = static_cast<TernaryExpr*>(expr);
+      const TernaryExpr* ternary = static_cast<TernaryExpr*>(expr);
 
       // How it should work:
       //   - Evaluate condition:
@@ -763,79 +547,78 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
       //     - Jump to left if true
       //     - Jump to right otherwise
 
-      compileExpr(ternary->condition, resultreg, nullptr, ctx);
+      compileExpr(ternary->condition, out, nullptr, ctx);
 
-      writer->appendOpCode(OP_JMPI0);
-      uint64 firstJumpOff = writer->buflen;
-      writer->appendU32(0);
-      writer->appendU8(resultreg);
-      writer->appendPadding(PAD_JMPI0);
+      writer.startInstr(OP_JMPI0);
+      const uint64 firstJumpOff = writer.getAddress();
+      writer.appendU32(0);
+      writer.appendU8(out);
+      writer.endInstr();
 
-      compileExpr(ternary->left, resultreg, nullptr, ctx);
+      compileExpr(ternary->left, out, nullptr, ctx);
 
-      writer->appendOpCode(OP_JMP);
-      uint64 secondJumpOff = writer->buflen;
-      writer->appendU32(0);
-      writer->appendPadding(PAD_JMP);
+      writer.startInstr(OP_JMP);
+      const uint64 secondJumpOff = writer.getAddress();
+      writer.appendU32(0);
+      writer.endInstr();
 
-      writer->writeInstructionCounter(firstJumpOff);
+      writer.writeInstructionCounter(firstJumpOff);
 
-      compileExpr(ternary->right, resultreg, nullptr, ctx);
+      compileExpr(ternary->right, out, nullptr, ctx);
 
-      writer->writeInstructionCounter(secondJumpOff);
-
+      writer.writeInstructionCounter(secondJumpOff);
       return;
     }
 
     case AST_PropertyAccessExpr: {
-      compilePropertyAccess(static_cast<PropertyAccessExpr*>(expr), resultreg, addr, ctx);
+      compilePropertyAccess(static_cast<PropertyAccessExpr*>(expr), out, addr, ctx);
       return;
     }
 
     case AST_IndexAccessExpr: {
-      compileIndexAccessExpr(static_cast<IndexAccessExpr*>(expr), resultreg, addr, ctx);
+      compileIndexAccessExpr(static_cast<IndexAccessExpr*>(expr), out, addr, ctx);
       return;
     }
 
     case AST_Identifier: {
-      compileIdentifier(static_cast<Identifier*>(expr), resultreg, addr, ctx);
+      compileIdentifier(static_cast<Identifier*>(expr), out, addr, ctx);
       return;
     }
 
     case AST_ArrayLiteral: {
-      ArrayLiteral* lit = static_cast<ArrayLiteral*>(expr);
-      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
+      const ArrayLiteral* lit = static_cast<ArrayLiteral*>(expr);
+      const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
 
-      uint64 csize = arrType->componentType->stackSizeBytes();
-      uint64 count = lit->values.size();
-      uint64 memsize = sizeof(uint32) + (csize * count);
+      const uint64 componentSize = arrType->componentType->stackSizeBytes();
+      const uint64 count = lit->values.size();
+      const uint64 memSize = sizeof(uint32) + (componentSize * count);
 
-      writer->appendOpCode(OP_HEAPALLOC);
-      writer->appendU8(resultreg);
-      writer->appendU64(memsize);
-      writer->appendPadding(PAD_HEAPALLOC);
+      writer.startInstr(OP_HEAPALLOC);
+      writer.appendU8(out);
+      writer.appendU64(memSize);
+      writer.endInstr();
 
-      registerid valreg = ctx->acquireRegister();
-      registerid idxreg = ctx->acquireRegister();
+      const registerid valueReg = ctx.acquireRegister();
+      const registerid indexReg = ctx.acquireRegister();
 
       for (uint32 i = 0; i < count; i++) {
-        Expr* expr = lit->values[i];
-        compileRValue(arrType->componentType, expr, ctx, valreg);
+        Expr* value = lit->values[i];
+        compileRValue(arrType->componentType, value, ctx, valueReg);
 
-        writer->appendOpCode(OP_LOADCONST32);
-        writer->appendU8(idxreg);
-        writer->appendU32(i);
-        writer->appendPadding(PAD_LOADCONST32);
+        writer.startInstr(OP_LOADCONST32);
+        writer.appendU8(indexReg);
+        writer.appendU32(i);
+        writer.endInstr();
 
         BYTEWIDTH_OPCODE(arrType->componentType->stackSizeBytes(), writer, OP_WRITEIDX)
-        writer->appendU8(resultreg);
-        writer->appendU8(valreg);
-        writer->appendU8(idxreg);
-        writer->appendPadding(PAD_WRITEIDX);
+        writer.appendU8(out);
+        writer.appendU8(valueReg);
+        writer.appendU8(indexReg);
+        writer.endInstr();
       }
 
-      ctx->freeRegister(valreg);
-      ctx->freeRegister(idxreg);
+      ctx.freeRegister(valueReg);
+      ctx.freeRegister(indexReg);
 
       return;
     }
@@ -861,84 +644,79 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
       //
       // Yeah whatever, resultreg already contains the allocated object
       //
-      ObjectLiteral* lit = static_cast<ObjectLiteral*>(expr);
-      ScriptStructType* stype = static_cast<ScriptStructType*>(lit->resultType);
+      const ObjectLiteral* lit = static_cast<ObjectLiteral*>(expr);
+      const ScriptStructType* stype = static_cast<ScriptStructType*>(lit->resultType);
 
-      registerid propreg = ctx->acquireRegister();
+      const registerid propertyReg = ctx.acquireRegister();
 
-      for (ObjectLiteralProperty* prop : lit->properties) {
-        std::string_view propName = ctx->stringTable->getview(prop->propertyName->value);
-        ScriptType* ptype = nullptr;
+      for (const ObjectLiteralProperty* prop : lit->properties) {
+        const std::string_view propName = ctx.getStrings()->getview(prop->propertyName->value);
+        const ScriptType* ptype = nullptr;
+
         uint32 off = 0;
 
         for (uint32 i = 0; i < stype->propertyCount; i++) {
-          StructProperty* prop = &stype->properties[i];
-          if (prop->propertyName == propName) {
-            ptype = prop->type;
+          StructProperty* typeProperty = &stype->properties[i];
+          if (typeProperty->propertyName == propName) {
+            ptype = typeProperty->type;
             break;
           }
-          off += prop->type->stackSizeBytes();
+          off += typeProperty->type->stackSizeBytes();
         }
 
         if (ptype->kind() == TK_STRUCT) {
-          writer->appendOpCode(OP_READOBJ64);
-          writer->appendU8(resultreg);
-          writer->appendU8(propreg);
-          writer->appendU32(off);
-          writer->appendPadding(PAD_READOBJ);
+          writer.startInstr(OP_READOBJ64);
+          writer.appendU8(out);
+          writer.appendU8(propertyReg);
+          writer.appendU32(off);
+          writer.endInstr();
         }
-        compileExpr(prop->value, propreg, nullptr, ctx);
+        compileExpr(prop->value, propertyReg, nullptr, ctx);
 
         if (ptype->kind() != TK_STRUCT) {
           BYTEWIDTH_OPCODE(ptype->stackSizeBytes(), writer, OP_WRITEOBJ)
-          writer->appendU8(resultreg);
-          writer->appendU8(propreg);
-          writer->appendU32(off);
-          writer->appendPadding(PAD_WRITEOBJ);
+          writer.appendU8(out);
+          writer.appendU8(propertyReg);
+          writer.appendU32(off);
+          writer.endInstr();
         }
       }
 
-      ctx->freeRegister(propreg);
+      ctx.freeRegister(propertyReg);
       return;
     }
 
     case AST_UnaryExpr: {
-      UnaryExpr* un = static_cast<UnaryExpr*>(expr);
-      unaryop uop = un->op;
-
-      if (uop == UOP_POS) {
-        compileExpr(un->target, resultreg, nullptr, ctx);
-        return;
-      }
+      const UnaryExpr* un = static_cast<UnaryExpr*>(expr);
+      const unaryop uop = un->op;
 
       switch (uop) {
         case UOP_POS:
-          compileExpr(un->target, resultreg, nullptr, ctx);
+          compileExpr(un->target, out, nullptr, ctx);
           return;
         case UOP_NEG: {
-          compileExpr(un->target, resultreg, nullptr, ctx);
+          compileExpr(un->target, out, nullptr, ctx);
 
           PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
           NUMTYPE_OPCODE(primType->primtype, writer, OP_NEG)
-
-          writer->appendU8(resultreg);
-          writer->appendU8(resultreg);
-          writer->appendPadding(7);
+          writer.appendU8(out);
+          writer.appendU8(out);
+          writer.endInstr();
           return;
         }
         case UOP_BIT_NOT:
-          compileExpr(un->target, resultreg, nullptr, ctx);
-          writer->appendOpCode(OP_BNEGATE);
-          writer->appendU8(resultreg);
-          writer->appendU8(resultreg);
-          writer->appendPadding(7);
+          compileExpr(un->target, out, nullptr, ctx);
+          writer.startInstr(OP_BNEGATE);
+          writer.appendU8(out);
+          writer.appendU8(out);
+          writer.endInstr();
           return;
         case UOP_LOG_NOT:
-          compileExpr(un->target, resultreg, nullptr, ctx);
-          writer->appendOpCode(OP_LNEGATE);
-          writer->appendU8(resultreg);
-          writer->appendU8(resultreg);
-          writer->appendPadding(7);
+          compileExpr(un->target, out, nullptr, ctx);
+          writer.startInstr(OP_LNEGATE);
+          writer.appendU8(out);
+          writer.appendU8(out);
+          writer.endInstr();
           return;
         default:
           break;
@@ -965,144 +743,148 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
       // before changing the stored value in memory
       //
 
-      AddrOutput addrout;
+      AddrOutput addrOut;
       registerid targetRegister;
-      bool isPostOp = uop == UOP_POSTINC || uop == UOP_POSTDEC;
+
+      const bool isPostOp = uop == UOP_POSTINC || uop == UOP_POSTDEC;
 
       if (isPostOp) {
-        targetRegister = ctx->acquireRegister();
+        targetRegister = ctx.acquireRegister();
       } else {
-        targetRegister = resultreg;
+        targetRegister = out;
       }
 
-      compileExpr(un->target, targetRegister, &addrout, ctx);
+      compileExpr(un->target, targetRegister, &addrOut, ctx);
 
       if (isPostOp) {
-        writer->appendInstruction(OP_MOV, targetRegister, resultreg);
+        writer.startInstr(OP_MOV);
+        writer.appendU8(targetRegister);
+        writer.appendU8(out);
+        writer.endInstr();
       }
 
       PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
-      primitivekind primkind = primType->primtype;
+      const primitivekind pk = primType->primtype;
 
       switch (uop) {
         case UOP_PREINC:
         case UOP_POSTINC:
-          NUMTYPE_OPCODE(primkind, writer, OP_INC)
-          writer->appendU8(targetRegister);
-          writer->appendU8(targetRegister);
-          writer->appendPadding(7);
+          NUMTYPE_OPCODE(pk, writer, OP_INC)
+          writer.appendU8(targetRegister);
+          writer.appendU8(targetRegister);
+          writer.endInstr();
           break;
 
         case UOP_PREDEC:
         case UOP_POSTDEC:
-          NUMTYPE_OPCODE(primkind, writer, OP_DEC)
-          writer->appendU8(targetRegister);
-          writer->appendU8(targetRegister);
-          writer->appendPadding(7);
+          NUMTYPE_OPCODE(pk, writer, OP_DEC)
+          writer.appendU8(targetRegister);
+          writer.appendU8(targetRegister);
+          writer.endInstr();
           break;
 
         default:
           break;
       }
 
-      compileWriteOperation(&addrout, primType->stackSizeBytes(), ctx, targetRegister);
+      compileWriteOperation(&addrOut, primType->stackSizeBytes(), ctx, targetRegister);
       return;
     }
 
     case AST_StringLiteral: {
-      StringLiteral* lit = static_cast<StringLiteral*>(expr);
-      uint64 off = ctx->emplaceConstString(lit->value);
+      const StringLiteral* lit = static_cast<StringLiteral*>(expr);
+      const StringPoolAddress off = ctx.getStringPool().emplace(lit->value);
 
-      writer->appendOpCode(OP_LOADCONSTSTR);
-      writer->appendU8(resultreg);
-      writer->appendU64(off);
+      writer.startInstr(OP_LOADCONSTSTR);
+      writer.appendU8(out);
+      writer.appendU64(off);
 
       return;
     }
     case AST_FloatLiteral: {
-      PrimitiveScriptType* pst = static_cast<PrimitiveScriptType*>(ctx->expectedType.back());
-      primitivekind pk = pst->primtype;
-      float64 val = static_cast<FloatLiteral*>(expr)->value;
+      const PrimitiveScriptType* pst = static_cast<PrimitiveScriptType*>(expr->resultType);
+      const primitivekind pk = pst->primtype;
+      const float64 val = static_cast<FloatLiteral*>(expr)->value;
 
       if (pk == PK_FLOAT32) {
-        writer->appendOpCode(OP_LOADCONST32);
-        writer->appendU8(resultreg);
-        writer->appendF32(val);
-        writer->appendPadding(PAD_LOADCONST32);
+        writer.startInstr(OP_LOADCONST32);
+        writer.appendU8(out);
+        writer.appendF32(static_cast<float32>(val));
+        writer.endInstr();
       } else {
-        writer->appendOpCode(OP_LOADCONST64);
-        writer->appendU8(resultreg);
-        writer->appendF64(val);
+        writer.startInstr(OP_LOADCONST64);
+        writer.appendU8(out);
+        writer.appendF64(val);
       }
 
       return;
     }
     case AST_BooleanLiteral: {
-      bool val = static_cast<BooleanLiteral*>(expr)->value;
-      writer->appendOpCode(OP_LOADCONST8);
-      writer->appendU8(resultreg);
-      writer->appendU8(val);
-      writer->appendPadding(PAD_LOADCONST8);
+      const bool val = static_cast<BooleanLiteral*>(expr)->value;
+      writer.startInstr(OP_LOADCONST8);
+      writer.appendU8(out);
+      writer.appendU8(val);
+      writer.endInstr();
       return;
     }
     case AST_IntLiteral: {
-      IntLiteral* il = static_cast<IntLiteral*>(expr);
-      PrimitiveScriptType* pst = static_cast<PrimitiveScriptType*>(ctx->expectedType.back());
-      primitivekind pk = pst->primtype;
+      const IntLiteral* il = static_cast<IntLiteral*>(expr);
+      const PrimitiveScriptType* pst = static_cast<PrimitiveScriptType*>(expr->resultType);
+      const primitivekind pk = pst->primtype;
 
       switch (pk) {
         case PK_BOOL:
-          writer->appendOpCode(OP_LOADCONST8);
-          writer->appendU8(resultreg);
+          writer.startInstr(OP_LOADCONST8);
+          writer.appendU8(out);
           if (il->value) {
-            writer->appendU8(1);
+            writer.appendU8(1);
           } else {
-            writer->appendU8(0);
+            writer.appendU8(0);
           }
-          writer->appendPadding(PAD_LOADCONST8);
+          writer.endInstr();
           break;
 
         case PK_INT8:
         case PK_UINT8:
-          writer->appendOpCode(OP_LOADCONST8);
-          writer->appendU8(resultreg);
-          writer->appendU8(il->value);
-          writer->appendPadding(PAD_LOADCONST8);
+          writer.startInstr(OP_LOADCONST8);
+          writer.appendU8(out);
+          writer.appendU8(il->value);
+          writer.endInstr();
           break;
 
         case PK_UINT16:
         case PK_INT16:
-          writer->appendOpCode(OP_LOADCONST16);
-          writer->appendU8(resultreg);
-          writer->appendU16(il->value);
-          writer->appendPadding(PAD_LOADCONST16);
+          writer.startInstr(OP_LOADCONST16);
+          writer.appendU8(out);
+          writer.appendU16(il->value);
+          writer.endInstr();
           break;
 
         case PK_UINT32:
         case PK_INT32:
-          writer->appendOpCode(OP_LOADCONST32);
-          writer->appendU8(resultreg);
-          writer->appendU32(il->value);
-          writer->appendPadding(PAD_LOADCONST32);
+          writer.startInstr(OP_LOADCONST32);
+          writer.appendU8(out);
+          writer.appendU32(il->value);
+          writer.endInstr();
           break;
 
         case PK_UINT64:
         case PK_INT64:
-          writer->appendOpCode(OP_LOADCONST64);
-          writer->appendU8(resultreg);
-          writer->appendU64(il->value);
+          writer.startInstr(OP_LOADCONST64);
+          writer.appendU8(out);
+          writer.appendU64(il->value);
           break;
 
         case PK_FLOAT32:
-          writer->appendOpCode(OP_LOADCONST32);
-          writer->appendU8(resultreg);
-          writer->appendF32(static_cast<float32>(il->value));
-          writer->appendPadding(4);
+          writer.startInstr(OP_LOADCONST32);
+          writer.appendU8(out);
+          writer.appendF32(static_cast<float32>(il->value));
+          writer.endInstr();
           break;
         case PK_FLOAT64:
-          writer->appendOpCode(OP_LOADCONST32);
-          writer->appendU8(resultreg);
-          writer->appendF64(static_cast<float64>(il->value));
+          writer.startInstr(OP_LOADCONST32);
+          writer.appendU8(out);
+          writer.appendF64(static_cast<float64>(il->value));
           break;
 
         default:
@@ -1118,35 +900,47 @@ void compileExpr(Expr* expr, registerid resultreg, AddrOutput* addr, CompilerCon
   }
 }
 
-void compileStructInitCall(ScriptStructType* type, CompilerContext* ctx, registerid out) {
-  BytecodeWriter* writer = ctx->writer;
+static void compileFuncCall(CompilerContext& ctx, const uint32 funcIdx, const registerid out) {
+  BytecodeWriter& writer = ctx.getWriter();
 
-  uint32 funcTableIndex = ctx->declaredStructConstructors[type];
-  uint64 heapsize = type->heapSize();
+  writer.startInstr(OP_FUNCLOOKUP);
+  writer.appendU8(out);
+  writer.appendU32(funcIdx);
+  writer.endInstr();
 
-  writer->appendOpCode(OP_HEAPALLOC);
-  writer->appendU8(out);
-  writer->appendU64(heapsize);
-
-  writer->appendOpCode(OP_PUSHARG);
-  writer->appendU8(out);
-  writer->appendPadding(PAD_PUSHARG);
-
-  writer->appendOpCode(OP_VINVOKE);
-  writer->appendU32(funcTableIndex);
-  writer->appendPadding(PAD_VINVOKE);
+  writer.startInstr(OP_INVOKE);
+  writer.appendU8(out);
+  writer.appendU8(out);
+  writer.endInstr();
 }
 
-void compileValueInitialiser(ScriptType* type, CompilerContext* ctx, registerid out) {
-  BytecodeWriter* writer = ctx->writer;
+static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, const registerid out) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  const uint32 funcTableIndex = ctx.getStructConstructorIndex(type);
+  const uint64 heapSize = type->heapSize();
+
+  writer.startInstr(OP_HEAPALLOC);
+  writer.appendU8(out);
+  writer.appendU64(heapSize);
+
+  writer.startInstr(OP_PUSHARG);
+  writer.appendU8(out);
+  writer.endInstr();
+
+  compileFuncCall(ctx, funcTableIndex, out);
+}
+
+static void compileValueInitialiser(ScriptType* type, CompilerContext& ctx, const registerid out) {
+  BytecodeWriter& writer = ctx.getWriter();
 
   switch (type->kind()) {
     case TK_PRIMITIVE:
     case TK_STRING:
     case TK_ARRAY:
       BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_LOADCONST)
-      writer->appendU8(out);
-      writer->appendU64(0);
+      writer.appendU8(out);
+      writer.appendU64(0);
       break;
 
     case TK_STRUCT:
@@ -1158,7 +952,7 @@ void compileValueInitialiser(ScriptType* type, CompilerContext* ctx, registerid 
   }
 }
 
-uint64 measureBlock(Block* block) {
+static uint64 measureBlock(const Block* block) {
   uint64 bsize = 0;
   for (Statement* stat : block->statements) {
     if (stat->nodeKind() != AST_LexicalDeclaration) {
@@ -1169,122 +963,122 @@ uint64 measureBlock(Block* block) {
   return bsize;
 }
 
-uint32 blockBegin(BytecodeWriter* writer, uint64 bytes, uint64* addrOut) {
-  uint32 instr = writer->getInstructionCounter();
+static uint32 blockBegin(BytecodeWriter& writer, uint64 bytes, uint64* addrOut) {
+  const uint32 instr = writer.getInstructionCounter();
 
-  writer->appendOpCode(OP_STACKALLOC);
+  writer.startInstr(OP_STACKALLOC);
 
   if (addrOut) {
-    *addrOut = writer->buflen;
+    *addrOut = writer.getAddress();
   }
 
-  writer->appendU64(bytes);
-  writer->appendPadding(PAD_STACKALLOC);
+  writer.appendU64(bytes);
+  writer.endInstr();
 
   return instr;
 }
 
-void blockEnd(BytecodeWriter* writer, uint64 bytes) {
-  writer->appendOpCode(OP_STACKFREE);
-  writer->appendU64(bytes);
-  writer->appendPadding(PAD_STACKFREE);
+static void blockEnd(BytecodeWriter& writer, uint64 bytes) {
+  writer.startInstr(OP_STACKFREE);
+  writer.appendU64(bytes);
+  writer.endInstr();
 
-  writer->appendOpCode(OP_RET);
-  writer->appendPadding(PAD_RET);
+  writer.startInstr(OP_RET);
+  writer.endInstr();
 }
 
-void compileStatement(Statement* stat, CompilerContext* ctx);
+static void compileStatement(Statement* stat, CompilerContext& ctx);
 
-void compileBlock(Block* block, CompilerContext* ctx, uint64 size = 0) {
-  blockBegin(ctx->writer, size, nullptr);
+static void compileBlock(const Block* block, CompilerContext& ctx, const uint64 size = 0) {
+  blockBegin(ctx.getWriter(), size, nullptr);
   for (Statement* statement : block->statements) {
     compileStatement(statement, ctx);
   }
-  blockEnd(ctx->writer, size);
+  blockEnd(ctx.getWriter(), size);
 }
 
-void compileLexDecl(LexicalDeclaration* lex, CompilerContext* ctx) {
+static void compileLexDecl(const LexicalDeclaration* lex, CompilerContext& ctx) {
   ScriptType* stype = lex->typeExpr->referencedType;
 
-  StackScope* scope = ctx->getScope();
-  StackSymbol* sym = scope->pushSymbol(lex->variableName->value, SSYM_VAR);
-  sym->stacksize = stype->stackSizeBytes();
+  StackScope* scope = ctx.getScope();
+  const StackSymbol* sym = scope->pushSymbol(lex->variableName->value, stype->stackSizeBytes());
 
-  BytecodeWriter* writer = ctx->writer;
+  BytecodeWriter& writer = ctx.getWriter();
 
-  registerid valreg = ctx->acquireRegister();
-  compileRValue(stype, lex->value, ctx, valreg);
+  const registerid valueReg = ctx.acquireRegister();
+  compileRValue(stype, lex->value, ctx, valueReg);
 
   BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_RSWRITE)
-  writer->appendU8(valreg);
-  writer->appendU64(sym->stackoffset);
+  writer.appendU8(valueReg);
+  writer.appendU64(sym->stackOffset);
 
-  ctx->freeRegister(valreg);
+  ctx.freeRegister(valueReg);
 }
 
-void compileIfStatement(IfStatement* stat, CompilerContext* ctx) {
-  registerid reg = ctx->acquireRegister();
-  BytecodeWriter* writer = ctx->writer;
+static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
+  const registerid reg = ctx.acquireRegister();
+  BytecodeWriter& writer = ctx.getWriter();
 
   compileExpr(stat->condition, reg, nullptr, ctx);
 
-  writer->appendOpCode(OP_JMPI0);
-  uint64 condFailedJumpAddr = writer->buflen;
+  writer.startInstr(OP_JMPI0);
+  const uint64 condFailedJumpAddr = writer.getAddress();
 
-  writer->appendU32(0);
-  writer->appendU8(reg);
-  writer->appendPadding(PAD_JMPI0);
+  writer.appendU32(0);
+  writer.appendU8(reg);
+  writer.endInstr();
 
   compileStatement(stat->body, ctx);
 
   if (stat->elseBody) {
-    writer->appendOpCode(OP_JMP);
-    uint64 afterElseAddr = writer->buflen;
-    writer->appendU32(0);
-    writer->appendPadding(PAD_JMP);
+    writer.startInstr(OP_JMP);
+    const uint64 afterElseAddr = writer.getAddress();
+    writer.appendU32(0);
+    writer.endInstr();
 
-    writer->writeInstructionCounter(condFailedJumpAddr);
+    writer.writeInstructionCounter(condFailedJumpAddr);
 
     compileStatement(stat->elseBody, ctx);
 
-    writer->writeInstructionCounter(afterElseAddr);
+    writer.writeInstructionCounter(afterElseAddr);
   } else {
-    writer->writeInstructionCounter(condFailedJumpAddr);
+    writer.writeInstructionCounter(condFailedJumpAddr);
   }
 }
 
-void compileFuncDecl(FunctionDeclStatement* stat, CompilerContext* ctx) {
-  uint64 stacksize = 0;
+static void compileFuncDecl(const FunctionDeclStatement* stat, CompilerContext& ctx) {
+  uint64 stackSize = 0;
   for (FunctionParam* p : stat->arguments) {
-    stacksize += p->paramType->referencedType->stackSizeBytes();
+    stackSize += p->paramType->referencedType->stackSizeBytes();
   }
-  stacksize += measureBlock(stat->functionBody);
+  stackSize += measureBlock(stat->functionBody);
 
-  uint32 start = blockBegin(ctx->writer, stacksize, nullptr);
+  uint32 start = blockBegin(ctx.getWriter(), stackSize, nullptr);
 
 
 
-  blockEnd(ctx->writer, stacksize);
+  blockEnd(ctx.getWriter(), stackSize);
 }
 
-void compileStatement(Statement* stat, CompilerContext* ctx) {
-  astnodetype kind = stat->nodeKind();
-  BytecodeWriter* writer = ctx->writer;
+void compileStatement(Statement* stat, CompilerContext& ctx) {
+  const astnodetype kind = stat->nodeKind();
+  BytecodeWriter& writer = ctx.getWriter();
 
   switch (kind) {
     case AST_LexicalDeclaration:
       compileLexDecl(static_cast<LexicalDeclaration*>(stat), ctx);
       return;
     case AST_FunctionDeclStatement:
-      ctx->funcQueue.push_back(static_cast<FunctionDeclStatement*>(stat));
+      ctx.enqueueFunction(static_cast<FunctionDeclStatement*>(stat));
       return;
     case AST_IfStatement:
       compileIfStatement(static_cast<IfStatement*>(stat), ctx);
       return;
 
     case AST_Block: {
-      Block* b = static_cast<Block*>(stat);
-      uint64 size = measureBlock(b);
+      const Block* b = static_cast<Block*>(stat);
+      const uint64 size = measureBlock(b);
+
       compileBlock(b, ctx, size);
       return;
     }
@@ -1294,7 +1088,7 @@ void compileStatement(Statement* stat, CompilerContext* ctx) {
   }
 }
 
-void compileRValue(ScriptType* type, Expr* val, CompilerContext* ctx, registerid out) {
+void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid out) {
   if (!val) {
     compileValueInitialiser(type, ctx, out);
     return;
@@ -1307,103 +1101,90 @@ void compileRValue(ScriptType* type, Expr* val, CompilerContext* ctx, registerid
   compileExpr(val, out, nullptr, ctx);
 }
 
-void compileStructDecl(StructDecl* decl, CompilerContext* ctx) {
+static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
   ScriptStructType* stype = decl->type;
-  ctx->declaredStructs.push_back(stype);
+  BytecodeWriter& writer = ctx.getWriter();
 
-  BytecodeWriter* writer = ctx->writer;
-  uint32 pcount = decl->properties.size();
-  uint64 stacksize = sizeof(uint64);
+  const uint32 propCount = decl->properties.size();
+  constexpr uint64 stackSize = POINTERSIZE;
 
-  ctx->pushScope();
+  ctx.pushScope();
 
-  uint32 start = blockBegin(writer, stacksize, nullptr);
+  const uint32 start = blockBegin(writer, stackSize, nullptr);
 
-  registerid selfreg = ctx->acquireRegister();
-  registerid propreg = ctx->acquireRegister();
+  const registerid selfReg = ctx.acquireRegister();
+  const registerid propReg = ctx.acquireRegister();
 
-  writer->appendOpCode(OP_RSREAD64);
-  writer->appendU8(selfreg);
-  writer->appendU64(0);
-  writer->appendPadding(PAD_RSREAD);
+  writer.startInstr(OP_RSREAD64);
+  writer.appendU8(selfReg);
+  writer.appendU64(0);
+  writer.endInstr();
 
   uint32 off = 0;
-  for (uint32 i = 0; i < pcount; i++) {
-    StructPropertyDecl* pdecl = decl->properties.at(i);
-    StructProperty* ptype = &stype->properties[i];
+  for (uint32 i = 0; i < propCount; i++) {
+    const StructPropertyDecl* propDecl = decl->properties.at(i);
+    const StructProperty* ptype = &stype->properties[i];
 
-    compileRValue(ptype->type, pdecl->value, ctx, propreg);
+    compileRValue(ptype->type, propDecl->value, ctx, propReg);
 
     BYTEWIDTH_OPCODE(ptype->type->stackSizeBytes(), writer, OP_WRITEOBJ)
-    writer->appendU8(selfreg);
-    writer->appendU8(propreg);
-    writer->appendU32(off);
+    writer.appendU8(selfReg);
+    writer.appendU8(propReg);
+    writer.appendU32(off);
 
     off += ptype->type->stackSizeBytes();
   }
 
-  ctx->popScope();
-  ctx->freeRegister(selfreg);
-  ctx->freeRegister(propreg);
+  ctx.popScope();
+  ctx.freeRegister(selfReg);
+  ctx.freeRegister(propReg);
 
-  blockEnd(writer, stacksize);
+  blockEnd(writer, stackSize);
 
-  std::string fname;
-  fname.append(stype->structName);
-  fname.append(".<init>");
+  std::string funcName;
+  funcName.append(stype->structName);
+  funcName.append(".<init>");
 
-  stringid id = ctx->stringTable->allocate(fname);
-  uint64 constPoolOff = ctx->emplaceConstString(id);
+  const stringid id = ctx.getStrings()->allocate(funcName);
 
   FunctionSignatureParam param = {
     .type = stype,
     .varargs = false
   };
   FunctionSignature sign = FunctionSignature();
-  sign.returnType = ctx->types->getVoidType();
+  sign.returnType = ctx.getTypes()->getVoidType();
   sign.paramCount = 1;
   sign.params = &param;
 
-  FunctionSignature* emplaced = ctx->types->emplaceFunctionType(&sign);
-  uint32 funcIdx = ctx->pushCompiledFunction(emplaced, start, constPoolOff);
+  FunctionSignature* emplaced = ctx.getTypes()->emplaceFunctionType(&sign);
+  const uint32 funcIdx = ctx.pushCompiledFunction(id, start, emplaced);
 
-  ctx->declaredStructConstructors[stype] = funcIdx;
+  ctx.pushStructConstructor(stype, funcIdx);
 }
 
-Bytecode compile(ScriptFileStatement* sfs, StringTable* table) {
-  BytecodeWriter writer;
+BytecodeFile compile(ScriptFileStatement* sfs, StringTable* table, TypeLookup* types) {
+  uint64 registerBitSet = 0;
+  CompilerContext ctx = CompilerContext(table, types, &registerBitSet);
 
-  const uint64 initcap = LENGTH_INSTRUCTION * 1024;
-
-  writer.buf = static_cast<uint8*>(malloc(initcap));
-  writer.bufcap = initcap;
-
-  if (!writer.buf) {
-    throw std::runtime_error("Failed to allocate initial bytecode buffer");
-  }
-
-  ConstStringPoolWriter stringPool;
-  uint64 registersInUse = 0;
-
-  CompilerContext ctx;
-  ctx.stringPool = &stringPool;
-  ctx.stringTable = table;
-  ctx.writer = &writer;
-  ctx.registersInUse = &registersInUse;
+  constexpr uint64 initcap = LENGTH_INSTRUCTION * 1024;
+  ctx.getWriter().reserveSpace(initcap);
 
   ctx.pushScope();
 
   for (Statement* stat : sfs->statements) {
-    if (stat->nodeKind() != AST_LexicalDeclaration) {
+    if (stat->nodeKind() != AST_StructDecl) {
       continue;
     }
-    compileStructDecl(static_cast<StructDecl*>(stat), &ctx);
+    compileStructDecl(static_cast<StructDecl*>(stat), ctx);
   }
 
   ctx.popScope();
 
-  return {
-    .data = nullptr,
-    .len = 0
-  };
+  BytecodeFile file;
+  file.instructionBuf = ctx.getWriter().getBuffer();
+  file.instructionsSize = ctx.getWriter().getLength();
+  file.constStringPool = ctx.getStringPool().getData();
+  file.stringPoolSize = ctx.getStringPool().getLength();
+
+  return file;
 }
