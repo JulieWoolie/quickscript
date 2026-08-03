@@ -44,4 +44,9 @@ add_executable(quickscript src/main.cpp
         src/codegen/type_conv.cc
         src/interpreter/ir_file.h
         src/codegen/CompilerContext.cc
-        src/codegen/CompilerContext.h)
+        src/codegen/CompilerContext.h
+        src/interpreter/StackMemory.cc
+        src/interpreter/StackMemory.h
+        src/interpreter/HeapMemory.cc
+        src/interpreter/HeapMemory.h
+        src/interpreter/Stack.h)
