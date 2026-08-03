@@ -41,4 +41,6 @@ add_executable(quickscript src/main.cpp
         src/codegen/compiler.h
         src/codegen/compiler.cc
         src/codegen/opcodespec.h
-        src/codegen/opcodespec.cc)
+        src/codegen/opcodespec.cc
+        src/codegen/type_conv.h
+        src/codegen/type_conv.cc)
