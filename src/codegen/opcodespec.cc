@@ -25,7 +25,6 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //
     case OP_PUSHLINE:
     case OP_JMP:
-    case OP_VINVOKE:
       *reinterpret_cast<uint32*>(buf) = va_arg(list, uint32);
       memset(buf + 4, 0, 5);
       break;
@@ -38,7 +37,6 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //
     case OP_JMPI0:
     case OP_JMPN0:
-    case OP_INVOKE:
       *reinterpret_cast<uint32*>(buf) = va_arg(list, uint32);
       *(buf + 4) = static_cast<uint8>(va_arg(list, int32));
       memset(buf + 5, 0, 4);
@@ -51,6 +49,7 @@ void appendOpCodeData(uint8* buf, opcode code, va_list list) {
     //   [1] register
     //
     case OP_MOV:
+    case OP_INVOKE:
     case OP_I8TU8:
     case OP_I8TI16:
     case OP_I8TU16:
