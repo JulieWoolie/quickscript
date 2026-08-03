@@ -536,7 +536,7 @@ bool isArrayTypeComparable(ScriptArrayType* type) {
 //
 // If the ASSIGN flag is set, meaning the operation will assign the
 // right operand to the left side, the left side must be able to hold
-// the right's value, but the right side's type will be returned as
+// the right's value, and the left side's type will be returned as
 // the result.
 //
 // That is, unless this is one of the exceptions carved out for
@@ -547,7 +547,7 @@ ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, b
 
   if (op == BOP_ASSIGN) {
     if (isAssignableTo(left, right)) {
-      return right;
+      return left;
     }
     return nullptr;
   }
