@@ -126,7 +126,7 @@ bool isAssignableTo(ScriptType* holder, ScriptType* value) {
       return false;
     }
 
-    return holder->stackSizeBytes() > value->stackSizeBytes();
+    return holder->stackSizeBytes() >= value->stackSizeBytes();
   }
 
   return false;
