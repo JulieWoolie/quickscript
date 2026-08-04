@@ -507,6 +507,16 @@ static void compileBinaryExpr(
 
   if (isAssignment) {
     compileWriteOperation(&out, rtype->stackSizeBytes(), ctx, r1);
+  } else {
+    switch (out.outptype) {
+      case OUTP_IDX:
+        ctx.freeRegister(out.indexRegister);
+      case OUTP_PROP:
+        ctx.freeRegister(out.objectRegister);
+        break;
+      default:
+        break;
+    }
   }
 }
 
