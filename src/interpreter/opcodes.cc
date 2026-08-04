@@ -36,6 +36,10 @@ conststring opcode_name(opcode code) {
     case OP_ASWRITE16: return "ASWRITE16";
     case OP_ASWRITE32: return "ASWRITE32";
     case OP_ASWRITE64: return "ASWRITE64";
+    case OP_STORECONST8: return "STORECONST8";
+    case OP_STORECONST16: return "STORECONST16";
+    case OP_STORECONST32: return "STORECONST32";
+    case OP_STORECONST64: return "STORECONST64";
     case OP_HEAPALLOC: return "HEAPALLOC";
     case OP_HEAPFREE: return "HEAPFREE";
     case OP_READOBJ8: return "READOBJ8";

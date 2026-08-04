@@ -111,6 +111,8 @@ function stackOperations() {
   byteSizedOpCode("RSWRITE", [reg("val"), uint64("offset")])
   byteSizedOpCode("ASREAD", [reg("out"), uint64("offset")])
   byteSizedOpCode("ASWRITE", [reg("val"), uint64("offset")])
+
+  byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")])
 }
 
 function heapOperations() {
