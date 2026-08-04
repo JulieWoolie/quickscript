@@ -45,7 +45,7 @@ export async function generateEvaluatorSwitchStatement(res: OpCodeGenResult): Pr
       if (mustCast || pOff > 0) {
         out += "("
       }
-      out += `args`
+      out += `instr.args`
       if (pOff != 0) {
         out += `+ ${pOff}`
       }
