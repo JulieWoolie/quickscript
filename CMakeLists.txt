@@ -49,4 +49,24 @@ add_executable(quickscript src/main.cpp
         src/interpreter/StackMemory.h
         src/interpreter/HeapMemory.cc
         src/interpreter/HeapMemory.h
-        src/interpreter/Stack.h)
+        src/interpreter/Stack.h
+        src/types/ScriptType.h
+        src/types/ScriptType.cc
+        src/types/PrimitiveScriptType.cc
+        src/types/PrimitiveScriptType.h
+        src/types/ScriptArrayType.cc
+        src/types/ScriptArrayType.h
+        src/types/ConstTypes.cc
+        src/types/ConstTypes.h
+        src/types/VoidScriptType.cc
+        src/types/VoidScriptType.h
+        src/types/StringScriptType.cc
+        src/types/StringScriptType.h
+        src/types/FunctionSignature.cc
+        src/types/FunctionSignature.h
+        src/types/TypeTable.cc
+        src/types/TypeTable.h
+        src/types/ScriptStructType.cc
+        src/types/ScriptStructType.h
+        src/interpreter/StringPool.cc
+        src/interpreter/StringPool.h)
