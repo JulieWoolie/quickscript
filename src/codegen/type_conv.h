@@ -7,7 +7,7 @@
 //
 
 #include "../interpreter/opcodes.h"
-#include "../types.h"
+#include "../types/types.h"
 
 opcode conversionOpCode(primitivekind from, primitivekind to);
 

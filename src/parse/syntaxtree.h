@@ -6,7 +6,7 @@
 #include "../common.h"
 #include "../stringtable.h"
 #include "token.h"
-#include "../types.h"
+#include "../types/types.h"
 
 // ========================
 // ======== Visitor =======

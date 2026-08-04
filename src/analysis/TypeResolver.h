@@ -1,7 +1,7 @@
 #ifndef QUICKSCRIPT_TYPERESOLVER_H
 #define QUICKSCRIPT_TYPERESOLVER_H
 
-#include "../types.h"
+#include "../types/types.h"
 #include "../interpreter/nativeinterface.h"
 #include "../errors.h"
 #include "../parse/syntaxtree.h"

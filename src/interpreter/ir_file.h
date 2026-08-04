@@ -2,7 +2,7 @@
 #define QUICKSCRIPT_IR_FILE_H
 
 #include "../common.h"
-#include "../types.h"
+#include "../types/types.h"
 
 #define FET_NIL 0
 #define FET_LOCAL 1

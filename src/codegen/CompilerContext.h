@@ -2,7 +2,7 @@
 #define QUICKSCRIPT_COMPILERCONTEXT_H
 
 #include "../stringtable.h"
-#include "../types.h"
+#include "../types/types.h"
 #include "../interpreter/opcodes.h"
 #include "../parse/syntaxtree.h"
 

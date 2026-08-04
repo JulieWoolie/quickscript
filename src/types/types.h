@@ -4,8 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "allocator.h"
-#include "common.h"
+#include "../allocator.h"
+#include "../common.h"
 
 #define POINTERSIZE 8
 

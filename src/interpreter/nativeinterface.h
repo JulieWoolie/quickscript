@@ -2,7 +2,7 @@
 #define QUICKSCRIPT_NATIVEINTERFACE_H
 
 #include "../common.h"
-#include "../types.h"
+#include "../types/types.h"
 
 struct QsString {
   uint32 length = 0;
