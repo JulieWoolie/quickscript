@@ -1,1 +1,1 @@
-deno run --allow-all opcode-gen.ts
+deno run --sloppy-imports --allow-all main.ts
