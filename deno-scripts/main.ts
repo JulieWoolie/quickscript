@@ -89,7 +89,7 @@ async function generateConversionCompileMethod(): Promise<void> {
 ${FILE_HEADER}
 
 #include "../interpreter/opcodes.h"
-#include "../types.h"
+#include "../types/types.h"
 
 opcode conversionOpCode(primitivekind from, primitivekind to);
 
