@@ -19,22 +19,8 @@ void native_printfn(NativeCall* call) {
   // nop;
 }
 
-Bindings createStandardBindings(TypeLookup* lookup) {
+Bindings createStandardBindings() {
   Bindings bindings;
-
-  FunctionSignature sign;
-  sign.paramCount = 1;
-  sign.returnType = lookup->getVoidType();
-
-  FunctionSignatureParam param;
-  param.type = lookup->getStringType();
-  param.varargs = false;
-  sign.params = &param;
-
-  FunctionSignature* emplaced = lookup->emplaceFunctionType(&sign);
-
-  bindings.putFunction("print", emplaced, native_printfn);
-
   return bindings;
 }
 
@@ -78,8 +64,8 @@ int32 main(int32 argc, cstring argv[]) {
 
   ScriptFileStatement* sfs = p.parse();
 
-  TypeLookup lookup = TypeLookup(&pool);
-  Bindings bindings = createStandardBindings(&lookup);
+  TypeTable lookup = TypeTable();
+  Bindings bindings = createStandardBindings();
 
   TypeResolver resolver = TypeResolver(&lookup, &table, &errors, &bindings);
   resolver.acceptScriptFileStatement(sfs);

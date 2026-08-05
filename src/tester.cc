@@ -316,7 +316,7 @@ bool runTestFile(const std::filesystem::path& fpath, TesterSettings* settings) {
     RUN_ERROR_CHECKS
   }
 
-  TypeLookup lookup = TypeLookup(&allocator);
+  TypeTable lookup = TypeTable();
   Bindings bindings;
 
   TypeResolver typeResolver = TypeResolver(&lookup, &table, &errors, &bindings);
