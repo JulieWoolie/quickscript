@@ -17,7 +17,7 @@ struct LexicalScope {
 };
 
 class TypeResolver: public Visitor {
-  TypeLookup* m_lookup;
+  TypeTable* m_lookup;
   StringTable* m_strings;
   CompilerErrors* m_errors;
   Bindings* m_bindings;
@@ -38,7 +38,7 @@ class TypeResolver: public Visitor {
 
   public:
     explicit TypeResolver(
-      TypeLookup *lookup,
+      TypeTable *lookup,
       StringTable* strings,
       CompilerErrors* errors,
       Bindings* bindings

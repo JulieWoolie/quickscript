@@ -3,6 +3,8 @@
 #include <functional>
 #include <stdint.h>
 
+#include "../types/ConstTypes.h"
+
 #define STATPUSH m_statementStack.push_back(v);
 #define STATPOP m_statementStack.pop_back();
 
@@ -38,7 +40,7 @@ void TypeResolver::pushSymbol(LexicalScope* scope, stringid name, ScriptType* ty
 }
 
 TypeResolver::TypeResolver(
-  TypeLookup* lookup,
+  TypeTable* lookup,
   StringTable* strings,
   CompilerErrors* errors,
   Bindings* bindings
@@ -51,13 +53,13 @@ TypeResolver::TypeResolver(
 
 void TypeResolver::acceptTypeNameExpr(TypeNameExpr* v) {
   std::string typeName = m_strings->getstring(v->typeName);
-  v->referencedType = m_lookup->findReferencedType(typeName);
+  v->referencedType = m_lookup->lookupByName(typeName);
 
   if (v->referencedType) {
     return;
   }
 
-  v->referencedType = m_lookup->getVoidType();
+  v->referencedType = ConstTypes::VOID();
   m_errors->error(v->location, "Unknown type '%s'", typeName.c_str());
 }
 
@@ -66,10 +68,19 @@ void TypeResolver::acceptArrayTypeExpr(ArrayTypeExpr* v) {
   ScriptType* compType = v->componentType->referencedType;
 
   if (!compType) {
-    compType = m_lookup->getVoidType();
+    compType = ConstTypes::VOID();
   }
 
-  v->referencedType = m_lookup->getArrayType(compType);
+  std::string compName = compType->getTypeName();
+  compName.append("[]");
+
+  ScriptType* arrType = m_lookup->lookupByName(compName);
+  if (!arrType) {
+    arrType = new ScriptArrayType(compType);
+    m_lookup->emplaceType(arrType);
+  }
+
+  v->referencedType = arrType;
 }
 
 primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {
@@ -93,11 +104,11 @@ void TypeResolver::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
   parsedprimitivetype ppt = v->primType;
 
   if (ppt == PPT_STRING) {
-    v->referencedType = m_lookup->getStringType();
+    v->referencedType = ConstTypes::STRING();
     return;
   }
   if (ppt == PPT_VOID) {
-    v->referencedType = m_lookup->getVoidType();
+    v->referencedType = ConstTypes::VOID();
     Statement* stat = m_statementStack.back();
 
     if (stat->nodeKind() == AST_LexicalDeclaration) {
@@ -108,7 +119,7 @@ void TypeResolver::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
   }
 
   primitivekind pk = parsedPrimitiveToTypeKind(ppt);
-  v->referencedType = m_lookup->getPrimitiveType(pk);
+  v->referencedType = ConstTypes::getPrimitiveType(pk);
 }
 
 void TypeResolver::acceptIdentifier(Identifier* v) {
@@ -130,9 +141,7 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
     LexicalScope* scope = m_scopes.data() + i;
     std::vector<LexicalSymbol> symbols = scope->symbols;
 
-    for (uint32 j = 0; j < symbols.size(); j++) {
-      LexicalSymbol& symbol = symbols.at(j);
-
+    for (LexicalSymbol& symbol: symbols) {
       if (symbol.name != name) {
         continue;
       }
@@ -150,62 +159,23 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
         continue;
       }
 
-      FunctionSignature* expectedSig = static_cast<FunctionSignature*>(expectedType);
-
-      FunctionSignature* sfunc = static_cast<FunctionSignature*>(stype);
-      uint32 pcount = sfunc->paramCount;
-      uint32 expectedParams = expectedSig->paramCount;
-
-      if (pcount > expectedSig->getMaxArgs() || pcount < expectedParams) {
-        continue;
-      }
-
-      bool paramTestingFailed = false;
-      uint32 score = 0;
-
-      for (uint32 pIdx = 0; pIdx < pcount; pIdx++) {
-        FunctionSignatureParam* param = &sfunc->params[pIdx];
-        FunctionSignatureParam* expectedParam = nullptr;
-        ScriptType* paramExpectedType = nullptr;
-
-        if (pIdx >= expectedParams) {
-          expectedParam = &expectedSig->params[expectedParams - 1];
-        } else {
-          expectedParam = &expectedSig->params[pIdx];
-        }
-
-        if (expectedParam->varargs) {
-          paramExpectedType = static_cast<ScriptArrayType*>(expectedParam->type)->componentType;
-        } else {
-          paramExpectedType = expectedParam->type;
-        }
-
-        if (param->type == paramExpectedType) {
-          score += 2;
-          continue;
-        }
-        if (isAssignableTo(paramExpectedType, param->type)) {
-          score += 1;
-          continue;
-        }
-
-        paramTestingFailed = true;
-        break;
-      }
-
-      if (paramTestingFailed) {
+      FunctionSignature* callingSign = static_cast<FunctionSignature*>(expectedType);
+      FunctionSignature* funcSign = static_cast<FunctionSignature*>(stype);
+      
+      const int32 score = FunctionSignature::callSignatureMatches(callingSign, funcSign);
+      if (score == SIGN_DOES_NOT_MATCH) {
         continue;
       }
 
       scores[scorerlen] = score;
-      signatures[scorerlen] = sfunc;
+      signatures[scorerlen] = funcSign;
       scorerlen++;
     }
   }
 
   if (scorerlen == 0) {
     m_errors->error(v->location, "Unknown variable/function '%s'", name.c_str());
-    v->resultType = m_lookup->getVoidType();
+    v->resultType = ConstTypes::VOID();
     return;
   }
   if (scorerlen == 1) {
@@ -233,21 +203,17 @@ void TypeResolver::acceptIdentifier(Identifier* v) {
 void TypeResolver::acceptCallExpr(CallExpr* v) {
   uint32 args = v->arguments.size();
 
-  FunctionSignature expected;
-  expected.returnType = nullptr;
-  expected.paramCount = args;
-
-  FunctionSignatureParam params[args];
-  expected.params = params;
+  ScriptType* params[args];
 
   for (uint32 i = 0; i < args; i++) {
     Expr* e = v->arguments.at(i);
     e->acceptVisit(this);
-    params[i].type = e->resultType;
-    params[i].varargs = false;
+    params[i] = e->resultType;
   }
+  
+  FunctionSignature sign = FunctionSignature(nullptr, false, args, params);
 
-  m_expectedTypes.push_back(&expected);
+  m_expectedTypes.push_back(&sign);
   v->target->acceptVisit(this);
   m_expectedTypes.pop_back();
 
@@ -255,45 +221,37 @@ void TypeResolver::acceptCallExpr(CallExpr* v) {
   if (targetType->kind() != TK_FUNC) {
     m_errors->error(v->location,
       "Expression does not return a callable function, but returns a %s",
-      targetType->typeName()
+      targetType->getTypeName()
     );
 
     v->resultType = targetType;
     return;
   }
 
-  v->resultType = ((FunctionSignature*) targetType)->returnType;
-}
-
-bool hasProperties(const typekind kind) {
-  switch (kind) {
-    case TK_STRING:
-    case TK_ARRAY:
-    case TK_STRUCT:
-      return true;
-    default:
-      return false;
-  }
+  v->resultType = static_cast<FunctionSignature*>(targetType)->getReturnType();
 }
 
 void TypeResolver::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
   v->target->acceptVisit(this);
   ScriptType* resType = v->target->resultType;
 
-  if (!(resType->typeFlags() & TYPEFLAG_PROPERTIES)) {
-    m_errors->error(v->location, "%s has no properties that can be accessed", resType->typeName());
+  if (!(resType->typeFlags() & TFLAG_PROPERTY_HOLDER)) {
+    m_errors->error(v->location, 
+      "%s has no properties that can be accessed", 
+      resType->getTypeName()
+    );
     return;
   }
 
   std::string queriedProp = m_strings->getstring(v->property->value);
-  ScriptType* propertyType = resType->getPropertyType(queriedProp, m_lookup);
+  ScriptType* propertyType = resType->getPropertyType(queriedProp);
 
   if (propertyType == nullptr) {
     m_errors->error(v->location,
       "No such property '%s' on %s",
-      queriedProp.c_str(), resType->typeName()
+      queriedProp.c_str(), resType->getTypeName()
     );
-    propertyType = m_lookup->getVoidType();
+    propertyType = ConstTypes::VOID();
   }
 
   v->resultType = propertyType;
@@ -306,34 +264,33 @@ void TypeResolver::acceptIndexAccessExpr(IndexAccessExpr* v) {
   if (!isIntegerType(indexType)) {
     m_errors->error(v->index->location,
       "%s cannot be used to index an array or string",
-      indexType->typeName()
+      indexType->getTypeName()
     );
   }
 
   v->target->acceptVisit(this);
   ScriptType* resultType = v->target->resultType;
 
-  if (!(resultType->typeFlags() & TYPEFLAG_INDEXABLE)) {
-    m_errors->error(v->location, "Type %s cannot be indexed", resultType->typeName());
-    v->resultType = m_lookup->getVoidType();
+  if (!(resultType->typeFlags() & TFLAG_INDEXABLE)) {
+    m_errors->error(v->location, "Type %s cannot be indexed", resultType->getTypeName());
+    v->resultType = ConstTypes::VOID();
     return;
   }
 
-  ScriptType* indexedType = resultType->getIndexedType(m_lookup);
+  ScriptType* indexedType = resultType->getIndexReturnType();
   v->resultType = indexedType;
 }
 
 void TypeResolver::acceptBooleanLiteral(BooleanLiteral* v) {
-  v->resultType = m_lookup->getPrimitiveType(PK_BOOL);
+  v->resultType = ConstTypes::BOOL();
 }
 
 void TypeResolver::acceptCharLiteral(CharLiteral* v) {
-  v->resultType = m_lookup->getPrimitiveType(PK_INT8);
-
+  v->resultType = ConstTypes::INT8();
 }
 
 void TypeResolver::acceptStringLiteral(StringLiteral* v) {
-  v->resultType = m_lookup->getStringType();
+  v->resultType = ConstTypes::STRING();
 }
 
 // Source - https://stackoverflow.com/a/4609795
@@ -382,7 +339,7 @@ void TypeResolver::acceptIntLiteral(IntLiteral* v) {
 
   primitivekind pk = parsedPrimitiveToTypeKind(smallestFitting);
 
-  v->resultType = m_lookup->getPrimitiveType(pk);
+  v->resultType = ConstTypes::getPrimitiveType(pk);
   v->smallestFittingType = smallestFitting;
 }
 
@@ -397,7 +354,7 @@ void TypeResolver::acceptFloatLiteral(FloatLiteral* v) {
     smallestFitting = PPT_FLOAT64;
   }
 
-  v->resultType = m_lookup->getPrimitiveType(smallestFitting);
+  v->resultType = ConstTypes::getPrimitiveType(smallestFitting);
   v->smallestFittingType = smallestFitting;
 }
 
@@ -407,13 +364,13 @@ void TypeResolver::acceptObjectLiteral(ObjectLiteral* v) {
     m_errors->error(
       v->location,
       "Type %s cannot be initialized with an object literal",
-      expectedType->typeName()
+      expectedType->getTypeName()
     );
     return;
   }
 
   ScriptStructType* structType = static_cast<ScriptStructType*>(expectedType);
-  uint32 pcount = structType->propertyCount;
+  uint32 pcount = structType->getPropertyCount();
 
   v->resultType = structType;
 
@@ -422,9 +379,9 @@ void TypeResolver::acceptObjectLiteral(ObjectLiteral* v) {
     ScriptType* proptype = nullptr;
 
     for (uint32 pi = 0; pi < pcount; pi++) {
-      StructProperty* prop = &structType->properties[pi];
+      StructProperty* prop = structType->getProperty(pi);
 
-      if (prop->propertyName != propertyName) {
+      if (prop->name != propertyName) {
         continue;
       }
 
@@ -435,7 +392,7 @@ void TypeResolver::acceptObjectLiteral(ObjectLiteral* v) {
     if (!proptype) {
       m_errors->error(prop->location, "No such property named '%s' on struct %s",
         propertyName.c_str(),
-        structType->typeName()
+        structType->getTypeName()
       );
       continue;
     }
@@ -449,8 +406,8 @@ void TypeResolver::acceptObjectLiteral(ObjectLiteral* v) {
     if (!isAssignableTo(proptype, pvalType)) {
       m_errors->error(prop->location,
         "Cannot assign value of type %s to property of type %s",
-        pvalType->typeName(),
-        proptype->typeName()
+        pvalType->getTypeName(),
+        proptype->getTypeName()
       );
     }
   }
@@ -466,14 +423,14 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
     m_errors->error(
       v->location,
       "Type %s cannot be initialized with an object literal",
-      type->typeName()
+      type->getTypeName()
     );
 
-    v->resultType = m_lookup->getVoidType();
+    v->resultType = ConstTypes::VOID();
     return;
   }
 
-  ScriptType* componentType = ((ScriptArrayType*) type)->componentType;
+  ScriptType* componentType = static_cast<ScriptArrayType*>(type)->getComponentType();
   m_expectedTypes.push_back(componentType);
 
   for (Expr* expr : v->values) {
@@ -486,8 +443,8 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
 
     m_errors->error(expr->location,
       "Cannot use value of type %s in array of type %s",
-      valType->typeName(),
-      componentType->typeName()
+      valType->getTypeName(),
+      componentType->getTypeName()
     );
   }
 
@@ -495,14 +452,14 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
   v->resultType = type;
 }
 
-bool isArrayTypeComparable(ScriptArrayType* type) {
-  ScriptType* ctype = type->componentType;
-  switch (ctype->kind()) {
+static bool isArrayTypeComparable(ScriptArrayType* type) {
+  ScriptType* compType = type->getComponentType();
+  switch (compType->kind()) {
     case TK_PRIMITIVE:
     case TK_STRING:
       return true;
     case TK_ARRAY:
-      return isArrayTypeComparable(static_cast<ScriptArrayType*>(ctype));
+      return isArrayTypeComparable(static_cast<ScriptArrayType*>(compType));
     default:
       return false;
   }
@@ -564,10 +521,10 @@ ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, b
     case BOP_LT:
     case BOP_LTE:
       if (isNumberType(left) && isNumberType(right)) {
-        return m_lookup->boolType();
+        return ConstTypes::BOOL();
       }
       if (lkind == TK_STRING && rkind == TK_STRING) {
-        return m_lookup->boolType();
+        return ConstTypes::BOOL();
       }
       if (lkind == TK_ARRAY && rkind == TK_ARRAY) {
         ScriptArrayType* larr = static_cast<ScriptArrayType*>(left);
@@ -577,17 +534,17 @@ ScriptType* TypeResolver::getOpResultType(ScriptType* left, ScriptType* right, b
           return nullptr;
         }
 
-        return m_lookup->boolType();
+        return ConstTypes::BOOL();
       }
       return nullptr;
 
     case BOP_EQ:
     case BOP_NEQ:
       if (lkind == TK_PRIMITIVE && rkind == TK_PRIMITIVE) {
-        return m_lookup->boolType();
+        return ConstTypes::BOOL();
       }
       if (left == right) {
-        return m_lookup->boolType();
+        return ConstTypes::BOOL();
       }
       return nullptr;
 
@@ -739,7 +696,7 @@ void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
   if (!res) {
     m_errors->error(v->location,
       "Cannot use %s operator on %s and %s",
-      binaryop_name(op), ltype->typeName(), rtype->typeName()
+      binaryop_name(op), ltype->getTypeName(), rtype->getTypeName()
     );
 
     v->resultType = ltype;
@@ -754,7 +711,7 @@ void TypeResolver::acceptBinaryExpr(BinaryExpr* v) {
   v->resultType = res;
 }
 
-ScriptType* checkUnaryOperation(unaryop op, ScriptType* type, TypeLookup* lookup) {
+ScriptType* checkUnaryOperation(unaryop op, ScriptType* type, TypeTable* lookup) {
   if (type->kind() != TK_PRIMITIVE) {
     return nullptr;
   }
@@ -767,20 +724,20 @@ ScriptType* checkUnaryOperation(unaryop op, ScriptType* type, TypeLookup* lookup
         return type;
       }
     case UOP_LOG_NOT:
-      if (isIntegerType(p) || p->primtype == PK_BOOL) {
+      if (isIntegerType(p) || p->getPrimitiveType() == PK_BOOL) {
         return type;
       }
     case UOP_NEG:
       // Unsigned type becomes signed
-      switch (p->primtype) {
+      switch (p->getPrimitiveType()) {
         case PK_UINT8:
-          return lookup->getPrimitiveType(PK_INT8);
+          return ConstTypes::INT8();
         case PK_UINT16:
-          return lookup->getPrimitiveType(PK_INT16);
+          return ConstTypes::INT16();
         case PK_UINT32:
-          return lookup->getPrimitiveType(PK_INT32);
+          return ConstTypes::INT32();
         case PK_UINT64:
-          return lookup->getPrimitiveType(PK_INT64);
+          return ConstTypes::INT64();
         case PK_BOOL:
           return nullptr;
         default:
@@ -806,7 +763,7 @@ void TypeResolver::acceptUnaryExpr(UnaryExpr* v) {
 
   m_errors->error(v->location, "Cannot use %s operator on %s",
     unaryop_name(v->op),
-    v->resultType->typeName()
+    v->resultType->getTypeName()
   );
 }
 
@@ -815,7 +772,7 @@ void TypeResolver::acceptTernaryExpr(TernaryExpr* v) {
 
   if (v->condition->resultType->kind() != TK_PRIMITIVE) {
     m_errors->error(v->condition->location, "%s is not assignable to a bool condition",
-      v->condition->resultType->typeName()
+      v->condition->resultType->getTypeName()
     );
   }
 
@@ -831,8 +788,8 @@ void TypeResolver::acceptTernaryExpr(TernaryExpr* v) {
     m_errors->error(
       v->location,
       "Ternary operator left and right values have incompatible types: %s and %s",
-      lType->typeName(),
-      rType->typeName()
+      lType->getTypeName(),
+      rType->getTypeName()
     );
     v->resultType = lType;
     return;
@@ -896,8 +853,8 @@ void TypeResolver::acceptLexicalDeclaration(LexicalDeclaration* v) {
     if (!isAssignableTo(vartype, valtype)) {
       m_errors->error(v->location,
         "Value of type %s is not assignable to variable with type %s",
-        valtype->typeName(),
-        vartype->typeName()
+        valtype->getTypeName(),
+        vartype->getTypeName()
       );
     }
   }
@@ -936,7 +893,7 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
     m_errors->error(
       v->location,
       "Function expects return value with %s, cannot return nothing",
-      expected->typeName()
+      expected->getTypeName()
     );
 
     return;
@@ -954,8 +911,8 @@ void TypeResolver::acceptReturnStatement(ReturnStatement* v) {
 
   m_errors->error(v->location,
     "Returned value of type %s cannot be assigned to expected type %s",
-    rtype->typeName(),
-    expected->typeName()
+    rtype->getTypeName(),
+    expected->getTypeName()
   );
 
   STATPOP
@@ -994,39 +951,40 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   v->returnType->acceptVisit(this);
 
   const uint32 paramCount = v->arguments.size();
-
-  FunctionSignature sign;
-  sign.returnType = v->returnType->referencedType;
-  sign.paramCount = paramCount;
-
-  FunctionSignatureParam params[paramCount];
-  sign.params = params;
+  ScriptType* params[paramCount];
+  ScriptType* retType = v->returnType->referencedType;
+  bool varargs = false;
+  bool varargsFailReported = false;
 
   pushScope();
-  getScope()->expectedReturnType = v->returnType->referencedType;
+  getScope()->expectedReturnType = retType;
 
   for (uint32 i = 0; i < v->arguments.size(); i++) {
     FunctionParam* p = v->arguments.at(i);
-    FunctionSignatureParam* sp = &params[i];
 
-    bool varargs = p->varargs;
+    bool varargsParam = p->varargs;
     ScriptType* trueType;
 
     p->paramType->acceptVisit(this);
 
-    if (varargs) {
-      trueType = m_lookup->getArrayType(p->paramType->referencedType);
+    if (varargsParam) {
+      trueType = new ScriptArrayType(p->paramType->referencedType);
     } else {
       trueType = p->paramType->referencedType;
     }
 
-    sp->type = trueType;
-    sp->varargs = p->varargs;
+    if (varargsParam && varargs && !varargsFailReported) {
+      m_errors->error(p->location, "Function is declared with 2 variadic arguments");
+      varargsFailReported = true;
+    }
+
+    params[i] = trueType;
+    varargs |= varargsParam;
 
     pushSymbol(p->name->value, trueType);
   }
 
-  FunctionSignature* ftype = m_lookup->emplaceFunctionType(&sign);
+  FunctionSignature* ftype = FunctionSignature::create(retType, varargs, paramCount, params);
   pushSymbol(getScope(1), v->name->value, ftype);
 
   v->signature = ftype;
@@ -1053,17 +1011,18 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
   STATPUSH
 
   const std::string name = m_strings->getstring(v->name->value);
+  ScriptType* existing = m_lookup->lookupByName(name);
 
-  uint32 propcount = v->properties.size();
-  ScriptStructType* stype = m_lookup->createStructType(name, propcount);
-
-  if (!stype) {
+  if (existing) {
     m_errors->error(v->location, "Double declaration of struct type '%s'", name.c_str());
     STATPOP
     return;
   }
 
-  for (uint32 i = 0; i < propcount; i++) {
+  const uint32 propCount = v->properties.size();
+  StructProperty properties[propCount];
+
+  for (uint32 i = 0; i < propCount; i++) {
     StructPropertyDecl* prop = v->properties.at(i);
     prop->propertyType->acceptVisit(this);
 
@@ -1079,16 +1038,20 @@ void TypeResolver::acceptStructDecl(StructDecl* v) {
           "Default value of property %s.%s is a %s and cannot be assigned to %s",
           name.c_str(),
           pname.c_str(),
-          vtype->typeName(),
-          ptype->typeName()
+          vtype->getTypeName(),
+          ptype->getTypeName()
         );
       }
     }
 
-    StructProperty* typeprop = stype->properties + i;
-    typeprop->type = ptype;
-    typeprop->propertyName = pname;
+    StructProperty* sProp = &properties[i];
+    sProp->type = ptype;
+    sProp->name = pname;
   }
+
+  ScriptStructType* type = ScriptStructType::create(name, properties, propCount);
+  m_lookup->emplaceType(type);
+
   STATPOP
 }
 
@@ -1109,7 +1072,7 @@ void TypeResolver::acceptAssertStatement(AssertStatement* v) {
   v->condition->acceptVisit(this);
 
   ScriptType* condType = v->condition->resultType;
-  PrimitiveScriptType* boolType = m_lookup->getPrimitiveType(PK_BOOL);
+  PrimitiveScriptType* boolType = ConstTypes::BOOL();
 
   if (isAssignableTo(boolType, condType)) {
     return;
