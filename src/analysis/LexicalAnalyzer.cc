@@ -126,7 +126,7 @@ void LexicalAnalyzer::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
   }
 
   std::string symName;
-  symName.append(resType->typeName());
+  symName.append(resType->getTypeName());
   symName.append(".");
 
   std::string_view sv = m_strings->getview(v->property->value);
