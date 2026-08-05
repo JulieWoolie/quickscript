@@ -180,13 +180,12 @@ function integerBinaryOperations() {
 
   const operations = [
     {code: "LSHIFT", operator: "<<"},
-    {code: "RSHIFT", operator: ">>"},
-    {code: "URSHIFT", operator: ">>>"}
+    {code: "RSHIFT", operator: ">>"}
   ]
 
   for (const op of operations) {
-    byteSizedOpCode(op.code, BINARY_ARGS, [
-      `registers[out] = REGREAD(lhs, %UTYPE%) ${op.operator} REGREAD(rhs, %UTYPE%);`
+    opCode(op.code, BINARY_ARGS, [
+      `registers[out] = REGREAD(lhs, uint64) ${op.operator} REGREAD(rhs, uint64);`
     ])
   }
 }
