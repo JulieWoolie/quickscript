@@ -1,6 +1,8 @@
 #ifndef QUICKSCRIPT_NATIVEINTERFACE_H
 #define QUICKSCRIPT_NATIVEINTERFACE_H
 
+#include <vector>
+
 #include "../common.h"
 #include "../types/types.h"
 
