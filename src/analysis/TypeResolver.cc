@@ -422,7 +422,7 @@ void TypeResolver::acceptArrayLiteral(ArrayLiteral* v) {
   if (type->kind() != TK_ARRAY) {
     m_errors->error(
       v->location,
-      "Type %s cannot be initialized with an object literal",
+      "Type %s cannot be initialized with an array literal",
       type->getTypeName()
     );
 
