@@ -1,10 +1,10 @@
 #include "compiler.h"
 
 #include "CompilerContext.h"
-#include "type_conv.h"
 #include "../interpreter/interpreter.h"
 #include "../interpreter/ir_file.h"
 #include "../interpreter/opcodes.h"
+#include "../types/ConstTypes.h"
 
 #define BYTEWIDTH_OPCODE(size, writer, opcode) \
   switch (size) {\
@@ -29,7 +29,7 @@
     default: writer.startInstr(opcode##F64); break; \
   }
 
-#define BIN_APPEND(pad) \
+#define BIN_APPEND \
       writer.appendU8(r1);\
       writer.appendU8(r2);\
       writer.appendU8(r1);\
@@ -57,13 +57,13 @@
     } else if (lkind == TK_STRUCT) {\
       writer.startInstr(OP_##type##STRUCT);\
     }\
-    BIN_APPEND(PAD_##type)\
+    BIN_APPEND\
     break;
 
 #define MATH_CASE(type)\
   case BOP_##type:\
     NUMTYPE_OPCODE(lpk, writer, OP_##type)\
-    BIN_APPEND(PAD_##type)\
+    BIN_APPEND\
     break;
 
 #define OUTP_NIL    0
@@ -183,10 +183,10 @@ static void compilePropertyAccess(
 
     propertyOffset = 0;
 
-    for (uint32 p = 0; p < structType->propertyCount; p++) {
-      const StructProperty* structProp = &structType->properties[p];
+    for (uint32 p = 0; p < structType->getPropertyCount(); p++) {
+      const StructProperty* structProp = structType->getProperty(p);
 
-      if (structProp->propertyName != view) {
+      if (structProp->name != view) {
         propertyOffset += structProp->type->stackSizeBytes();
         continue;
       }
@@ -438,29 +438,29 @@ static void compileBinaryExpr(
   primitivekind rpk = PK_NIL;
 
   if (lkind == TK_PRIMITIVE) {
-    lpk = static_cast<PrimitiveScriptType*>(ltype)->primtype;
+    lpk = static_cast<PrimitiveScriptType*>(ltype)->getPrimitiveType();
   }
   if (rtype->kind() == TK_PRIMITIVE) {
-    rpk = static_cast<PrimitiveScriptType*>(rtype)->primtype;
+    rpk = static_cast<PrimitiveScriptType*>(rtype)->getPrimitiveType();
   }
 
   switch (nonAssign) {
     case BOP_SHL:
-      BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_LSHIFT)
-      BIN_APPEND(PAD_LSHIFT)
+      writer.startInstr(OP_LSHIFT);
+      BIN_APPEND
       break;
     case BOP_SHR:
     case BOP_USHR:
-      BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_RSHIFT)
-      BIN_APPEND(PAD_RSHIFT)
+      writer.startInstr(OP_RSHIFT);
+      BIN_APPEND
       break;
     case BOP_BIT_OR:
       writer.startInstr(OP_BOR);
-      BIN_APPEND(PAD_BOR)
+      BIN_APPEND
       break;
     case BOP_BIT_AND:
       writer.startInstr(OP_BAND);
-      BIN_APPEND(PAD_BAND)
+      BIN_APPEND
       break;
     case BOP_XOR:
       if (lpk == PK_BOOL) {
@@ -468,7 +468,7 @@ static void compileBinaryExpr(
       } else {
         writer.startInstr(OP_LXOR);
       }
-      BIN_APPEND(PAD_BXOR)
+      BIN_APPEND
       break;
 
     case BOP_ADD:
@@ -477,7 +477,7 @@ static void compileBinaryExpr(
       } else {
         NUMTYPE_OPCODE(lpk, writer, OP_ADD)
       }
-      BIN_APPEND(PAD_ADD)
+      BIN_APPEND
       break;
     case BOP_MUL:
       if (lkind == TK_STRING) {
@@ -485,7 +485,7 @@ static void compileBinaryExpr(
       } else {
         NUMTYPE_OPCODE(lpk, writer, OP_ADD)
       }
-      BIN_APPEND(PAD_ADD)
+      BIN_APPEND
       break;
 
     EQUALITY_CASE(EQ)
@@ -599,7 +599,9 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       const ArrayLiteral* lit = static_cast<ArrayLiteral*>(expr);
       const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
 
-      const uint64 componentSize = arrType->componentType->stackSizeBytes();
+      ScriptType* cType = arrType->getComponentType();
+
+      const uint64 componentSize = cType->stackSizeBytes();
       const uint64 count = lit->values.size();
       const uint64 memSize = sizeof(uint32) + (componentSize * count);
 
@@ -613,14 +615,14 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
 
       for (uint32 i = 0; i < count; i++) {
         Expr* value = lit->values[i];
-        compileRValue(arrType->componentType, value, ctx, valueReg);
+        compileRValue(cType, value, ctx, valueReg);
 
         writer.startInstr(OP_LOADCONST32);
         writer.appendU8(indexReg);
         writer.appendU32(i);
         writer.endInstr();
 
-        BYTEWIDTH_OPCODE(arrType->componentType->stackSizeBytes(), writer, OP_WRITEIDX)
+        BYTEWIDTH_OPCODE(componentSize, writer, OP_WRITEIDX)
         writer.appendU8(out);
         writer.appendU8(valueReg);
         writer.appendU8(indexReg);
@@ -665,9 +667,9 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
 
         uint32 off = 0;
 
-        for (uint32 i = 0; i < stype->propertyCount; i++) {
-          StructProperty* typeProperty = &stype->properties[i];
-          if (typeProperty->propertyName == propName) {
+        for (uint32 i = 0; i < stype->getPropertyCount(); i++) {
+          const StructProperty* typeProperty = stype->getProperty(i);
+          if (typeProperty->name == propName) {
             ptype = typeProperty->type;
             break;
           }
@@ -708,7 +710,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
           compileExpr(un->target, out, nullptr, ctx);
 
           PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
-          NUMTYPE_OPCODE(primType->primtype, writer, OP_NEG)
+          NUMTYPE_OPCODE(primType->getPrimitiveType(), writer, OP_NEG)
           writer.appendU8(out);
           writer.appendU8(out);
           writer.endInstr();
@@ -774,7 +776,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       }
 
       PrimitiveScriptType* primType = static_cast<PrimitiveScriptType*>(un->target->resultType);
-      const primitivekind pk = primType->primtype;
+      const primitivekind pk = primType->getPrimitiveType();
 
       switch (uop) {
         case UOP_PREINC:
@@ -813,7 +815,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
     }
     case AST_FloatLiteral: {
       const PrimitiveScriptType* pst = static_cast<PrimitiveScriptType*>(expr->resultType);
-      const primitivekind pk = pst->primtype;
+      const primitivekind pk = pst->getPrimitiveType();
       const float64 val = static_cast<FloatLiteral*>(expr)->value;
 
       if (pk == PK_FLOAT32) {
@@ -840,7 +842,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
     case AST_IntLiteral: {
       const IntLiteral* il = static_cast<IntLiteral*>(expr);
       const PrimitiveScriptType* pst = static_cast<PrimitiveScriptType*>(expr->resultType);
-      const primitivekind pk = pst->primtype;
+      const primitivekind pk = pst->getPrimitiveType();
 
       switch (pk) {
         case PK_BOOL:
@@ -928,7 +930,7 @@ static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, 
   BytecodeWriter& writer = ctx.getWriter();
 
   const uint32 funcTableIndex = ctx.getStructConstructorIndex(type);
-  const uint64 heapSize = type->heapSize();
+  const uint64 heapSize = type->getHeapSize();
 
   writer.startInstr(OP_HEAPALLOC);
   writer.appendU8(out);
@@ -1116,7 +1118,7 @@ static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
   BytecodeWriter& writer = ctx.getWriter();
 
   const uint32 propCount = decl->properties.size();
-  constexpr uint64 stackSize = POINTERSIZE;
+  constexpr uint64 stackSize = POINTER_SIZE;
 
   ctx.pushScope();
 
@@ -1133,7 +1135,7 @@ static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
   uint32 off = 0;
   for (uint32 i = 0; i < propCount; i++) {
     const StructPropertyDecl* propDecl = decl->properties.at(i);
-    const StructProperty* ptype = &stype->properties[i];
+    const StructProperty* ptype = stype->getProperty(i);
 
     compileRValue(ptype->type, propDecl->value, ctx, propReg);
 
@@ -1152,27 +1154,23 @@ static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
   blockEnd(writer, stackSize);
 
   std::string funcName;
-  funcName.append(stype->structName);
+  funcName.append(stype->getTypeName());
   funcName.append(".<init>");
 
   const stringid id = ctx.getStrings()->allocate(funcName);
 
-  FunctionSignatureParam param = {
-    .type = stype,
-    .varargs = false
-  };
-  FunctionSignature sign = FunctionSignature();
-  sign.returnType = ctx.getTypes()->getVoidType();
-  sign.paramCount = 1;
-  sign.params = &param;
+  ScriptType* ctorParams[1];
+  ctorParams[0] = stype;
 
-  FunctionSignature* emplaced = ctx.getTypes()->emplaceFunctionType(&sign);
-  const uint32 funcIdx = ctx.pushCompiledFunction(id, start, emplaced);
+  FunctionSignature* sign = FunctionSignature::create(ConstTypes::VOID(), false, 1, ctorParams);
+  ctx.getTypes()->emplaceType(sign);
+
+  const uint32 funcIdx = ctx.pushCompiledFunction(id, start, sign);
 
   ctx.pushStructConstructor(stype, funcIdx);
 }
 
-BytecodeFile compile(ScriptFileStatement* sfs, StringTable* table, TypeLookup* types) {
+BytecodeFile compile(ScriptFileStatement* sfs, StringTable* table, TypeTable* types) {
   uint64 registerBitSet = 0;
   CompilerContext ctx = CompilerContext(table, types, &registerBitSet);
 
