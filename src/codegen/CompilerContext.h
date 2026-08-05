@@ -121,12 +121,12 @@ class CompilerContext {
   BytecodeWriter m_writer;
 
   StringTable* m_strings;
-  TypeLookup* m_types;
+  TypeTable* m_types;
 
   uint64* m_registersInUse;
 
   public:
-    CompilerContext(StringTable* strings, TypeLookup* types, uint64* registryBitset);
+    CompilerContext(StringTable* strings, TypeTable* types, uint64* registryBitset);
 
     void enqueueFunction(FunctionDeclStatement* stat);
     FunctionDeclStatement* pollQueuedFunction();
@@ -153,7 +153,7 @@ class CompilerContext {
     BytecodeWriter& getWriter();
     ConstStringPoolWriter& getStringPool();
     StringTable* getStrings();
-    TypeLookup* getTypes();
+    TypeTable* getTypes();
 };
 
 

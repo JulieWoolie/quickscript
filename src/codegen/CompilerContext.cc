@@ -1,5 +1,8 @@
 #include "CompilerContext.h"
 
+#include <cstring>
+#include <stdexcept>
+
 #define RUNTIME_CHECKS
 
 StackScope::StackScope(uint32 level) {
@@ -153,7 +156,7 @@ uint8* ConstStringPoolWriter::getData() const {
   return m_data;
 }
 
-CompilerContext::CompilerContext(StringTable* strings, TypeLookup* types, uint64* registryBitset)
+CompilerContext::CompilerContext(StringTable* strings, TypeTable* types, uint64* registryBitset)
   : m_stringPool(strings)
 {
   m_strings = strings;
@@ -293,6 +296,6 @@ StringTable* CompilerContext::getStrings() {
   return m_strings;
 }
 
-TypeLookup* CompilerContext::getTypes() {
+TypeTable* CompilerContext::getTypes() {
   return m_types;
 }
