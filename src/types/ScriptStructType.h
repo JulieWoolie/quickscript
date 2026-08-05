@@ -19,6 +19,8 @@ class ScriptStructType: public ScriptType {
 
     static ScriptStructType* create(std::string name, const StructProperty* properties, uint32 propCount);
 
+    static void free(ScriptStructType* type);
+
     uint32 getPropertyCount() const;
     StructProperty* getProperty(uint32 idx) const;
 

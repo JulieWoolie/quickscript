@@ -30,6 +30,10 @@ ScriptStructType* ScriptStructType::create(
   return new (data) ScriptStructType(std::move(name), propArr, propCount);
 }
 
+void ScriptStructType::free(ScriptStructType* type) {
+  std::free(type);
+}
+
 uint32 ScriptStructType::getPropertyCount() const {
   return m_propertyCount;
 }
