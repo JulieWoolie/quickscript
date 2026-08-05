@@ -974,7 +974,7 @@ void TypeResolver::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
     }
 
     if (varargsParam && varargs && !varargsFailReported) {
-      m_errors->error(p->location, "Function is declared with 2 variadic arguments");
+      m_errors->error(p->location, "Function is declared with multiple variadic arguments");
       varargsFailReported = true;
     }
 
