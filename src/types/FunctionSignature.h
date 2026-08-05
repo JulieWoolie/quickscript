@@ -5,6 +5,8 @@
 
 #include "ScriptType.h"
 
+#define SIGN_DOES_NOT_MATCH (-1)
+
 class FunctionSignature: public ScriptType {
   ScriptType* const m_returnType;
 
@@ -20,6 +22,8 @@ class FunctionSignature: public ScriptType {
     FunctionSignature(ScriptType* returnType, bool varargs, uint32 pCount, ScriptType** pTypes);
 
     static FunctionSignature* create(ScriptType* retType, bool varargs, uint32 pCount, ScriptType** pTypes);
+
+    static int32 callSignatureMatches(FunctionSignature* callSign, FunctionSignature* funcSign);
 
     conststring getTypeName() const override;
 

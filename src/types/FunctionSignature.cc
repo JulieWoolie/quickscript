@@ -1,5 +1,8 @@
 #include "FunctionSignature.h"
 
+#include "ScriptArrayType.h"
+#include "types.h"
+
 FunctionSignature::FunctionSignature(
   ScriptType* returnType,
   bool varargs,
@@ -72,4 +75,52 @@ ScriptType* FunctionSignature::getArgumentType(const uint32 idx) const {
 
 uint32 FunctionSignature::getArgumentsLength() const {
   return m_paramCount;
+}
+
+int32 FunctionSignature::callSignatureMatches(FunctionSignature* callSign, FunctionSignature* funcSign) {
+  const uint32 callParamCount = callSign->m_paramCount;
+  const uint32 funcParamCount = funcSign->m_paramCount;
+  const bool funcVariadic = funcSign->m_varargs;
+
+  if (callParamCount < funcParamCount) {
+    return SIGN_DOES_NOT_MATCH;
+  }
+  if (!funcVariadic && callParamCount > funcParamCount) {
+    return SIGN_DOES_NOT_MATCH;
+  }
+
+  int32 score = 0;
+
+  for (uint32 i = 0; i < callParamCount; i++) {
+    ScriptType* callingType = callSign->m_paramTypes[i];
+    ScriptType* targetType = nullptr;
+
+    if (i >= funcParamCount) {
+      targetType = static_cast<ScriptArrayType*>(funcSign->m_paramTypes[funcParamCount-1])->getComponentType();
+    } else {
+      targetType = funcSign->m_paramTypes[i];
+    }
+
+    if (i == (funcParamCount - 1)) {
+      if (targetType == callingType) {
+        score += 2;
+        continue;
+      }
+      targetType = static_cast<ScriptArrayType*>(targetType)->getComponentType();
+    }
+    
+    if (callingType == targetType) {
+      score += 2;
+      continue;
+    }
+
+    if (isAssignableTo(targetType, callingType)) {
+      score += 1;
+      continue;
+    }
+
+    return SIGN_DOES_NOT_MATCH;
+  }
+
+  return score;
 }
