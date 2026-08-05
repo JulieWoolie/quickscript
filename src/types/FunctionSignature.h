@@ -23,6 +23,8 @@ class FunctionSignature: public ScriptType {
 
     static FunctionSignature* create(ScriptType* retType, bool varargs, uint32 pCount, ScriptType** pTypes);
 
+    static void free(FunctionSignature* type);
+
     static int32 callSignatureMatches(FunctionSignature* callSign, FunctionSignature* funcSign);
 
     conststring getTypeName() const override;

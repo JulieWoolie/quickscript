@@ -54,6 +54,10 @@ FunctionSignature* FunctionSignature::create(
   return new (sign) FunctionSignature(retType, varargs, pCount, arrStart);
 }
 
+void FunctionSignature::free(FunctionSignature* type) {
+  std::free((void*) type);
+}
+
 conststring FunctionSignature::getTypeName() const {
   return m_name.c_str();
 }
@@ -108,7 +112,7 @@ int32 FunctionSignature::callSignatureMatches(FunctionSignature* callSign, Funct
       }
       targetType = static_cast<ScriptArrayType*>(targetType)->getComponentType();
     }
-    
+
     if (callingType == targetType) {
       score += 2;
       continue;
