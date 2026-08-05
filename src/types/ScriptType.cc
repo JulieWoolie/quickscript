@@ -6,7 +6,7 @@ ScriptType::ScriptType(typekind kind, uint64 stackSize)
 
 }
 
-conststring ScriptType::wwwwwwgetTypeName() const {
+conststring ScriptType::getTypeName() const {
   return "";
 }
 
