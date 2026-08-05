@@ -3,9 +3,9 @@
 #include "ScriptType.h"
 
 
-class StringScriptType: public ScriptType {
+class ScriptStringType: public ScriptType {
   public:
-    StringScriptType();
+    ScriptStringType();
 
     uint32 typeFlags() const override;
     ScriptType* getIndexReturnType() const override;

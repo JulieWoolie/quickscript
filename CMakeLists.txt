@@ -60,8 +60,8 @@ add_executable(quickscript src/main.cpp
         src/types/ConstTypes.h
         src/types/VoidScriptType.cc
         src/types/VoidScriptType.h
-        src/types/StringScriptType.cc
-        src/types/StringScriptType.h
+        src/types/ScriptStringType.cc
+        src/types/ScriptStringType.h
         src/types/FunctionSignature.cc
         src/types/FunctionSignature.h
         src/types/TypeTable.cc
