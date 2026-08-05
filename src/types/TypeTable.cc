@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "ConstTypes.h"
+#include "ScriptStructType.h"
 
 void TypeTable::ensureIndexLookupHasSpace(const uint32 desiredSize) {
   const uint64 desiredCap = static_cast<uint64>(desiredSize) * sizeof(ScriptType**);
@@ -62,6 +63,23 @@ TypeTable::TypeTable() {
 }
 
 TypeTable::~TypeTable() {
+  for (uint64 i = TI_STRING + 1; i < m_indexLookupLen; i++) {
+    ScriptType* type = m_indexLookup[i];
+
+    if (type->kind() == TK_ARRAY) {
+      delete static_cast<ScriptArrayType*>(type);
+      continue;
+    }
+    if (type->kind() == TK_FUNC) {
+      FunctionSignature::free(static_cast<FunctionSignature*>(type));
+      continue;
+    }
+    if (type->kind() == TK_STRUCT) {
+      ScriptStructType::free(static_cast<ScriptStructType*>(type));
+      continue;
+    }
+  }
+
   free(m_indexLookup);
 
   m_indexLookup = nullptr;
