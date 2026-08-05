@@ -4,8 +4,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "FunctionSignature.h"
-#include "ScriptArrayType.h"
 #include "ScriptType.h"
 
 #define TI_VOID 0

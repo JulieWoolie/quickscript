@@ -3,6 +3,8 @@
 #include <stdexcept>
 
 #include "ConstTypes.h"
+#include "FunctionSignature.h"
+#include "ScriptArrayType.h"
 #include "ScriptStructType.h"
 
 void TypeTable::ensureIndexLookupHasSpace(const uint32 desiredSize) {
