@@ -1,6 +1,7 @@
 #ifndef QUICKSCRIPT_OPTIMIZATIONS_H
 #define QUICKSCRIPT_OPTIMIZATIONS_H
 
+#include "allocator.h"
 #include "parse/syntaxtree.h"
 
 Expr* optimizeBinaryOpIfPossible(BinaryExpr* e, NoFreeAllocator* alloc);
