@@ -22,7 +22,15 @@
 // Becomes:
 //   const uint32 x = 4
 //
+// == 3. Flip unary operators when result is not used ==
+// The following code:
+//   uint32 i = 0
+//   i++
+// Becomes:
+//   uint32 i = 0
+//   ++i
 //
+// Saves one whole IR instruction xd
 //
 //
 
