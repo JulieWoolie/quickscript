@@ -2,7 +2,7 @@
 #define QUICKSCRIPT_CONSTTYPES_H
 
 #include "PrimitiveScriptType.h"
-#include "StringScriptType.h"
+#include "ScriptStringType.h"
 #include "VoidScriptType.h"
 
 class ConstTypes {
@@ -23,7 +23,9 @@ class ConstTypes {
 
     static VoidScriptType* VOID();
 
-    static StringScriptType* STRING();
+    static ScriptStringType* STRING();
+
+    static PrimitiveScriptType* getPrimitiveType(primitivekind kind);
 };
 
 
