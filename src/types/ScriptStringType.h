@@ -10,6 +10,7 @@ class ScriptStringType: public ScriptType {
     uint32 typeFlags() const override;
     ScriptType* getIndexReturnType() const override;
     ScriptType* getPropertyType(std::string_view propertyName) const override;
+    conststring getTypeName() const override;
 };
 
 

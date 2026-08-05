@@ -63,6 +63,10 @@ ScriptType* ScriptStructType::getPropertyType(const std::string_view propertyNam
   return nullptr;
 }
 
+conststring ScriptStructType::getTypeName() const {
+  return m_name.c_str();
+}
+
 uint64 ScriptStructType::getHeapSize() const {
   return m_heapSize;
 }

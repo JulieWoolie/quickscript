@@ -19,3 +19,7 @@ ScriptType* ScriptStringType::getPropertyType(std::string_view propertyName) con
   }
   return nullptr;
 }
+
+conststring ScriptStringType::getTypeName() const {
+  return "string";
+}

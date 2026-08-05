@@ -4,7 +4,8 @@
 ScriptArrayType::ScriptArrayType(ScriptType* componentType)
 : ScriptType(TK_PRIMITIVE,POINTER_SIZE), m_componentType(componentType)
 {
-
+  m_name.append(componentType->getTypeName());
+  m_name.append("[]");
 }
 
 ScriptType* ScriptArrayType::getComponentType() const {
@@ -24,5 +25,9 @@ ScriptType* ScriptArrayType::getPropertyType(std::string_view propertyName) cons
     return ConstTypes::UINT32();
   }
   return nullptr;
+}
+
+conststring ScriptArrayType::getTypeName() const {
+  return m_name.c_str();
 }
 
