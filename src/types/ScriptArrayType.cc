@@ -2,7 +2,7 @@
 #include "ConstTypes.h"
 
 ScriptArrayType::ScriptArrayType(ScriptType* componentType)
-: ScriptType(TK_PRIMITIVE,POINTER_SIZE), m_componentType(componentType)
+: ScriptType(TK_ARRAY,POINTER_SIZE), m_componentType(componentType)
 {
   m_name.append(componentType->getTypeName());
   m_name.append("[]");
