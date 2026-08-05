@@ -7,7 +7,7 @@
 
 #define PRINTEXPRBASE printf("%s(", v->nodeType());\
   printloc(v->location);\
-  if (v->resultType) {printf(" res-type='%s'", v->resultType->typeName());}
+  if (v->resultType) {printf(" res-type='%s'", v->resultType->getTypeName());}
 
 #define PRINTNODEBASE printf("%s(", v->nodeType());printloc(v->location);
 #define OBJBEGIN printf(" {");inc();
