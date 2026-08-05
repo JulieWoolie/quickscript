@@ -14,6 +14,8 @@ class ScriptStructType: public ScriptType {
   const uint32 m_propertyCount;
   StructProperty* const m_properties;
 
+  uint64 m_heapSize = 0;
+
   public:
     ScriptStructType(std::string name, StructProperty* properties, uint32 propCount);
 
@@ -26,6 +28,8 @@ class ScriptStructType: public ScriptType {
 
     uint32 typeFlags() const override;
     ScriptType* getPropertyType(std::string_view propertyName) const override;
+
+    uint64 getHeapSize() const;
 };
 
 

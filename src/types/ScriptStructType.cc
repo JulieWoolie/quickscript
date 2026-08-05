@@ -8,7 +8,10 @@ ScriptStructType::ScriptStructType(std::string name, StructProperty* properties,
     m_propertyCount(propCount),
     m_properties(properties)
 {
-
+  m_heapSize = 0;
+  for (uint32 i = 0; i < m_propertyCount; i++) {
+    m_heapSize += m_properties[i].type->stackSizeBytes();
+  }
 }
 
 ScriptStructType* ScriptStructType::create(
@@ -58,4 +61,8 @@ ScriptType* ScriptStructType::getPropertyType(const std::string_view propertyNam
     return p->type;
   }
   return nullptr;
+}
+
+uint64 ScriptStructType::getHeapSize() const {
+  return m_heapSize;
 }
