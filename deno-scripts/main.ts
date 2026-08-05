@@ -7,8 +7,8 @@ import {
   writeToFile
 } from "./common";
 import {generateOpCodes} from "./opcode-gen";
-import {generateMarkdownSpec, printHtmlSpec} from "./docs";
 import {generateEvaluatorSwitchStatement} from "./evaluator-gen";
+import {generateDocs} from "./docs";
 
 async function createOpCodesHeader(res: OpCodeGenResult): Promise<void> {
   const opcodes = res.codes
@@ -145,12 +145,8 @@ async function main(): Promise<void> {
 
   await createOpCodesHeader(res)
   await createOpCodesSourceFile(codes)
-
-  await generateMarkdownSpec(res)
-  await printHtmlSpec(res)
-
+  await generateDocs(res)
   await generateConversionCompileMethod()
-
   await generateEvaluatorSwitchStatement(res)
 }
 
