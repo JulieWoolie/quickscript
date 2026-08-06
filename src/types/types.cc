@@ -84,6 +84,10 @@ bool isAssignableTo(ScriptType* holder, ScriptType* value) {
     primitivekind hk = ph->getPrimitiveType();
     primitivekind vk = pv->getPrimitiveType();
 
+    if (hk == PK_BOOL) {
+      return true;
+    }
+
     if (pkIsFloat(vk) && !pkIsFloat(hk)) {
       return false;
     }
@@ -95,21 +99,7 @@ bool isAssignableTo(ScriptType* holder, ScriptType* value) {
 }
 
 bool pkIsNumberType(primitivekind kind) {
-  switch (kind) {
-    case PK_INT8:
-    case PK_UINT8:
-    case PK_INT16:
-    case PK_UINT16:
-    case PK_INT32:
-    case PK_UINT32:
-    case PK_INT64:
-    case PK_UINT64:
-    case PK_FLOAT32:
-    case PK_FLOAT64:
-      return true;
-    default:
-      return false;
-  }
+  return kind >= PK_INT8 && kind <= PK_FLOAT64;
 }
 
 bool isIntegerType(ScriptType* type) {
@@ -123,19 +113,7 @@ bool isIntegerType(ScriptType* type) {
 }
 
 bool pkIsIntegerType(const primitivekind kind) {
-  switch (kind) {
-    case PK_INT8:
-    case PK_UINT8:
-    case PK_INT16:
-    case PK_UINT16:
-    case PK_INT32:
-    case PK_UINT32:
-    case PK_INT64:
-    case PK_UINT64:
-      return true;
-    default:
-      return false;
-  }
+  return kind >= PK_INT8 && kind <= PK_UINT64;
 }
 
 bool isBooleanType(ScriptType* type) {
