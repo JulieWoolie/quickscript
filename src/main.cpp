@@ -5,11 +5,10 @@
 
 #include "allocator.h"
 #include "common.h"
-#include "analysis/TypeResolver.h"
+#include "analysis/SemanticAnalyzer.h"
 #include "interpreter/nativeinterface.h"
 #include "errors.h"
 #include "tester.h"
-#include "analysis/LexicalAnalyzer.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
@@ -67,11 +66,8 @@ int32 main(int32 argc, cstring argv[]) {
   TypeTable lookup = TypeTable();
   Bindings bindings = createStandardBindings();
 
-  TypeResolver resolver = TypeResolver(&lookup, &table, &errors, &bindings);
+  SemanticAnalyzer resolver = SemanticAnalyzer(&lookup, &table, &errors, &bindings);
   resolver.acceptScriptFileStatement(sfs);
-
-  LexicalAnalyzer lexAnalysis = LexicalAnalyzer(&table, &errors, &bindings);
-  lexAnalysis.acceptScriptFileStatement(sfs);
 
   if (errors.getErrorCount() == 0) {
     PrintingVisitor pv = PrintingVisitor(&table, fname);

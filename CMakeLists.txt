@@ -25,8 +25,8 @@ add_executable(quickscript src/main.cpp
         src/interpreter/opcodes.h
         src/interpreter/opcodes.cc
         src/types/types.cc
-        src/analysis/typeresolver.cc
-        src/analysis/typeresolver.h
+        src/analysis/SemanticAnalyzer.cc
+        src/analysis/SemanticAnalyzer.h
         src/optimizations.h
         src/optimizations.cc
         src/interpreter/nativeinterface.h
@@ -34,8 +34,6 @@ add_executable(quickscript src/main.cpp
         src/interpreter/interpreter.h
         src/tester.h
         src/tester.cc
-        src/analysis/LexicalAnalyzer.cc
-        src/analysis/LexicalAnalyzer.h
         src/analysis/ast_optimizer.h
         src/analysis/ast_optimizer.cc
         src/codegen/compiler.h

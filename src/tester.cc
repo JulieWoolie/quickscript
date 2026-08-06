@@ -8,12 +8,13 @@
 
 #include "allocator.h"
 #include "errors.h"
-#include "analysis/LexicalAnalyzer.h"
-#include "analysis/TypeResolver.h"
+#include "analysis/SemanticAnalyzer.h"
 #include "parse/lexer.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
 #include "parse/token.h"
+
+#define PRINT_FULL_ERRORS
 
 struct ExpectedError {
   int32 line = -1;
@@ -212,6 +213,7 @@ bool checkError(const ReportedError& rep, const ExpectedError& expect) {
   return false;
 }
 
+#ifndef PRINT_FULL_ERRORS
 #define COMPARE_REPORTED_ERRORS(len) \
   for (uint32 i = 0; i < len; i++) {\
     const ExpectedError& err = errors->at(i);\
@@ -220,9 +222,21 @@ bool checkError(const ReportedError& rep, const ExpectedError& expect) {
     if (checkError(r, err)) {\
       continue;\
     }\
-    \
     comparisonsFailed = true;\
   }
+#else
+#define COMPARE_REPORTED_ERRORS(len) \
+  for (uint32 i = 0; i < len; i++) {\
+    const ExpectedError& err = errors->at(i);\
+    const ReportedError& r = reported.at(i);\
+    \
+    if (checkError(r, err)) {\
+      continue;\
+    }\
+    compilerErrors->printError(r);\
+    comparisonsFailed = true;\
+  }
+#endif
 
 bool checkErrors(std::vector<ExpectedError>* errors, CompilerErrors* compilerErrors) {
   int32 expected = errors->size();
@@ -319,11 +333,8 @@ bool runTestFile(const std::filesystem::path& fpath, TesterSettings* settings) {
   TypeTable lookup = TypeTable();
   Bindings bindings;
 
-  TypeResolver typeResolver = TypeResolver(&lookup, &table, &errors, &bindings);
-  LexicalAnalyzer analyzer = LexicalAnalyzer(&table, &errors, &bindings);
-
+  SemanticAnalyzer typeResolver = SemanticAnalyzer(&lookup, &table, &errors, &bindings);
   typeResolver.acceptScriptFileStatement(sfs);
-  analyzer.acceptScriptFileStatement(sfs);
 
   if (settings->printAsts) {
     PrintingVisitor pv = PrintingVisitor(&table, fname);
