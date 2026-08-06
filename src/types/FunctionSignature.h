@@ -37,7 +37,7 @@ class FunctionSignature: public ScriptType {
 
     ScriptType* getArgumentType(uint32 idx) const;
 
-    void setArgumentType(uint32 idx, ScriptType* type) const;
+    void setArgumentType(uint32 idx, ScriptType* type);
 
     uint32 getArgumentsLength() const;
 };

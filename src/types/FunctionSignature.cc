@@ -77,6 +77,7 @@ ScriptType* FunctionSignature::getReturnType() const {
 
 void FunctionSignature::setReturnType(ScriptType* type) {
   m_returnType = type;
+  composeName();
 }
 
 ScriptType* FunctionSignature::getArgumentType(const uint32 idx) const {
@@ -86,11 +87,12 @@ ScriptType* FunctionSignature::getArgumentType(const uint32 idx) const {
   return m_paramTypes[idx];
 }
 
-void FunctionSignature::setArgumentType(const uint32 idx, ScriptType* type) const {
+void FunctionSignature::setArgumentType(const uint32 idx, ScriptType* type) {
   if (idx >= m_paramCount) {
     return;
   }
   m_paramTypes[idx] = type;
+  composeName();
 }
 
 uint32 FunctionSignature::getArgumentsLength() const {
