@@ -13,31 +13,31 @@ FunctionSignature::FunctionSignature(
     m_varargs(varargs),
     m_paramTypes(pTypes), m_paramCount(pCount)
 {
-  composeName();
+  composeName(m_name, m_returnType, m_paramCount, m_paramTypes);
 }
 
-void FunctionSignature::composeName() {
-  m_name.append("(");
-  if (m_paramCount > 0) {
-    for (uint32 i = 0; i < m_paramCount; i++) {
-      ScriptType* paramType = m_paramTypes[i];
+void FunctionSignature::composeName(std::string& out, ScriptType* retType, uint32 pCount, ScriptType** pTypes) {
+  out.append("(");
+  if (pCount > 0) {
+    for (uint32 i = 0; i < pCount; i++) {
+      ScriptType* paramType = pTypes[i];
       if (i != 0) {
-        m_name.append(",");
+        out.append(",");
       }
 
       if (paramType) {
-        m_name.append(paramType->getTypeName());
+        out.append(paramType->getTypeName());
       } else {
-        m_name.append("?");
+        out.append("?");
       }
     }
   }
 
-  m_name.append(")");
+  out.append(")");
 
-  if (m_returnType && m_returnType->kind() != TK_VOID) {
-    m_name.append("=>");
-    m_name.append(m_returnType->getTypeName());
+  if (retType) {
+    out.append("=>");
+    out.append(retType->getTypeName());
   }
 }
 
@@ -75,24 +75,11 @@ ScriptType* FunctionSignature::getReturnType() const {
   return m_returnType;
 }
 
-void FunctionSignature::setReturnType(ScriptType* type) {
-  m_returnType = type;
-  composeName();
-}
-
 ScriptType* FunctionSignature::getArgumentType(const uint32 idx) const {
   if (idx >= m_paramCount) {
     return nullptr;
   }
   return m_paramTypes[idx];
-}
-
-void FunctionSignature::setArgumentType(const uint32 idx, ScriptType* type) {
-  if (idx >= m_paramCount) {
-    return;
-  }
-  m_paramTypes[idx] = type;
-  composeName();
 }
 
 uint32 FunctionSignature::getArgumentsLength() const {
