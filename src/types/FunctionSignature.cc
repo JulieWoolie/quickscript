@@ -24,7 +24,12 @@ void FunctionSignature::composeName() {
       if (i != 0) {
         m_name.append(",");
       }
-      m_name.append(paramType->getTypeName());
+
+      if (paramType) {
+        m_name.append(paramType->getTypeName());
+      } else {
+        m_name.append("?");
+      }
     }
   }
 
@@ -70,11 +75,22 @@ ScriptType* FunctionSignature::getReturnType() const {
   return m_returnType;
 }
 
+void FunctionSignature::setReturnType(ScriptType* type) {
+  m_returnType = type;
+}
+
 ScriptType* FunctionSignature::getArgumentType(const uint32 idx) const {
   if (idx >= m_paramCount) {
     return nullptr;
   }
   return m_paramTypes[idx];
+}
+
+void FunctionSignature::setArgumentType(const uint32 idx, ScriptType* type) const {
+  if (idx >= m_paramCount) {
+    return;
+  }
+  m_paramTypes[idx] = type;
 }
 
 uint32 FunctionSignature::getArgumentsLength() const {

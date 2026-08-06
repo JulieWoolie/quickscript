@@ -8,7 +8,7 @@
 #define SIGN_DOES_NOT_MATCH (-1)
 
 class FunctionSignature: public ScriptType {
-  ScriptType* const m_returnType;
+  ScriptType* m_returnType;
 
   const bool m_varargs;
   ScriptType** const m_paramTypes;
@@ -33,7 +33,11 @@ class FunctionSignature: public ScriptType {
 
     ScriptType* getReturnType() const;
 
+    void setReturnType(ScriptType* type);
+
     ScriptType* getArgumentType(uint32 idx) const;
+
+    void setArgumentType(uint32 idx, ScriptType* type) const;
 
     uint32 getArgumentsLength() const;
 };
