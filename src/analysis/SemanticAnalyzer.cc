@@ -1,5 +1,6 @@
 #include "SemanticAnalyzer.h"
 
+#include <bitset>
 #include <functional>
 #include <stdint.h>
 
@@ -8,8 +9,16 @@
 #define STATPUSH m_statementStack.push_back(v);
 #define STATPOP m_statementStack.pop_back();
 
-#define NOT_MAIN(name) if (getScope()->getType() == SCOPE_MAIN) { m_errors->error(v->location, "%s not allowed here", name); }
+#define NOT_MAIN(name) \
+  if (getScope()->getType() == SCOPE_MAIN && !wasWrongScopeReported()) { \
+    m_errors->error(v->location, "%s not allowed here", name);\
+    pushWrongScopeTypeReported(true);\
+  } else {\
+    pushWrongScopeTypeReported(false);\
+  }
+
 #define NOT_MAINR(name) if (getScope()->getType() == SCOPE_MAIN) { m_errors->error(v->location, "%s not allowed here", name); return; }
+#define NOT_MAIN_TRAILING popWrongScopeReported();
 
 #define PRINTVIEW(x) static_cast<int>(x.length()), x.data()
 
@@ -318,6 +327,24 @@ bool SemanticAnalyzer::everyBranchHasReturn(Statement* stat) {
     default:
       return false;
   }
+}
+
+void SemanticAnalyzer::pushWrongScopeTypeReported(bool reported) {
+  m_wrongScopeReports.push_back(reported);
+}
+
+void SemanticAnalyzer::popWrongScopeReported() {
+  if (m_wrongScopeReports.empty()) {
+    return;
+  }
+  m_wrongScopeReports.pop_back();
+}
+
+bool SemanticAnalyzer::wasWrongScopeReported() const {
+  if (m_wrongScopeReports.empty()) {
+    return false;
+  }
+  return m_wrongScopeReports.back();
 }
 
 void SemanticAnalyzer::acceptIdentifier(Identifier* v) {
@@ -1145,6 +1172,7 @@ void SemanticAnalyzer::acceptBlock(Block* v) {
   }
 
   popScope();
+  NOT_MAIN_TRAILING
   STATPOP
 }
 
@@ -1159,6 +1187,7 @@ void SemanticAnalyzer::acceptIfStatement(IfStatement* v) {
     v->elseBody->acceptVisit(this);
   }
 
+  NOT_MAIN_TRAILING
   STATPOP
 }
 
@@ -1175,6 +1204,8 @@ void SemanticAnalyzer::acceptForStatement(ForStatement* v) {
   acceptBodyNoScope(v->loopBody);
 
   popScope();
+
+  NOT_MAIN_TRAILING
   STATPOP
 }
 
@@ -1218,7 +1249,7 @@ void SemanticAnalyzer::acceptLexicalDeclaration(LexicalDeclaration* v) {
 }
 
 void SemanticAnalyzer::acceptDoWhileStatement(DoWhileStatement* v) {
-  NOT_MAIN("DoWhile Loop")
+  NOT_MAIN("Do While Loop")
 
   STATPUSH
   pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
@@ -1228,6 +1259,7 @@ void SemanticAnalyzer::acceptDoWhileStatement(DoWhileStatement* v) {
 
   popScope();
 
+  NOT_MAIN_TRAILING
   STATPOP
 }
 
@@ -1242,6 +1274,7 @@ void SemanticAnalyzer::acceptWhileStatement(WhileStatement* v) {
 
   popScope();
 
+  NOT_MAIN_TRAILING
   STATPOP
 }
 
@@ -1424,9 +1457,11 @@ void SemanticAnalyzer::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
 }
 
 void SemanticAnalyzer::acceptExprStatement(ExprStatement* v) {
-  NOT_MAIN("Expression statement")
+  NOT_MAIN("Expression")
   STATPUSH
   v->expression->acceptVisit(this);
+
+  NOT_MAIN_TRAILING
   STATPOP
 }
 

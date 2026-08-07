@@ -76,6 +76,8 @@ class SemanticAnalyzer: public Visitor {
 
   std::vector<TypeNameExpr*> m_failedTypeNames;
 
+  std::vector<bool> m_wrongScopeReports;
+
   void popScope();
 
   Scope* pushScope(scopetype stype, stringid label = EMPTY_STRING);
@@ -100,6 +102,12 @@ class SemanticAnalyzer: public Visitor {
   Symbol* resolveReferencedSymbol(stringid name, ScriptType* expectedType);
 
   bool everyBranchHasReturn(Statement* stat);
+
+  void pushWrongScopeTypeReported(bool reported);
+
+  void popWrongScopeReported();
+
+  bool wasWrongScopeReported() const;
 
   public:
     explicit SemanticAnalyzer(
