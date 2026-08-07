@@ -1176,15 +1176,40 @@ void SemanticAnalyzer::acceptBlock(Block* v) {
   STATPOP
 }
 
+static bool isAllowedLoopOrIfBody(Statement* stat) {
+  switch (stat->nodeKind()) {
+    case AST_Block:
+    case AST_ForStatement:
+    case AST_DoWhileStatement:
+    case AST_WhileStatement:
+    case AST_IfStatement:
+    case AST_ReturnStatement:
+    case AST_ControlFlowStatement:
+    case AST_ExprStatement:
+      return true;
+    default:
+      return false;
+  }
+}
+
 void SemanticAnalyzer::acceptIfStatement(IfStatement* v) {
   NOT_MAIN("If Statement")
   STATPUSH
 
   v->condition->acceptVisit(this);
-  v->body->acceptVisit(this);
+
+  if (isAllowedLoopOrIfBody(v->body)) {
+    v->body->acceptVisit(this);
+  } else {
+    m_errors->error(v->location, "Statement not allowed as if statement's body");
+  }
 
   if (v->elseBody) {
-    v->elseBody->acceptVisit(this);
+    if (isAllowedLoopOrIfBody(v->elseBody)) {
+      v->elseBody->acceptVisit(this);
+    } else {
+      m_errors->error(v->location, "Statement not allowed as if statement's else statement");
+    }
   }
 
   NOT_MAIN_TRAILING
