@@ -142,6 +142,7 @@ void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
     const conststring data = content.data();
     const uint32 clen = content.length();
     ExpectedError err;
+    err.line = t->start.line + 1;
 
     bool skip = false;
     uint32 readIdx = 0;
