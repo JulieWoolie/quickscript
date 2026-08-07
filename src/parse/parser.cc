@@ -168,12 +168,13 @@ uint8 Parser::isLexOrFuncDecl() {
       return LFDL_NONE;
   }
 
+  next();
+
   if (is(TT_COLON) && canBeLabelled) {
     RESTORECURSOR;
     return LFDL_LABELLED_LOOP;
   }
 
-  next();
   while (is(TT_LSQUARE)) {
     next();
 
