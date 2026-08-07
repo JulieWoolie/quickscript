@@ -1,0 +1,21 @@
+void main() {
+  # ERROR message="Statement not allowed as if statement's body"
+  if (true) uint32 i = 0
+
+  # ERROR message="Statement not allowed as if statement's body"
+  if (true) uint32 i() { return 0 }
+
+  # ERROR message="Statement not allowed as if statement's else statement"
+  if (true) {} else uint32 i() { return 0 }
+
+  uint32 x = 0
+
+  # Correct, no errors
+  if (true) {}
+
+  # Correct, no errors
+  if true {}
+
+  # Correct, no errors
+  if true x++
+}
