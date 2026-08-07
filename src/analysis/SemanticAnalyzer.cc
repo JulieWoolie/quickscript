@@ -1519,11 +1519,11 @@ void SemanticAnalyzer::acceptStructDecl(StructDecl* v) {
 
       if (!isAssignableTo(propertyType, valueType)) {
         m_errors->error(prop->location,
-          "Default value of property %s.%s is a %s and cannot be assigned to %s",
-          typeName,
-          propertyName.c_str(),
+          "Cannot assign %s value to property %s %s.%s",
           valueType->getTypeName(),
-          propertyType->getTypeName()
+          propertyType->getTypeName(),
+          typeName,
+          propertyName.c_str()
         );
       }
     }
