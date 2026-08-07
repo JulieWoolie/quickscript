@@ -257,7 +257,7 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors) {
     for (uint32 i = actual; i < expected; i++) {
       const ExpectedError& err = tcase.expectedErrors[i];
       fprintf(stderr,
-        "[CONDITION FAIL] Expected error did not occur!\n  Expected message: %s\n",
+        "[CONDITION FAIL] Expected error did not occur: %s\n",
         err.message.c_str()
       );
     }
