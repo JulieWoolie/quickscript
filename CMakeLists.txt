@@ -67,4 +67,6 @@ add_executable(quickscript src/main.cpp
         src/types/ScriptStructType.cc
         src/types/ScriptStructType.h
         src/interpreter/StringPool.cc
-        src/interpreter/StringPool.h)
+        src/interpreter/StringPool.h
+        src/args.h
+        src/args.cc)
