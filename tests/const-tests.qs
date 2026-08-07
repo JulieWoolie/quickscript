@@ -1,4 +1,4 @@
-int32 main() {
+void main() {
   const uint32 x = 0
 
   # ERROR line=next message="Cannot reassign const variable 'x'"

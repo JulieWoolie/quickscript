@@ -1,4 +1,4 @@
-int32 main() {
+void main() {
   string str = "Hello, world!"
   char ch = str[0]
 

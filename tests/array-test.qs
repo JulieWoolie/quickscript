@@ -1,4 +1,4 @@
-int32 main() {
+void main() {
   int32[] arr = [1, 2]
 
   uint32 len = arr.length

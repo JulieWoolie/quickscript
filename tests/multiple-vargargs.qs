@@ -1,2 +1,2 @@
 # ERROR line=next message="Function is declared with multiple variadic arguments"
-int32 f(int32 a..., int32 b...) {}
+int32 f(int32 a..., int32 b...) { return 0 }
