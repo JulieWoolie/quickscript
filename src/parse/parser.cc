@@ -146,6 +146,7 @@ uint8 Parser::isLexOrFuncDecl() {
 
   tokentype tt = peek()->ttype;
   bool canBeLabelled = true;
+  uint32 line = peek()->start.line;
 
   switch (tt) {
     case TT_KEYW_BOOL:
@@ -170,9 +171,9 @@ uint8 Parser::isLexOrFuncDecl() {
 
   next();
 
-  if (is(TT_COLON) && canBeLabelled) {
+  if (is(TT_COLON)) {
     RESTORECURSOR;
-    return LFDL_LABELLED_LOOP;
+    return canBeLabelled ? LFDL_LABELLED_LOOP : LFDL_NONE;
   }
 
   while (is(TT_LSQUARE)) {
@@ -191,14 +192,22 @@ uint8 Parser::isLexOrFuncDecl() {
     return LFDL_NONE;
   }
 
-  next();
+  uint32 idLine = next()->start.line;
 
   if (is(TT_ASSIGN)) {
     RESTORECURSOR
     return LFDL_LEX;
   }
   if (!is(TT_LBRACKET)) {
+    Token* peeked = peek();
+
     RESTORECURSOR
+
+    if (peeked->start.line != idLine && line == idLine) {
+      // Variable declaration without value
+      return LFDL_LEX;
+    }
+
     return LFDL_NONE;
   }
 
