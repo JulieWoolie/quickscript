@@ -1,0 +1,22 @@
+void main() {
+  while (true) {
+    # Correct, no errors
+    break
+  }
+
+  # ERROR message="Control flow statement used outside of loop"
+  break
+
+  # ERROR message="Control flow statement used outside of loop"
+  continue
+
+  # This should be correct
+  looplabel: while (true) {
+    break looplabel
+  }
+
+  label1: while (1) {
+    # ERROR message="No loop with label 'notRealLabel'"
+    break notRealLabel
+  }
+}
