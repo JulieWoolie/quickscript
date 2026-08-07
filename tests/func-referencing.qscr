@@ -1,0 +1,15 @@
+# MODE validate
+
+# This will pass if both func1() and func2() are able to call each other,
+# aka, if they both know the other exists
+
+void func1() {
+  func2()
+}
+
+void func2() {
+  func1()
+}
+
+void main() {
+}
