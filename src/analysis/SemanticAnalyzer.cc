@@ -289,6 +289,37 @@ Symbol* SemanticAnalyzer::resolveReferencedSymbol(stringid name, ScriptType* exp
   return best;
 }
 
+bool SemanticAnalyzer::everyBranchHasReturn(Statement* stat) {
+  switch (stat->nodeKind()) {
+    case AST_Block: {
+      Block* b = static_cast<Block*>(stat);
+      for (Statement* s : b->statements) {
+        if (everyBranchHasReturn(s)) {
+          return true;
+        }
+      }
+      return false;
+    }
+    case AST_IfStatement: {
+      const IfStatement* ifStatement = static_cast<IfStatement*>(stat);
+      Statement* elseBody = ifStatement->elseBody;
+
+      return everyBranchHasReturn(ifStatement->body)
+          && (!elseBody || everyBranchHasReturn(elseBody));
+    }
+    case AST_ReturnStatement:
+      return true;
+    case AST_ForStatement:
+      return everyBranchHasReturn(static_cast<ForStatement*>(stat)->loopBody);
+    case AST_WhileStatement:
+      return everyBranchHasReturn(static_cast<WhileStatement*>(stat)->body);
+    case AST_DoWhileStatement:
+      return everyBranchHasReturn(static_cast<DoWhileStatement*>(stat)->body);
+    default:
+      return false;
+  }
+}
+
 void SemanticAnalyzer::acceptIdentifier(Identifier* v) {
   ScriptType* expectedType = nullptr;
   if (!m_expectedTypes.empty()) {
@@ -1299,6 +1330,12 @@ void SemanticAnalyzer::acceptReturnStatement(ReturnStatement* v) {
     return;
   }
 
+  if (expected->kind() == TK_VOID) {
+    m_errors->error(v->location, "Cannot return a value in a void method");
+    STATPOP
+    return;
+  }
+
   m_errors->error(v->location,
     "Returned value of type %s cannot be assigned to expected type %s",
     rtype->getTypeName(),
@@ -1376,6 +1413,11 @@ void SemanticAnalyzer::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   }
 
   acceptBodyNoScope(v->functionBody);
+
+  if (sign->getReturnType()->kind() != TK_VOID && !everyBranchHasReturn(v->functionBody)) {
+    m_errors->error(v->location, "Non-void function has no return value");
+  }
+
   popScope();
 
   STATPOP

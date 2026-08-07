@@ -99,6 +99,8 @@ class SemanticAnalyzer: public Visitor {
 
   Symbol* resolveReferencedSymbol(stringid name, ScriptType* expectedType);
 
+  bool everyBranchHasReturn(Statement* stat);
+
   public:
     explicit SemanticAnalyzer(
       TypeTable *lookup,
