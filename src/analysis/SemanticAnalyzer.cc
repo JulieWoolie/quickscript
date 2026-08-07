@@ -1264,6 +1264,7 @@ void SemanticAnalyzer::acceptLexicalDeclaration(LexicalDeclaration* v) {
   Symbol* existingVar = scope->findVariable(v->variableName->value);
   if (existingVar) {
     m_errors->error(v->location, "Duplicate variable definition");
+    STATPOP
     return;
   }
 
@@ -1500,6 +1501,7 @@ void SemanticAnalyzer::acceptStructDecl(StructDecl* v) {
   Scope* scope = getScope();
   if (scope->getType() != SCOPE_MAIN) {
     m_errors->error(v->location, "Structs can only be declared in the global scope");
+    STATPOP
     return;
   }
 
