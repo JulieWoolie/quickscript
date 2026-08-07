@@ -29,7 +29,7 @@ uint32 CompilerErrors::getErrorCount() const {
   return count;
 }
 
-const std::vector<ReportedError>& CompilerErrors::getErrors() const {
+std::vector<ReportedError>& CompilerErrors::getErrors() {
   return m_errors;
 }
 

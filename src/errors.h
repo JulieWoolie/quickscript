@@ -36,7 +36,7 @@ class CompilerErrors {
 
     uint32 getErrorCount() const;
 
-    const std::vector<ReportedError>& getErrors() const;
+    std::vector<ReportedError>& getErrors();
 
     void fatal(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
     void fatal(conststring msg, ...) __attribute__((format(printf, 2, 3)));

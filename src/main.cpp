@@ -14,36 +14,30 @@
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
 
-void native_printfn(NativeCall* call) {
-  // nop;
-}
-
 Bindings createStandardBindings() {
   Bindings bindings;
   return bindings;
 }
 
 int32 main(int32 argc, cstring argv[]) {
-  if (argc < 2) {
-    fprintf(stderr, "Enter file name to execute!\n");
-    return EXIT_FAILURE;
-  }
+  ProgramSettings settings;
+  ParseResult res = parseSettings(settings, argc, argv);
 
-  cstring fname = argv[argc - 1];
-  if (strcmp(fname, "run-tests") == 0) {
-    TesterSettings settings;
-    settings.printAsts = false;
-    settings.directory = "../tests/";
-
-    runTests(settings);
-
+  if (res == RES_FAILED || settings.command == CMD_HELP) {
+    showHelpMessage();
     return EXIT_SUCCESS;
   }
 
+  if (settings.command == CMD_TESTS) {
+    runTests(settings);
+    return EXIT_SUCCESS;
+  }
+
+  std::string fname = std::string(settings.inputFile);
   std::ifstream file(fname);
 
   if (!file.is_open()) {
-    printf("File '%s' doesn't exist or can't be read.\n", fname);
+    printf("File '%s' doesn't exist or can't be read.\n", fname.c_str());
     return EXIT_FAILURE;
   }
 
@@ -52,7 +46,7 @@ int32 main(int32 argc, cstring argv[]) {
   TokenList tokens = TokenList();
   StringTable table = StringTable();
 
-  CompilerErrors errors = CompilerErrors(&file_contents, fname);
+  CompilerErrors errors = CompilerErrors(&file_contents, fname.c_str());
 
   Lexer l = Lexer(file_contents, &tokens, &table, &errors);
   l.lex();
@@ -69,8 +63,12 @@ int32 main(int32 argc, cstring argv[]) {
   SemanticAnalyzer resolver = SemanticAnalyzer(&lookup, &table, &errors, &bindings);
   resolver.acceptScriptFileStatement(sfs);
 
-  if (errors.getErrorCount() == 0) {
-    PrintingVisitor pv = PrintingVisitor(&table, fname);
+  if (errors.getErrorCount() != 0) {
+    return EXIT_FAILURE;
+  }
+
+  if (settings.printAst) {
+    PrintingVisitor pv = PrintingVisitor(&table, fname.c_str());
     sfs->acceptVisit(&pv);
   }
 

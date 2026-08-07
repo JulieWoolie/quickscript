@@ -16,19 +16,13 @@
 
 #define PRINT_FULL_ERRORS
 
-struct ExpectedError {
-  int32 line = -1;
-  std::string message;
-  std::string name;
-};
-
 struct KeyValuePair {
   std::string_view key;
   std::string_view value;
   uint32 end = 0;
 };
 
-uint32 findTokenEnd(conststring str, uint32 start, uint32 len) {
+static uint32 findTokenEnd(conststring str, uint32 start, uint32 len) {
   if (str[start] == '"' || str[start] == '\'') {
     const int8 q = str[start];
 
@@ -52,7 +46,7 @@ uint32 findTokenEnd(conststring str, uint32 start, uint32 len) {
   return len;
 }
 
-bool parsePair(conststring str, uint32 len, uint32 off, KeyValuePair* out) {
+static bool parsePair(conststring str, uint32 len, uint32 off, KeyValuePair* out) {
   uint32 readidx = off;
   while (str[readidx] == ' ' && readidx < len) {
     readidx++;
@@ -101,7 +95,7 @@ bool parsePair(conststring str, uint32 len, uint32 off, KeyValuePair* out) {
   return true;
 }
 
-bool startsWith(conststring str, uint32 off, uint32 len, conststring prefix) {
+static bool startsWith(conststring str, uint32 off, uint32 len, conststring prefix) {
   uint32 remlen = len - off;
   uint32 prefixlen = strlen(prefix);
 
@@ -121,7 +115,7 @@ bool startsWith(conststring str, uint32 off, uint32 len, conststring prefix) {
   return true;
 }
 
-int32 parseViewToInt(std::string_view sv) {
+static int32 parseViewToInt(std::string_view sv) {
   uint32 len = sv.length();
 
   char buf[len + 1];
@@ -131,42 +125,57 @@ int32 parseViewToInt(std::string_view sv) {
   return atoi(buf);
 }
 
-void findExpectedErrors(std::vector<ExpectedError>* out, TokenList* list, StringTable* table) {
-  uint32 size = list->size();
+void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
+  const uint32 size = list.size();
 
   for (uint32 idx = 0; idx < size; idx++) {
-    Token* t = list->get(idx);
+    const Token* t = list.get(idx);
     if (t->ttype != TT_LCOMMENT) {
       continue;
     }
 
-    std::string_view content = table->getview(t->valueId);
+    std::string_view content = table.getview(t->valueId);
     if (content.empty()) {
       continue;
     }
 
-    conststring data = content.data();
-    uint32 clen = content.length();
+    const conststring data = content.data();
+    const uint32 clen = content.length();
     ExpectedError err;
 
     bool skip = false;
+    uint32 readIdx = 0;
 
-    uint32 readidx = 0;
-    while (readidx < clen) {
-      if (data[readidx] == ' ') {
-        readidx++;
+    while (readIdx < clen) {
+      if (data[readIdx] == ' ') {
+        readIdx++;
         continue;
       }
 
-      if (!startsWith(data, readidx, clen, "ERROR ")) {
+      if (startsWith(data, readIdx, clen, "MODE ")) {
+        readIdx += 5;
+
+        if (startsWith(data, readIdx, clen, "run")) {
+          out.mode = TESTMODE_RUN;
+        } else if (startsWith(data, readIdx, clen, "expr")) {
+          out.mode = TESTMODE_EXPR;
+        } else {
+          out.mode = TESTMODE_VALIDATE;
+        }
+
         skip = true;
         break;
       }
 
-      readidx += 5;
+      if (!startsWith(data, readIdx, clen, "ERROR ")) {
+        skip = true;
+        break;
+      }
+
+      readIdx += 5;
 
       KeyValuePair p;
-      while (parsePair(data, clen, readidx, &p)) {
+      while (parsePair(data, clen, readIdx, &p)) {
         if (p.key == "name") {
           err.name = std::string(p.value);
         } else if (p.key == "message") {
@@ -178,7 +187,7 @@ void findExpectedErrors(std::vector<ExpectedError>* out, TokenList* list, String
             err.line = parseViewToInt(p.value);
           }
         }
-        readidx = p.end;
+        readIdx = p.end;
       }
     }
 
@@ -186,73 +195,68 @@ void findExpectedErrors(std::vector<ExpectedError>* out, TokenList* list, String
       continue;
     }
 
-    out->push_back(err);
+    out.expectedErrors.push_back(err);
   }
 }
 
-bool checkError(const ReportedError& rep, const ExpectedError& expect) {
-  if (rep.message != expect.message) {
+static bool checkError(const ReportedError* rep, const ExpectedError& expect) {
+  if (rep->message != expect.message) {
     fprintf(stderr,
       "[CONDITION FAIL]\n  Expected error message: %s\n  Actual: %s\n",
       expect.message.c_str(),
-      rep.message.c_str()
+      rep->message.c_str()
     );
     return false;
   }
 
-  if (expect.line == -1 || expect.line == rep.location.line) {
+  if (expect.line == -1 || expect.line == rep->location.line) {
     return true;
   }
 
   fprintf(stderr,
     "[CONDITION FAIL]\n  Expected error on line %i\n  Actual: %i\n",
     expect.line,
-    rep.location.line
+    rep->location.line
   );
 
   return false;
 }
 
-#ifndef PRINT_FULL_ERRORS
-#define COMPARE_REPORTED_ERRORS(len) \
-  for (uint32 i = 0; i < len; i++) {\
-    const ExpectedError& err = errors->at(i);\
-    const ReportedError& r = reported.at(i);\
-    \
-    if (checkError(r, err)) {\
-      continue;\
-    }\
-    comparisonsFailed = true;\
+static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors) {
+  const uint32 expected = tcase.expectedErrors.size();
+  const uint32 actual = compilerErrors.getErrorCount();
+
+  std::vector<ReportedError*> reported;
+  bool comparisonsFailed = false;
+
+  for (ReportedError& err : compilerErrors.getErrors()) {
+    if (err.level != LOGL_FATAL && err.level != LOGL_ERROR) {
+      continue;
+    }
+    reported.push_back(&err);
   }
-#else
-#define COMPARE_REPORTED_ERRORS(len) \
-  for (uint32 i = 0; i < len; i++) {\
-    const ExpectedError& err = errors->at(i);\
-    const ReportedError& r = reported.at(i);\
-    \
-    if (checkError(r, err)) {\
-      continue;\
-    }\
-    compilerErrors->printError(r);\
-    comparisonsFailed = true;\
-  }
+
+  for (uint32 i = 0; i < std::min(expected, actual); i++) {
+    const ExpectedError& err = tcase.expectedErrors.at(i);
+    const ReportedError* r = reported.at(i);
+
+    if (checkError(r, err)) {
+      continue;
+    }
+
+#ifdef PRINT_FULL_ERRORS
+    compilerErrors.printError(*r);
 #endif
 
-bool checkErrors(std::vector<ExpectedError>* errors, CompilerErrors* compilerErrors) {
-  int32 expected = errors->size();
-  int32 actual = compilerErrors->getErrorCount();
-
-  const std::vector<ReportedError>& reported = compilerErrors->getErrors();
-  bool comparisonsFailed = false;
+    comparisonsFailed = true;
+  }
 
   if (expected > actual) {
     // some errors did not occur
-    COMPARE_REPORTED_ERRORS(actual)
-
     for (uint32 i = actual; i < expected; i++) {
-      const ExpectedError& err = errors->at(i);
+      const ExpectedError& err = tcase.expectedErrors[i];
       fprintf(stderr,
-        "[CONDITION FAIL] Expected error did not ocurr!\n  Expected message: %s\n",
+        "[CONDITION FAIL] Expected error did not occur!\n  Expected message: %s\n",
         err.message.c_str()
       );
     }
@@ -262,28 +266,26 @@ bool checkErrors(std::vector<ExpectedError>* errors, CompilerErrors* compilerErr
 
   if (expected < actual) {
     // some unexpected errors occurred
-    COMPARE_REPORTED_ERRORS(expected)
-
     fprintf(stderr, "[CONDITION FAIL] Unexpected error(s) when running test!\n");
     for (uint32 i = expected; i < actual; i++) {
-      compilerErrors->printError(reported.at(i));
+      const ReportedError* err = reported.at(i);
+      compilerErrors.printError(*err);
     }
 
     return false;
   }
 
   // All good size wise
-  COMPARE_REPORTED_ERRORS(expected)
   return !comparisonsFailed;
 }
 
 #define RUN_ERROR_CHECKS return checkErrors(&expectedErrors, &errors);
 
-bool runTestFile(const std::filesystem::path& fpath, TesterSettings* settings) {
-  std::ifstream instream(fpath);
+bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& settings) {
+  std::ifstream instream(filePath);
 
   if (!instream.is_open()) {
-    fprintf(stderr, "Failed to open %ls\n", fpath.c_str());
+    fprintf(stderr, "Failed to open %ls\n", filePath.c_str());
     return false;
   }
 
@@ -292,60 +294,68 @@ bool runTestFile(const std::filesystem::path& fpath, TesterSettings* settings) {
   TokenList tlist;
   StringTable table;
 
-  conststring fname = reinterpret_cast<conststring>(fpath.c_str());
-
-  CompilerErrors errors = CompilerErrors(&file_contents, fname);
+  conststring fileName = reinterpret_cast<conststring>(filePath.c_str());
+  CompilerErrors errors = CompilerErrors(&file_contents, fileName);
   errors.setSilent(true);
 
   Lexer l = Lexer(file_contents, &tlist, &table, &errors);
   l.setCommentsIgnored(false);
 
-  std::vector<ExpectedError> expectedErrors;
-
+  TestCase tcase;
   bool stepFailed = false;
+
   try {
     l.lex();
-    findExpectedErrors(&expectedErrors, &tlist, &table);
-  } catch (std::runtime_error& e) {
-    findExpectedErrors(&expectedErrors, &tlist, &table);
+    parseTestCase(tcase, tlist, table);
+  } catch (std::runtime_error& err) {
+    parseTestCase(tcase, tlist, table);
     stepFailed = true;
   }
 
   if (stepFailed) {
-    RUN_ERROR_CHECKS
+    return checkErrors(tcase, errors);
   }
 
   NoFreeAllocator allocator;
   Parser p = Parser(&tlist, &allocator, &errors, &table);
-  ScriptFileStatement* sfs = nullptr;
+  Node* result = nullptr;
 
-  stepFailed = false;
-  try {
-    sfs = p.parse();
-  } catch (std::runtime_error& e) {
-    stepFailed = true;
+  if (tcase.mode == TESTMODE_RUN || tcase.mode == TESTMODE_VALIDATE) {
+    try {
+      result = p.parse();
+    } catch (std::runtime_error& e) {
+      stepFailed = true;
+    }
+  } else {
+    try {
+      result = p.expr();
+    } catch (std::runtime_error& e) {
+      stepFailed = true;
+    }
   }
 
   if (stepFailed) {
-    RUN_ERROR_CHECKS
+    return checkErrors(tcase, errors);
   }
 
   TypeTable lookup = TypeTable();
   Bindings bindings;
 
   SemanticAnalyzer typeResolver = SemanticAnalyzer(&lookup, &table, &errors, &bindings);
-  typeResolver.acceptScriptFileStatement(sfs);
-
-  if (settings->printAsts) {
-    PrintingVisitor pv = PrintingVisitor(&table, fname);
-    pv.acceptScriptFileStatement(sfs);
+  if (result->nodeKind() == AST_ScriptFileStatement) {
+    typeResolver.acceptScriptFileStatement(static_cast<ScriptFileStatement*>(result));
   }
 
-  RUN_ERROR_CHECKS
+  if (settings.printAst) {
+    PrintingVisitor pv = PrintingVisitor(&table, fileName);
+    result->acceptVisit(&pv);
+  }
+
+  return checkErrors(tcase, errors);
 }
 
-void runTests(TesterSettings settings) {
-  std::filesystem::path dirpath = settings.directory;
+void runTests(const ProgramSettings& settings) {
+  const std::filesystem::path dirpath = settings.inputFile;
 
   uint32 total = 0;
   uint32 failed = 0;
@@ -357,7 +367,7 @@ void runTests(TesterSettings settings) {
       }
 
       const std::filesystem::path& path = entry.path();
-      bool success = runTestFile(path, &settings);
+      bool success = runTestCase(path, settings);
 
       total++;
 
@@ -367,7 +377,7 @@ void runTests(TesterSettings settings) {
       }
 
       failed++;
-      fprintf(stderr, "[TEST FAIL] Test '%ls' failed\n", path.c_str());
+      fprintf(stderr, "[TEST FAIL] Test '%ls' failed\n\n", path.c_str());
     }
   } catch (const std::filesystem::filesystem_error& e) {
     // ignore
