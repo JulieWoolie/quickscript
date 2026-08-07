@@ -47,9 +47,11 @@ struct StructDecl;
 struct AssertStatement;
 
 #define AST_NIL 0
+
 #define AST_TypeNameExpr 1
 #define AST_ArrayTypeExpr 2
 #define AST_PrimitiveTypeExpr 3
+
 #define AST_Identifier 4
 #define AST_CallExpr 5
 #define AST_PropertyAccessExpr 6
@@ -62,6 +64,7 @@ struct AssertStatement;
 #define AST_BinaryExpr 13
 #define AST_UnaryExpr 14
 #define AST_TernaryExpr 15
+
 #define AST_Block 16
 #define AST_IfStatement 17
 #define AST_ForStatement 18
@@ -76,6 +79,7 @@ struct AssertStatement;
 #define AST_ExprStatement 27
 #define AST_StructPropertyDecl 28
 #define AST_StructDecl 29
+
 #define AST_ObjectLiteralProperty 30
 #define AST_ObjectLiteral 31
 #define AST_AssertStatement 32
