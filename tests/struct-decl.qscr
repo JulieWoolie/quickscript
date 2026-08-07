@@ -1,0 +1,10 @@
+struct StructType {
+  # ERROR message="Cannot assign string value to property int32 StructType.wrongType"
+  int32 wrongType = ""
+
+  # Correct
+  int32 noValue
+
+  # Correct
+  int32 correctType = 0
+}
