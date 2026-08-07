@@ -42,10 +42,7 @@
     } else { \
       writer.startInstr(OP_##cmptype##ARR); \
     } \
-    writer.appendU8(r1); \
-    writer.appendU8(r2); \
-    writer.appendU8(r1); \
-    writer.endInstr(); \
+    BIN_APPEND \
     break;
 
 #define EQUALITY_CASE(type)\
