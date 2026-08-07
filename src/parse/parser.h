@@ -87,6 +87,8 @@ class Parser {
 
     // Expressions
 
+    Expr* loopConditionExpr();
+
     Expr* expr();
     Expr* ternaryExpr();
     Expr* assignExpr();

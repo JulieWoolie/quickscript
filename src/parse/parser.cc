@@ -349,7 +349,7 @@ IfStatement* Parser::ifStatement() {
   IfStatement s;
   s.location = t->start;
 
-  Expr* cond = expr();
+  Expr* cond = loopConditionExpr();
   Statement* body = statement();
 
   s.condition = cond;
@@ -420,7 +420,7 @@ DoWhileStatement* Parser::doWhileStatement(Identifier* label) {
   dow.body = block();
 
   expect(TT_KEYW_WHILE);
-  dow.condition = expr();
+  dow.condition = loopConditionExpr();
 
   return EMPLACE(dow);
 }
@@ -431,7 +431,7 @@ WhileStatement* Parser::whileStatement(Identifier* label) {
   WhileStatement dow;
   dow.location = t->start;
   dow.label = label;
-  dow.condition = expr();
+  dow.condition = loopConditionExpr();
   dow.body = block();
 
   return EMPLACE(dow);
@@ -651,6 +651,16 @@ PrimitiveTypeExpr* Parser::primitiveType() {
   pte.location = t->start;
   pte.primType = pt;
   return EMPLACE(pte);
+}
+
+Expr* Parser::loopConditionExpr() {
+  if (is(TT_LBRACKET)) {
+    next();
+    Expr* res = expr();
+    expect(TT_RBRACKET);
+    return res;
+  }
+  return expr();
 }
 
 Expr* Parser::expr() {
