@@ -25,10 +25,7 @@ ScriptStructType* ScriptStructType::create(
 
   for (uint32 i = 0; i < propCount; i++) {
     StructProperty* dest = &propArr[i];
-    new (dest) StructProperty();
-
-    const StructProperty* from = &properties[i];
-    *dest = *from;
+    new (dest) StructProperty(properties[i]);
   }
 
   return new (data) ScriptStructType(std::move(name), propArr, propCount);
