@@ -1,0 +1,14 @@
+void main() {
+  # Correct
+  vec2 v = {x = 0, y = 0}
+
+  vec2 d
+
+  # ERROR message="Unknown type 'nonexistent'"
+  nonexistent val
+}
+
+struct vec2 {
+  float32 x = 0
+  float32 y = 0
+}
