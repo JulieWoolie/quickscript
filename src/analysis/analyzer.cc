@@ -314,7 +314,7 @@ PropertySymbol* findPropSymbol(Scope* scope, ScriptType* structType, stringid pr
       }
 
       PropertySymbol* sps = static_cast<PropertySymbol*>(symbol);
-      if (sps->getStructSymbol()->getScriptType() != structType) {
+      if (sps->getHolderType() != structType) {
         continue;
       }
 
@@ -339,19 +339,21 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
   }
 
   std::string_view queriedProp = ctx.getStrings().getview(v->property->value);
-  ScriptType* propertyType = nullptr;
-  
-  if (resType->kind() != TK_STRUCT) {
-    propertyType = resType->getPropertyType(queriedProp);
-  } else {
-    PropertySymbol* sps = findPropSymbol(ctx.getScope(), resType, v->property->value);
-    if (sps) {
-      propertyType = sps->getScriptType();
-      ctx.getSymbolCache()[v->property] = sps;
+  PropertySymbol* sps = findPropSymbol(ctx.getScope(), resType, v->property->value);
+
+  if (!sps) {
+    ScriptType* propertyType = resType->getPropertyType(queriedProp);
+
+    if (propertyType) {
+      Scope* global = ctx.getGlobalScope();
+      NoFreeAllocator& alloc = ctx.getAllocator();
+
+      sps = alloc.make<PropertySymbol>(resType, v->property->value, propertyType);
+      global->pushSymbol(sps);
     }
   }
 
-  if (!propertyType) {
+  if (!sps) {
     ctx.getErrors().error(v->location,
       "No such property '%.*s' on %s",
       PRINTVIEW(queriedProp), resType->getTypeName()
@@ -360,7 +362,8 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
     return;
   }
 
-  v->resultType = propertyType;
+  v->resultType = sps->getScriptType();
+  ctx.getSymbolCache()[v->property] = sps;
 }
 
 static void acceptIndexAccessExpr(SemanticContext& ctx, IndexAccessExpr* v) {
@@ -1026,7 +1029,7 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
       continue;
     }
 
-    PropertySymbol* sym = alloc.make<PropertySymbol>(lss, propDecl->name->value, typeProp->type);
+    PropertySymbol* sym = alloc.make<PropertySymbol>(type, propDecl->name->value, typeProp->type);
     scope->pushSymbol(sym);
   }
 }
@@ -1574,10 +1577,22 @@ static void acceptStatement(SemanticContext& ctx, Statement* stat) {
   }
 }
 
+static void addDefaultSymbols(SemanticContext& ctx, Scope* scope) {
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  StringTable& strings = ctx.getStrings();
+
+  stringid lengthId = strings.allocate("length");
+
+  PropertySymbol* stringLength = alloc.make<PropertySymbol>(ConstTypes::STRING(), lengthId, ConstTypes::UINT32());
+  scope->pushSymbol(stringLength);
+}
+
 SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   STATPUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
   ctx.setGlobalScope(scope);
+
+  addDefaultSymbols(ctx, scope);
 
   scope->setExpectedReturnType(nullptr);
 
