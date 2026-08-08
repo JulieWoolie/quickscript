@@ -887,10 +887,21 @@ static void acceptUnaryExpr(SemanticContext& ctx, UnaryExpr* v) {
     return;
   }
 
-  ScriptType* resType = getUnaryOpResult(v->op, v->target->resultType);
+  const unaryop op = v->op;
+  ScriptType* resType = getUnaryOpResult(op, v->target->resultType);
 
   if (resType) {
-    checkAssignability(ctx, v->target);
+    switch (op) {
+      case UOP_PREDEC:
+      case UOP_PREINC:
+      case UOP_POSTDEC:
+      case UOP_POSTINC:
+        checkAssignability(ctx, v->target);
+        break;
+      default:
+        break;
+    }
+
     v->resultType = resType;
     return;
   }
