@@ -1084,6 +1084,41 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
   }
 }
 
+
+static bool isPossibleMainFunction(SemanticContext& ctx, FunctionDeclStatement* v) {
+  StringTable& strings = ctx.getStrings();
+  stringid mainId = strings.findId("main");
+
+  // Even if mainId == EMPTY_STRING, there's surely no way a method would
+  // have an empty string as an identifier
+  if (v->name->value != mainId) {
+    return false;
+  }
+
+  FunctionSignature* signature = v->signature;
+  ScriptType* returnedType = signature->getReturnType();
+
+  if (returnedType->kind() != TK_VOID && !isIntegerType(returnedType)) {
+    return false;
+  }
+
+  const uint32 argsLen = signature->getArgumentsLength();
+  if (argsLen == 0) {
+    return true;
+  }
+  if (argsLen > 1) {
+    return false;
+  }
+
+  ScriptType* argType = signature->getArgumentType(0);
+  if (argType->kind() != TK_ARRAY) {
+    return false;
+  }
+
+  ScriptType* componentType = static_cast<ScriptArrayType*>(argType)->getComponentType();
+  return componentType == ConstTypes::STRING();
+}
+
 static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) {
   resolveTypeExpr(ctx, v->returnType);
 
@@ -1153,6 +1188,10 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
   scope->pushSymbol(sym);
 
   ctx.getSymbolCache()[v] = sym;
+
+  if (isPossibleMainFunction(ctx, v)) {
+    ctx.getMainFuncCandidates().push_back(lf);
+  }
 }
 
 static void reportUnused(const SemanticContext& ctx, Scope* scope) {
