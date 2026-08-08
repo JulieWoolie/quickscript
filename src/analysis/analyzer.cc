@@ -1733,6 +1733,13 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
     acceptStatement(ctx, s);
   }
 
+  std::vector<LocalFunction*>& mainCandidates = ctx.getMainFuncCandidates();
+  if (mainCandidates.empty()) {
+    ctx.getErrors().warn(
+      "No possible main(string[]) functions found. Script will have no entry point"
+    );
+  }
+
   reportUnused(ctx, scope);
   ctx.popScope();
   STAT_POP
