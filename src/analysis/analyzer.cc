@@ -20,7 +20,7 @@
 #define NOT_MAINR(name) if (ctx.getScope()->getType() == SCOPE_MAIN) { ctx.getErrors().error(v->location, "%s not allowed here", name); return; }
 #define NOT_MAIN_TRAILING ctx.popWrongScopeReported();
 
-Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* id, ScriptType* expectedType) {
+static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* id, ScriptType* expectedType) {
   std::unordered_map<Identifier*, Symbol*>& cache = ctx.getSymbolCache();
   if (cache.contains(id)) {
     return cache[id];
@@ -34,16 +34,19 @@ Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* 
   uint32 scoreLen = 0;
 
   for (Scope* scope = start; scope != nullptr; scope = scope->getParent()) {
-    std::vector<Symbol*>& symbols = scope->getSymbols();
-
-    for (Symbol* symbol : symbols) {
+    for (Symbol* symbol : scope->getSymbols()) {
       if (symbol->getName() != name) {
         continue;
       }
 
-      ScriptType* stype = symbol->getScriptType();
+      const symboltype symType = symbol->stype();
+      if (symType != SYM_LocalVar && symType != SYM_LocalFunc) {
+        continue;
+      }
+
+      ScriptType* scriptType = symbol->getScriptType();
       if (!expectedType || expectedKind != TK_FUNC) {
-        if (stype->kind() == TK_FUNC) {
+        if (scriptType->kind() == TK_FUNC) {
           continue;
         }
 
@@ -51,12 +54,12 @@ Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* 
         return symbol;
       }
 
-      if (stype->kind() != TK_FUNC) {
+      if (scriptType->kind() != TK_FUNC) {
         continue;
       }
 
       FunctionSignature* callingSign = static_cast<FunctionSignature*>(expectedType);
-      FunctionSignature* funcSign = static_cast<FunctionSignature*>(stype);
+      FunctionSignature* funcSign = static_cast<FunctionSignature*>(scriptType);
 
       const int32 score = FunctionSignature::callSignatureMatches(callingSign, funcSign);
       if (score == SIGN_DOES_NOT_MATCH) {
@@ -1634,5 +1637,5 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
   ctx.popScope();
   STATPOP
 
-  return ctx.makeSemanticFile();
+  return ctx.makeSemanticFile(v);
 }
