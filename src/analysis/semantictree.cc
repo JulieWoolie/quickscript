@@ -14,6 +14,14 @@ void Symbol::setFlags(symflags f) {
   m_flags = f;
 }
 
+void Symbol::addFlags(symflags flags) {
+  m_flags |= flags;
+}
+
+void Symbol::removeFlags(symflags flags) {
+  m_flags &= ~flags;
+}
+
 stringid Symbol::getName() const {
   return m_name;
 }

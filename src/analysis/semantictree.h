@@ -79,6 +79,10 @@ class Symbol {
 
     void setFlags(symflags f);
 
+    void addFlags(symflags flags);
+
+    void removeFlags(symflags flags);
+
     stringid getName() const;
 
     ScriptType* getScriptType() const;
