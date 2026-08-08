@@ -22,6 +22,8 @@ class SemanticContext {
 
   std::vector<LocalFunction*> m_localFunctions;
 
+  std::unordered_map<Identifier*, Symbol*> m_symbolCache;
+
   Scope* m_globalScope = nullptr;
   Scope* m_currentScope = nullptr;
 
@@ -77,6 +79,8 @@ class SemanticContext {
     Bindings& getBindings() const;
 
     NoFreeAllocator& getAllocator();
+
+    std::unordered_map<Identifier*, Symbol*>& getSymbolCache();
 };
 
 

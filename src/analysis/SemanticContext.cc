@@ -141,3 +141,7 @@ Bindings& SemanticContext::getBindings() const {
 NoFreeAllocator& SemanticContext::getAllocator() {
   return m_allocator;
 }
+
+std::unordered_map<Identifier*, Symbol*>& SemanticContext::getSymbolCache() {
+  return m_symbolCache;
+}
