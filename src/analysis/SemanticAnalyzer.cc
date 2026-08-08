@@ -6,191 +6,102 @@
 
 #include "../types/ConstTypes.h"
 
-#define STATPUSH m_statementStack.push_back(v);
-#define STATPOP m_statementStack.pop_back();
+#define STATPUSH ctx.pushStatement(v);
+#define STATPOP ctx.popStatement();
 
 #define NOT_MAIN(name) \
-  if (getScope()->getType() == SCOPE_MAIN && !wasWrongScopeReported()) { \
-    m_errors->error(v->location, "%s not allowed here", name);\
-    pushWrongScopeTypeReported(true);\
+  if (ctx.getScope()->getType() == SCOPE_MAIN && !ctx.wasWrongScopeReported()) { \
+    ctx.getErrors().error(v->location, "%s not allowed here", name);\
+    ctx.pushWrongScopeTypeReported(true);\
   } else {\
-    pushWrongScopeTypeReported(false);\
+    ctx.pushWrongScopeTypeReported(false);\
   }
 
-#define NOT_MAINR(name) if (getScope()->getType() == SCOPE_MAIN) { m_errors->error(v->location, "%s not allowed here", name); return; }
-#define NOT_MAIN_TRAILING popWrongScopeReported();
+#define NOT_MAINR(name) if (ctx.getScope()->getType() == SCOPE_MAIN) { ctx.getErrors().error(v->location, "%s not allowed here", name); return; }
+#define NOT_MAIN_TRAILING ctx.popWrongScopeReported();
 
-#define PRINTVIEW(x) static_cast<int>(x.length()), x.data()
+Symbol* resolveReferencedSymbol(Scope* start, stringid name, ScriptType* expectedType) {
+  typekind expectedKind = expectedType ? expectedType->kind() : TK_NIL;
 
-Scope::Scope(const stringid label, const scopetype type)
-  : m_currentLabel(label), m_scopeType(type)
-{
+  uint32 scores[10];
+  Symbol* signatures[10];
+  uint32 scoreLen = 0;
 
-}
+  for (Scope* scope = start; scope != nullptr; scope = scope->getParent()) {
+    std::vector<Symbol*>& symbols = scope->getSymbols();
 
-Symbol* Scope::pushSymbol(stringid name, ScriptType* type, symboltype lexType, uint32 flags) {
-  uint64 off = m_size;
-  Symbol* sym = &m_symbols.emplace_back(name, lexType, flags, off, type, 0, 0);
+    for (Symbol* symbol : symbols) {
+      if (symbol->getName() != name) {
+        continue;
+      }
 
-  m_size += type->stackSizeBytes();
-
-  return sym;
-}
-
-Symbol* Scope::findVariable(stringid name) {
-  for (Symbol& sym : m_symbols) {
-    if (sym.name != name) {
-      continue;
-    }
-    if (sym.stype != SYM_VAR && sym.stype != SYM_CONST) {
-      continue;
-    }
-    return &sym;
-  }
-  return nullptr;
-}
-
-std::vector<Symbol>* Scope::getSymbols() {
-  return &m_symbols;
-}
-
-ScriptType* Scope::getExpectedReturnType() const {
-  return m_expectedReturnType;
-}
-
-void Scope::setExpectedReturnType(ScriptType* type) {
-  m_expectedReturnType = type;
-}
-
-stringid Scope::getLabel() const {
-  return m_currentLabel;
-}
-
-scopetype Scope::getType() const {
-  return m_scopeType;
-}
-
-Symbol* Scope::findSymbol(const stringid name, symboltype st) {
-  for (Symbol& sym : m_symbols) {
-    if (sym.name != name) {
-      continue;
-    }
-    if (st != SYM_NIL && sym.stype != st) {
-      continue;
-    }
-    return &sym;
-  }
-  return nullptr;
-}
-
-void SemanticAnalyzer::popScope() {
-  Scope* scope = getScope();
-
-  for (Symbol& sym : *scope->getSymbols()) {
-    if (sym.flags & SYMFLAG_BINDING || (sym.readUses != 0 && sym.writeUses != 0)) {
-      continue;
-    }
-
-    std::string_view name = m_strings->getview(sym.name);
-
-    switch (sym.stype) {
-      case SYM_CONST:
-        if (sym.readUses == 0) {
-          m_errors->warn("Const variable '%.*s' is unused", PRINTVIEW(name));
+      ScriptType* stype = symbol->getScriptType();
+      if (!expectedType || expectedKind != TK_FUNC) {
+        if (stype->kind() == TK_FUNC) {
+          continue;
         }
-        break;
-      case SYM_VAR:
-        if (sym.writeUses != 0 && sym.readUses == 0) {
-          m_errors->warn("Variable '%.*s' is written to but never read", PRINTVIEW(name));
-        }
-        if (sym.writeUses == 0 && sym.readUses == 0) {
-          m_errors->warn("Variable '%.*s' is unused", PRINTVIEW(name));
-        }
-        break;
-      case SYM_FUNC:
-        if (sym.readUses == 0) {
-          m_errors->warn("Function '%.*s' is never called", PRINTVIEW(name));
-        }
-        break;
-      case SYM_STRUCT:
-        if (sym.readUses == 0) {
-          m_errors->warn("Struct '%.*s' is unused", PRINTVIEW(name));
-        }
-        break;
-      case SYM_PROP:
-        if (sym.writeUses != 0 && sym.readUses == 0) {
-          m_errors->warn("Struct property '%.*s' is written to but never read", PRINTVIEW(name));
-        }
-        if (sym.writeUses == 0 && sym.readUses == 0) {
-          m_errors->warn("Struct property '%.*s' is unused", PRINTVIEW(name));
-        }
-        break;
-      default:
-        break;
+        return symbol;
+      }
+
+      if (stype->kind() != TK_FUNC) {
+        continue;
+      }
+
+      FunctionSignature* callingSign = static_cast<FunctionSignature*>(expectedType);
+      FunctionSignature* funcSign = static_cast<FunctionSignature*>(stype);
+
+      const int32 score = FunctionSignature::callSignatureMatches(callingSign, funcSign);
+      if (score == SIGN_DOES_NOT_MATCH) {
+        continue;
+      }
+
+      scores[scoreLen] = score;
+      signatures[scoreLen] = symbol;
+      scoreLen++;
     }
   }
 
-  m_scopes.pop_back();
-}
-
-Scope* SemanticAnalyzer::pushScope(scopetype stype, stringid label) {
-  Scope& scope = m_scopes.emplace_back(label, stype);
-
-  if (m_scopes.size() > 1) {
-    Scope* parent = &m_scopes.back() - 1;
-    scope.setExpectedReturnType(parent->getExpectedReturnType());
-  }
-
-  return &scope;
-}
-
-Scope* SemanticAnalyzer::getScope(uint32 off) {
-  if (off >= m_scopes.size()) {
+  if (scoreLen == 0) {
     return nullptr;
   }
-  return &m_scopes.back() - off;
-}
-
-
-SemanticAnalyzer::SemanticAnalyzer(
-  TypeTable* lookup,
-  StringTable* strings,
-  CompilerErrors* errors,
-  Bindings* bindings
-) {
-  m_lookup = lookup;
-  m_strings = strings;
-  m_errors = errors;
-  m_bindings = bindings;
-}
-
-void SemanticAnalyzer::acceptTypeNameExpr(TypeNameExpr* v) {
-  std::string typeName = m_strings->getstring(v->typeName);
-  v->referencedType = m_lookup->lookupByName(typeName);
-
-  if (!v->referencedType) {
-    v->referencedType = ConstTypes::VOID();
-    m_errors->error(v->location, "Unknown type '%s'", typeName.c_str());
-    return;
+  if (scoreLen == 1) {
+    return signatures[0];
   }
 
-  Scope* global = &m_scopes[0];
-  Symbol* structSym = global->findSymbol(v->typeName, SYM_STRUCT);
+  uint32 highest = -1;
+  Symbol* best = nullptr;
 
-  if (structSym) {
-    structSym->readUses++;
+  for (uint32 idx = 0; idx < scoreLen; idx++) {
+    const uint32 scr = scores[idx];
+
+    if (scr <= highest) {
+      continue;
+    }
+
+    highest = scr;
+    best = signatures[idx];
   }
+
+  return best;
 }
 
-void SemanticAnalyzer::acceptArrayTypeExpr(ArrayTypeExpr* v) {
-  v->componentType->acceptVisit(this);
-  ScriptType* compType = v->componentType->referencedType;
-
-  if (!compType) {
-    compType = ConstTypes::VOID();
+ScriptType* getArrayType(SemanticContext& ctx, ScriptType* componentType) {
+  if (!componentType) {
+    return nullptr;
   }
 
-  v->referencedType = getArrayType(compType);
+  std::string compName = componentType->getTypeName();
+  compName.append("[]");
+
+  ScriptType* found = ctx.getTypes().lookupByName(compName);
+  if (found) {
+    return found;
+  }
+
+  found = new ScriptArrayType(componentType);
+  ctx.getTypes().emplaceType(found);
+
+  return found;
 }
 
 primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {
@@ -210,95 +121,101 @@ primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {
   }
 }
 
-void SemanticAnalyzer::acceptPrimitiveTypeExpr(PrimitiveTypeExpr* v) {
-  parsedprimitivetype ppt = v->primType;
+static ScriptType* evaluateTypeExpr(SemanticContext& ctx, TypeExpr* v) {
+  astnodetype kind = v->nodeKind();
 
-  if (ppt == PPT_STRING) {
-    v->referencedType = ConstTypes::STRING();
-    return;
-  }
-  if (ppt == PPT_VOID) {
-    v->referencedType = ConstTypes::VOID();
-    Statement* stat = m_statementStack.back();
-
-    if (stat->nodeKind() == AST_LexicalDeclaration) {
-      m_errors->error(v->location, "'void' type not allowed here");
+  switch (kind) {
+    case AST_PrimitiveTypeExpr: {
+      PrimitiveTypeExpr* pr = static_cast<PrimitiveTypeExpr*>(v);
+      if (pr->primType == PPT_STRING) {
+        return ConstTypes::STRING();
+      }
+      if (pr->primType == PPT_VOID) {
+        return ConstTypes::VOID();
+      }
+      primitivekind pk = parsedPrimitiveToTypeKind(pr->primType);
+      return ConstTypes::getPrimitiveType(pk);
     }
-
-    return;
+    case AST_ArrayTypeExpr: {
+      ArrayTypeExpr* arr = static_cast<ArrayTypeExpr*>(v);
+      ScriptType* cType = evaluateTypeExpr(ctx, arr->componentType);
+      if (!cType) {
+        return nullptr;
+      }
+      return getArrayType(ctx, cType);
+    }
+    case AST_TypeNameExpr: {
+      TypeNameExpr* tn = static_cast<TypeNameExpr*>(v);
+      const std::string typeName = ctx.getStrings().getstring(tn->typeName);
+      return ctx.getTypes().lookupByName(typeName);
+    }
+    default:
+      return nullptr;
   }
-
-  primitivekind pk = parsedPrimitiveToTypeKind(ppt);
-  v->referencedType = ConstTypes::getPrimitiveType(pk);
 }
 
-Symbol* SemanticAnalyzer::resolveReferencedSymbol(stringid name, ScriptType* expectedType) {
-  typekind expectedKind = expectedType ? expectedType->kind() : TK_NIL;
+static void resolveTypeExpr(SemanticContext& ctx, TypeExpr* typeExpr) {
+  astnodetype kind = typeExpr->nodeKind();
 
-  uint32 scores[10];
-  Symbol* signatures[10];
-  uint32 scorerlen = 0;
+  switch (kind) {
+    case AST_TypeNameExpr: {
+      TypeNameExpr* v = static_cast<TypeNameExpr*>(typeExpr);
+      std::string typeName = ctx.getStrings().getstring(v->typeName);
+      v->referencedType = ctx.getTypes().lookupByName(typeName);
 
-  for (uint32 i = 0; i < m_scopes.size(); i++) {
-    Scope* scope = getScope(i);
-    std::vector<Symbol>* symbols = scope->getSymbols();
-
-    for (Symbol& symbol : *symbols) {
-      if (symbol.name != name) {
-        continue;
+      if (!v->referencedType) {
+        v->referencedType = ConstTypes::VOID();
+        ctx.getErrors().error(v->location, "Unknown type '%s'", typeName.c_str());
+        return;
       }
 
-      ScriptType* stype = symbol.scriptType;
-      if (!expectedType || expectedKind != TK_FUNC) {
-        if (stype->kind() == TK_FUNC) {
-          continue;
+      Scope* global = ctx.getScope();
+      Symbol* structSym = global->findSymbol(v->typeName, SYM_LocalStruct);
+
+      if (structSym) {
+        LocalStructSymbol* lss = static_cast<LocalStructSymbol*>(structSym);
+        lss->used();
+      }
+      return;
+    }
+    case AST_ArrayTypeExpr: {
+      ArrayTypeExpr* v = static_cast<ArrayTypeExpr*>(typeExpr);
+      resolveTypeExpr(ctx, v->componentType);
+      ScriptType* compType = v->componentType->referencedType;
+
+      if (!compType) {
+        compType = ConstTypes::VOID();
+      }
+
+      v->referencedType = getArrayType(ctx, compType);
+      return;
+    }
+    case AST_PrimitiveTypeExpr: {
+      PrimitiveTypeExpr* v = static_cast<PrimitiveTypeExpr*>(typeExpr);
+      parsedprimitivetype ppt = v->primType;
+
+      if (ppt == PPT_STRING) {
+        v->referencedType = ConstTypes::STRING();
+        return;
+      }
+      if (ppt == PPT_VOID) {
+        v->referencedType = ConstTypes::VOID();
+        Statement* stat = ctx.getCurrentStatement();
+
+        if (stat->nodeKind() == AST_LexicalDeclaration) {
+          ctx.getErrors().error(v->location, "'void' type not allowed here");
         }
-        return &symbol;
+
+        return;
       }
 
-      if (stype->kind() != TK_FUNC) {
-        continue;
-      }
-
-      FunctionSignature* callingSign = static_cast<FunctionSignature*>(expectedType);
-      FunctionSignature* funcSign = static_cast<FunctionSignature*>(stype);
-
-      const int32 score = FunctionSignature::callSignatureMatches(callingSign, funcSign);
-      if (score == SIGN_DOES_NOT_MATCH) {
-        continue;
-      }
-
-      scores[scorerlen] = score;
-      signatures[scorerlen] = &symbol;
-      scorerlen++;
+      primitivekind pk = parsedPrimitiveToTypeKind(ppt);
+      v->referencedType = ConstTypes::getPrimitiveType(pk);
     }
   }
-
-  if (scorerlen == 0) {
-    return nullptr;
-  }
-  if (scorerlen == 1) {
-    return signatures[0];
-  }
-
-  int32 highest = -1;
-  Symbol* best = nullptr;
-
-  for (uint32 idx = 0; idx < scorerlen; idx++) {
-    int32 scr = scores[idx];
-
-    if (scr <= highest) {
-      continue;
-    }
-
-    highest = scr;
-    best = signatures[idx];
-  }
-
-  return best;
 }
 
-bool SemanticAnalyzer::everyBranchHasReturn(Statement* stat) {
+static bool everyBranchHasReturn(Statement* stat) {
   switch (stat->nodeKind()) {
     case AST_Block: {
       Block* b = static_cast<Block*>(stat);
@@ -329,35 +246,16 @@ bool SemanticAnalyzer::everyBranchHasReturn(Statement* stat) {
   }
 }
 
-void SemanticAnalyzer::pushWrongScopeTypeReported(bool reported) {
-  m_wrongScopeReports.push_back(reported);
-}
+static void acceptExpr(SemanticContext& ctx, Expr* v);
 
-void SemanticAnalyzer::popWrongScopeReported() {
-  if (m_wrongScopeReports.empty()) {
-    return;
-  }
-  m_wrongScopeReports.pop_back();
-}
+static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
+  ScriptType* expectedType = ctx.getExpectedType();
+  Symbol* referenced = resolveReferencedSymbol(ctx.getScope(), v->value, expectedType);
 
-bool SemanticAnalyzer::wasWrongScopeReported() const {
-  if (m_wrongScopeReports.empty()) {
-    return false;
-  }
-  return m_wrongScopeReports.back();
-}
-
-void SemanticAnalyzer::acceptIdentifier(Identifier* v) {
-  ScriptType* expectedType = nullptr;
-  if (!m_expectedTypes.empty()) {
-    expectedType = m_expectedTypes.back();
-  }
-
-  Symbol* referenced = resolveReferencedSymbol(v->value, expectedType);
   if (!referenced) {
-    std::string_view name = m_strings->getview(v->value);
+    std::string_view name = ctx.getStrings().getview(v->value);
 
-    m_errors->error(v->location, "Unknown symbol '%.*s'",
+    ctx.getErrors().error(v->location, "Unknown symbol '%.*s'",
       PRINTVIEW(name)
     );
 
@@ -365,29 +263,29 @@ void SemanticAnalyzer::acceptIdentifier(Identifier* v) {
     return;
   }
 
-  referenced->readUses++;
-  v->resultType = referenced->scriptType;
+  // referenced->readUses++;
+  v->resultType = referenced->getScriptType();
 }
 
-void SemanticAnalyzer::acceptCallExpr(CallExpr* v) {
+static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
   const uint32 args = v->arguments.size();
   ScriptType* params[args];
 
   for (uint32 i = 0; i < args; i++) {
     Expr* e = v->arguments.at(i);
-    e->acceptVisit(this);
+    acceptExpr(ctx, e);
     params[i] = e->resultType;
   }
 
   FunctionSignature sign = FunctionSignature(nullptr, false, args, params);
 
-  m_expectedTypes.push_back(&sign);
-  v->target->acceptVisit(this);
-  m_expectedTypes.pop_back();
+  ctx.pushExpectedType(&sign);
+  acceptExpr(ctx, v->target);
+  ctx.popExpectedType();
 
   ScriptType* targetType = v->target->resultType;
   if (targetType->kind() != TK_FUNC) {
-    m_errors->error(v->location,
+    ctx.getErrors().error(v->location,
       "Expression does not return a callable function, but returns a %s",
       targetType->getTypeName()
     );
@@ -399,23 +297,23 @@ void SemanticAnalyzer::acceptCallExpr(CallExpr* v) {
   v->resultType = static_cast<FunctionSignature*>(targetType)->getReturnType();
 }
 
-void SemanticAnalyzer::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
-  v->target->acceptVisit(this);
+static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v) {
+  acceptExpr(ctx, v->target);
   ScriptType* resType = v->target->resultType;
 
   if (!(resType->typeFlags() & TFLAG_PROPERTY_HOLDER)) {
-    m_errors->error(v->location,
+    ctx.getErrors().error(v->location,
       "%s has no properties that can be accessed",
       resType->getTypeName()
     );
     return;
   }
 
-  std::string queriedProp = m_strings->getstring(v->property->value);
+  std::string queriedProp = ctx.getStrings().getstring(v->property->value);
   ScriptType* propertyType = resType->getPropertyType(queriedProp);
 
   if (propertyType == nullptr) {
-    m_errors->error(v->location,
+    ctx.getErrors().error(v->location,
       "No such property '%s' on %s",
       queriedProp.c_str(), resType->getTypeName()
     );
@@ -425,21 +323,21 @@ void SemanticAnalyzer::acceptPropertyAccessExpr(PropertyAccessExpr* v) {
   v->resultType = propertyType;
 }
 
-void SemanticAnalyzer::acceptIndexAccessExpr(IndexAccessExpr* v) {
-  v->index->acceptVisit(this);
+static void acceptIndexAccessExpr(SemanticContext& ctx, IndexAccessExpr* v) {
+  acceptExpr(ctx, v->index);
   ScriptType* indexType = v->index->resultType;
 
-  v->target->acceptVisit(this);
+  acceptExpr(ctx, v->target);
   ScriptType* resultType = v->target->resultType;
 
   if (!(resultType->typeFlags() & TFLAG_INDEXABLE)) {
-    m_errors->error(v->location, "Type %s cannot be indexed", resultType->getTypeName());
+    ctx.getErrors().error(v->location, "Type %s cannot be indexed", resultType->getTypeName());
     v->resultType = ConstTypes::VOID();
     return;
   }
 
   if (!isIntegerType(indexType)) {
-    m_errors->error(v->index->location,
+    ctx.getErrors().error(v->index->location,
       "%s cannot be used to index an array or string",
       indexType->getTypeName()
     );
@@ -449,21 +347,9 @@ void SemanticAnalyzer::acceptIndexAccessExpr(IndexAccessExpr* v) {
   v->resultType = indexedType;
 }
 
-void SemanticAnalyzer::acceptBooleanLiteral(BooleanLiteral* v) {
-  v->resultType = ConstTypes::BOOL();
-}
-
-void SemanticAnalyzer::acceptCharLiteral(CharLiteral* v) {
-  v->resultType = ConstTypes::INT8();
-}
-
-void SemanticAnalyzer::acceptStringLiteral(StringLiteral* v) {
-  v->resultType = ConstTypes::STRING();
-}
-
 #define sgn(val) ((0 < val) - (val < 0))
 
-void SemanticAnalyzer::acceptIntLiteral(IntLiteral* v) {
+static void acceptIntLiteral(IntLiteral* v) {
   const int64 val = v->value;
   parsedprimitivetype smallestFitting = PPT_INT64;
 
@@ -505,7 +391,7 @@ void SemanticAnalyzer::acceptIntLiteral(IntLiteral* v) {
   v->smallestFittingType = smallestFitting;
 }
 
-void SemanticAnalyzer::acceptFloatLiteral(FloatLiteral* v) {
+static void acceptFloatLiteral(FloatLiteral* v) {
   const float64 val = v->value;
   parsedprimitivetype smallestFitting = PPT_FLOAT64;
 
@@ -520,10 +406,10 @@ void SemanticAnalyzer::acceptFloatLiteral(FloatLiteral* v) {
   v->smallestFittingType = smallestFitting;
 }
 
-void SemanticAnalyzer::acceptObjectLiteral(ObjectLiteral* v) {
-  ScriptType* expectedType = m_expectedTypes.back();
+static void acceptObjectLiteral(SemanticContext& ctx, ObjectLiteral* v) {
+  ScriptType* expectedType = ctx.getExpectedType();
   if (expectedType->kind() != TK_STRUCT) {
-    m_errors->error(
+    ctx.getErrors().error(
       v->location,
       "Type %s cannot be initialized with an object literal",
       expectedType->getTypeName()
@@ -537,7 +423,7 @@ void SemanticAnalyzer::acceptObjectLiteral(ObjectLiteral* v) {
   v->resultType = structType;
 
   for (ObjectLiteralProperty* prop : v->properties) {
-    std::string propertyName = m_strings->getstring(prop->propertyName->value);
+    std::string propertyName = ctx.getStrings().getstring(prop->propertyName->value);
     ScriptType* proptype = nullptr;
 
     for (uint32 pi = 0; pi < pcount; pi++) {
@@ -552,21 +438,21 @@ void SemanticAnalyzer::acceptObjectLiteral(ObjectLiteral* v) {
     }
 
     if (!proptype) {
-      m_errors->error(prop->location, "No such property named '%s' on struct %s",
+      ctx.getErrors().error(prop->location, "No such property named '%s' on struct %s",
         propertyName.c_str(),
         structType->getTypeName()
       );
       continue;
     }
 
-    m_expectedTypes.push_back(proptype);
-    prop->value->acceptVisit(this);
-    m_expectedTypes.pop_back();
+    ctx.pushExpectedType(proptype);
+    acceptExpr(ctx, prop->value);
+    ctx.popExpectedType();
 
     ScriptType* pvalType = prop->value->resultType;
 
     if (!isAssignableTo(proptype, pvalType)) {
-      m_errors->error(prop->location,
+      ctx.getErrors().error(prop->location,
         "Cannot assign value of type %s to property of type %s",
         pvalType->getTypeName(),
         proptype->getTypeName()
@@ -575,14 +461,10 @@ void SemanticAnalyzer::acceptObjectLiteral(ObjectLiteral* v) {
   }
 }
 
-void SemanticAnalyzer::acceptObjectLiteralProperty(ObjectLiteralProperty* v) {
-
-}
-
-void SemanticAnalyzer::acceptArrayLiteral(ArrayLiteral* v) {
-  ScriptType* type = m_expectedTypes.back();
+static void acceptArrayLiteral(SemanticContext& ctx, ArrayLiteral* v) {
+  ScriptType* type = ctx.getExpectedType();
   if (type->kind() != TK_ARRAY) {
-    m_errors->error(
+    ctx.getErrors().error(
       v->location,
       "Type %s cannot be initialized with an array literal",
       type->getTypeName()
@@ -593,24 +475,24 @@ void SemanticAnalyzer::acceptArrayLiteral(ArrayLiteral* v) {
   }
 
   ScriptType* componentType = static_cast<ScriptArrayType*>(type)->getComponentType();
-  m_expectedTypes.push_back(componentType);
+  ctx.pushExpectedType(componentType);
 
   for (Expr* expr : v->values) {
-    expr->acceptVisit(this);
+    acceptExpr(ctx, expr);
 
     ScriptType* valType = expr->resultType;
     if (isAssignableTo(componentType, valType)) {
       continue;
     }
 
-    m_errors->error(expr->location,
+    ctx.getErrors().error(expr->location,
       "Cannot use value of type %s in array of type %s",
       valType->getTypeName(),
       componentType->getTypeName()
     );
   }
 
-  m_expectedTypes.pop_back();
+  ctx.popExpectedType();
   v->resultType = type;
 }
 
@@ -661,7 +543,7 @@ static bool isArrayTypeComparable(ScriptArrayType* type) {
 // That is, unless this is one of the exceptions carved out for
 // strings ('+' for string concatenating, or '*' for repeating strings)
 //
-ScriptType* SemanticAnalyzer::getOpResultType(ScriptType* left, ScriptType* right, binaryop op) const {
+static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop op) {
   bool isAssign = op & BOP_ASSIGN_FLAG;
 
   if (op == BOP_ASSIGN) {
@@ -786,209 +668,42 @@ ScriptType* SemanticAnalyzer::getOpResultType(ScriptType* left, ScriptType* righ
   }
 }
 
-void SemanticAnalyzer::acceptBodyNoScope(Statement* block) {
-  if (block->nodeKind() == AST_Block) {
-    Block* b = static_cast<Block*>(block);
-    for (Statement* s : b->statements) {
-      s->acceptVisit(this);
-    }
-    return;
-  }
-  block->acceptVisit(this);
-}
-
-void SemanticAnalyzer::createStructType(StructDecl* v) {
-  const std::string name = m_strings->getstring(v->name->value);
-  const ScriptType* existing = m_lookup->lookupByName(name);
-
-  if (existing) {
-    m_errors->error(v->location, "Double declaration of struct type '%s'", name.c_str());
-    STATPOP
-    return;
-  }
-
-  const uint32 propCount = v->properties.size();
-  StructProperty properties[propCount];
-
-  for (uint32 i = 0; i < propCount; i++) {
-    const StructPropertyDecl* prop = v->properties.at(i);
-    const std::string pName = m_strings->getstring(prop->name->value);
-
-    ScriptType* propType = resolveTypeExpr(prop->propertyType);
-
-    StructProperty* sProp = &properties[i];
-    sProp->type = propType;
-    sProp->name = pName;
-  }
-
-  ScriptStructType* type = ScriptStructType::create(name, properties, propCount);
-  m_lookup->emplaceType(type);
-
-  v->type = type;
-
-  Scope* scope = getScope();
-  scope->pushSymbol(v->name->value, type, SYM_STRUCT);
-}
-
-void SemanticAnalyzer::resolveMissingProperties(const StructDecl* decl) {
-  const std::vector<StructPropertyDecl*>& propertyDecls = decl->properties;
-  ScriptStructType* type = decl->type;
-
-  const uint32 pCount = propertyDecls.size();
-  Scope* scope = getScope();
-
-  for (uint32 i = 0; i < pCount; i++) {
-    StructPropertyDecl* propDecl = propertyDecls[i];
-    StructProperty* typeProp = type->getProperty(i);
-    typeProp->type = resolveTypeExpr(propDecl->propertyType);
-
-    std::string symbolName;
-    symbolName.append(type->getTypeName());
-    symbolName.append(".");
-    symbolName.append(typeProp->name);
-
-    const stringid symId = m_strings->allocate(symbolName);
-    scope->pushSymbol(symId, typeProp->type, SYM_PROP);
-  }
-}
-
-void SemanticAnalyzer::createFuncSignature(FunctionDeclStatement* v) {
-  v->returnType->acceptVisit(this);
-
-  const uint32 paramCount = v->arguments.size();
-  ScriptType* params[paramCount];
-  ScriptType* returnType = v->returnType->referencedType;
-  bool varargs = false;
-  bool varargsFailReported = false;
-
-  for (uint32 i = 0; i < v->arguments.size(); i++) {
-    FunctionParam* p = v->arguments.at(i);
-
-    bool varargsParam = p->varargs;
-    ScriptType* trueType;
-
-    p->paramType->acceptVisit(this);
-
-    if (varargsParam) {
-      trueType = getArrayType(p->paramType->referencedType);
-    } else {
-      trueType = p->paramType->referencedType;
-    }
-
-    if (varargsParam && varargs && !varargsFailReported) {
-      m_errors->error(p->location, "Function is declared with multiple variadic arguments");
-      varargsFailReported = true;
-    }
-
-    params[i] = trueType;
-    varargs |= varargsParam;
-  }
-
-  std::string funcSignStr;
-  FunctionSignature::composeName(funcSignStr, returnType, paramCount, params);
-
-  FunctionSignature* ftype = static_cast<FunctionSignature*>(m_lookup->lookupByName(funcSignStr));
-
-  if (!ftype) {
-    ftype = FunctionSignature::create(returnType, varargs, paramCount, params);
-    m_lookup->emplaceType(ftype);
-  }
-
-  v->signature = ftype;
-
-  Scope* scope = getScope();
-  const stringid funcName = v->name->value;
-
-  for (const Symbol& sym : *scope->getSymbols()) {
-    if (sym.name != funcName) {
+StructPropSymbol* findPropSymbol(Scope* scope, ScriptStructType* structType, stringid propName) {
+  while (scope) {
+    Symbol* sym = scope->findSymbol(propName, SYM_StructProp);
+    if (!sym) {
+      scope = scope->getParent();
       continue;
     }
-    if (sym.scriptType != ftype) {
-      continue;
-    }
-
-    m_errors->error(v->location, "Duplicate function definition");
-    return;
+    return static_cast<StructPropSymbol*>(sym);
   }
-
-  scope->pushSymbol(v->name->value, ftype, SYM_FUNC);
+  return nullptr;
 }
 
-ScriptType* SemanticAnalyzer::resolveTypeExpr(TypeExpr* v) {
-  astnodetype kind = v->nodeKind();
-
-  switch (kind) {
-    case AST_PrimitiveTypeExpr: {
-      PrimitiveTypeExpr* pr = static_cast<PrimitiveTypeExpr*>(v);
-      if (pr->primType == PPT_STRING) {
-        return ConstTypes::STRING();
-      }
-      if (pr->primType == PPT_VOID) {
-        return ConstTypes::VOID();
-      }
-      primitivekind pk = parsedPrimitiveToTypeKind(pr->primType);
-      return ConstTypes::getPrimitiveType(pk);
-    }
-    case AST_ArrayTypeExpr: {
-      ArrayTypeExpr* arr = static_cast<ArrayTypeExpr*>(v);
-      ScriptType* cType = resolveTypeExpr(arr->componentType);
-      if (!cType) {
-        return nullptr;
-      }
-      return getArrayType(cType);
-    }
-    case AST_TypeNameExpr: {
-      TypeNameExpr* tn = static_cast<TypeNameExpr*>(v);
-      const std::string typeName = m_strings->getstring(tn->typeName);
-      return m_lookup->lookupByName(typeName);
-    }
-    default:
-      return nullptr;
-  }
-}
-
-ScriptType* SemanticAnalyzer::getArrayType(ScriptType* componentType) const {
-  if (!componentType) {
-    return nullptr;
-  }
-
-  std::string compName = componentType->getTypeName();
-  compName.append("[]");
-
-  ScriptType* found = m_lookup->lookupByName(compName);
-  if (found) {
-    return found;
-  }
-
-  found = new ScriptArrayType(componentType);
-  m_lookup->emplaceType(found);
-
-  return found;
-}
-
-void SemanticAnalyzer::checkAssignability(Expr* expr) {
+static void checkAssignability(SemanticContext& ctx, Expr* expr) {
   astnodetype kind = expr->nodeKind();
 
   switch (kind) {
     case AST_Identifier: {
       const Identifier* id = static_cast<Identifier*>(expr);
-      Symbol* sym = resolveReferencedSymbol(id->value, id->resultType);
+      Symbol* sym = resolveReferencedSymbol(ctx.getScope(), id->value, id->resultType);
 
       if (!sym) {
         return;
       }
-
-      if (sym->stype == SYM_CONST) {
-        std::string_view view = m_strings->getview(id->value);
-        m_errors->error(expr->location, "Cannot reassign const variable '%.*s'",
-          PRINTVIEW(view)
-        );
-      } else if (sym->stype != SYM_VAR) {
+      if (sym->stype() != SYM_LocalVar) {
         // TODO: Change this message lol
-        m_errors->error(expr->location, "Cannot reassign whatever that is");
-        sym->writeUses++;
+        ctx.getErrors().error(expr->location, "Cannot reassign whatever that is");
       }
 
+      if (sym->getFlags() & SYMFLAG_CONST) {
+        std::string_view view = ctx.getStrings().getview(id->value);
+        ctx.getErrors().error(expr->location, "Cannot reassign const variable '%.*s'",
+          PRINTVIEW(view)
+        );
+      }
+
+      static_cast<LocalVarSymbol*>(sym)->getWrites().push_back(expr->location);
       return;
     }
 
@@ -1002,24 +717,21 @@ void SemanticAnalyzer::checkAssignability(Expr* expr) {
       }
 
       if (objType->kind() == TK_ARRAY) {
-        m_errors->error(expr->location, "Cannot mutate array length");
+        ctx.getErrors().error(expr->location, "Cannot mutate array length");
       }
       if (objType->kind() == TK_STRING) {
-        m_errors->error(expr->location, "Cannot mutate string length");
+        ctx.getErrors().error(expr->location, "Cannot mutate string length");
       }
 
       if (objType->kind() == TK_STRUCT) {
         ScriptStructType* structType = static_cast<ScriptStructType*>(objType);
+        StructPropSymbol* pSym = findPropSymbol(ctx.getScope(), structType, prop->property->value);
 
-        std::string symName = structType->getTypeName();
-        symName.append(".");
-        symName.append(m_strings->getview(prop->property->value));
-        stringid symId = m_strings->findId(symName);
-
-        Symbol* propSym = m_scopes[0].findSymbol(symId, SYM_PROP);
-        if (propSym) {
-          propSym->writeUses++;
+        if (!pSym) {
+          return;
         }
+
+        pSym->setWrites(pSym->getWrites() + 1);
       }
 
       return;
@@ -1030,21 +742,21 @@ void SemanticAnalyzer::checkAssignability(Expr* expr) {
       ScriptType* type = idx->target->resultType;
 
       if (type->kind() == TK_STRING) {
-        m_errors->error(expr->location, "Cannot mutate strings");
+        ctx.getErrors().error(expr->location, "Cannot mutate strings");
       }
 
       return;
     }
 
     default:
-      m_errors->error(expr->location, "Invalid left-hand-side expression; cannot be assigned to");
+      ctx.getErrors().error(expr->location, "Invalid left-hand-side expression; cannot be assigned to");
       break;
   }
 }
 
-void SemanticAnalyzer::acceptBinaryExpr(BinaryExpr* v) {
-  v->lhs->acceptVisit(this);
-  v->rhs->acceptVisit(this);
+static void acceptBinaryExpr(SemanticContext& ctx, BinaryExpr* v) {
+  acceptExpr(ctx, v->lhs);
+  acceptExpr(ctx, v->rhs);
 
   ScriptType* ltype = v->lhs->resultType;
   ScriptType* rtype = v->rhs->resultType;
@@ -1053,7 +765,7 @@ void SemanticAnalyzer::acceptBinaryExpr(BinaryExpr* v) {
   ScriptType* res = getOpResultType(ltype, rtype, op);
 
   if (!res) {
-    m_errors->error(v->location,
+    ctx.getErrors().error(v->location,
       "Cannot use %s operator on %s and %s",
       binaryop_name(op), ltype->getTypeName(), rtype->getTypeName()
     );
@@ -1063,7 +775,7 @@ void SemanticAnalyzer::acceptBinaryExpr(BinaryExpr* v) {
   }
 
   if (op & BOP_ASSIGN_FLAG) {
-    checkAssignability(v->lhs);
+    checkAssignability(ctx, v->lhs);
   }
 
   v->resultType = res;
@@ -1111,36 +823,36 @@ static ScriptType* getUnaryOpResult(unaryop op, ScriptType* type) {
   }
 }
 
-void SemanticAnalyzer::acceptUnaryExpr(UnaryExpr* v) {
-  v->target->acceptVisit(this);
+static void acceptUnaryExpr(SemanticContext& ctx, UnaryExpr* v) {
+  acceptExpr(ctx, v->target);
 
   ScriptType* resType = getUnaryOpResult(v->op, v->target->resultType);
 
   if (resType) {
-    checkAssignability(v->target);
+    checkAssignability(ctx, v->target);
     v->resultType = resType;
     return;
   }
 
   v->resultType = v->target->resultType;
 
-  m_errors->error(v->location, "Cannot use %s operator on %s",
+  ctx.getErrors().error(v->location, "Cannot use %s operator on %s",
     unaryop_name(v->op),
     v->resultType->getTypeName()
   );
 }
 
-void SemanticAnalyzer::acceptTernaryExpr(TernaryExpr* v) {
-  v->condition->acceptVisit(this);
+static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
+  acceptExpr(ctx, v->condition);
 
   if (!isAssignableTo(ConstTypes::BOOL(), v->condition->resultType)) {
-    m_errors->error(v->condition->location, "%s is not assignable to a bool condition",
+    ctx.getErrors().error(v->condition->location, "%s is not assignable to a bool condition",
       v->condition->resultType->getTypeName()
     );
   }
 
-  v->left->acceptVisit(this);
-  v->right->acceptVisit(this);
+  acceptExpr(ctx, v->left);
+  acceptExpr(ctx, v->right);
 
   ScriptType* lType = v->left->resultType;
   ScriptType* rType = v->right->resultType;
@@ -1148,7 +860,7 @@ void SemanticAnalyzer::acceptTernaryExpr(TernaryExpr* v) {
   ScriptType* common = getCommonType(lType, rType);
 
   if (!common) {
-    m_errors->error(
+    ctx.getErrors().error(
       v->location,
       "Ternary operator left and right values have incompatible types: %s and %s",
       lType->getTypeName(),
@@ -1161,17 +873,287 @@ void SemanticAnalyzer::acceptTernaryExpr(TernaryExpr* v) {
   v->resultType = common;
 }
 
-void SemanticAnalyzer::acceptBlock(Block* v) {
+static void acceptExpr(SemanticContext& ctx, Expr* v) {
+  astnodetype kind = v->nodeKind();
+  
+  switch (kind) {
+    case AST_Identifier:
+      acceptIdentifier(ctx, static_cast<Identifier*>(v));
+      break;
+    case AST_CallExpr:
+      acceptCallExpr(ctx, static_cast<CallExpr*>(v));
+      break;
+    case AST_PropertyAccessExpr:
+      acceptPropertyAccessExpr(ctx, static_cast<PropertyAccessExpr*>(v));
+      break;
+    case AST_IndexAccessExpr:
+      acceptIndexAccessExpr(ctx, static_cast<IndexAccessExpr*>(v));
+      break;
+
+    case AST_BooleanLiteral:
+      v->resultType = ConstTypes::BOOL();
+      break;
+    case AST_CharLiteral:
+      v->resultType = ConstTypes::INT8();
+      break;
+    case AST_StringLiteral:
+      v->resultType = ConstTypes::STRING();
+      break;
+    case AST_IntLiteral:
+      acceptIntLiteral(static_cast<IntLiteral*>(v));
+      break;
+    case AST_FloatLiteral:
+      acceptFloatLiteral(static_cast<FloatLiteral*>(v));
+      break;
+    case AST_BinaryExpr:
+      acceptBinaryExpr(ctx, static_cast<BinaryExpr*>(v));
+      break;
+    case AST_UnaryExpr:
+      acceptUnaryExpr(ctx, static_cast<UnaryExpr*>(v));
+      break;
+    case AST_TernaryExpr:
+      acceptTernaryExpr(ctx, static_cast<TernaryExpr*>(v));
+      break;
+
+    case AST_ArrayLiteral:
+      acceptArrayLiteral(ctx, static_cast<ArrayLiteral*>(v));
+      break;
+    case AST_ObjectLiteral:
+      acceptObjectLiteral(ctx, static_cast<ObjectLiteral*>(v));
+      break;
+
+    default:
+      break;
+  }
+}
+
+static void acceptStatement(SemanticContext& ctx, Statement* stat);
+
+static void acceptBodyNoScope(SemanticContext& ctx, Statement* block) {
+  if (block->nodeKind() == AST_Block) {
+    Block* b = static_cast<Block*>(block);
+    for (Statement* s : b->statements) {
+      acceptStatement(ctx, s);
+    }
+    return;
+  }
+  acceptStatement(ctx, block);
+}
+
+static void createStructType(SemanticContext& ctx, StructDecl* v) {
+  StringTable& strings = ctx.getStrings();
+  TypeTable& types = ctx.getTypes();
+
+  const std::string name = strings.getstring(v->name->value);
+  const ScriptType* existing = types.lookupByName(name);
+
+  if (existing) {
+    ctx.getErrors().error(v->location, "Double declaration of struct type '%s'", name.c_str());
+    STATPOP
+    return;
+  }
+
+  const uint32 propCount = v->properties.size();
+  StructProperty properties[propCount];
+
+  for (uint32 i = 0; i < propCount; i++) {
+    const StructPropertyDecl* prop = v->properties.at(i);
+    const std::string pName = strings.getstring(prop->name->value);
+
+    ScriptType* propType = evaluateTypeExpr(ctx, prop->propertyType);
+
+    StructProperty* sProp = &properties[i];
+    sProp->type = propType;
+    sProp->name = pName;
+  }
+
+  ScriptStructType* type = ScriptStructType::create(name, properties, propCount);
+  types.emplaceType(type);
+
+  v->type = type;
+
+  Scope* scope = ctx.getScope();
+  LocalStructSymbol* symb = ctx.getAllocator().make<LocalStructSymbol>(v->name->value, type, v);
+
+  scope->pushSymbol(symb);
+}
+
+static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* decl) {
+  const std::vector<StructPropertyDecl*>& propertyDecls = decl->properties;
+  ScriptStructType* type = decl->type;
+
+  const uint32 pCount = propertyDecls.size();
+  Scope* scope = ctx.getScope();
+
+  LocalStructSymbol* lss = static_cast<LocalStructSymbol*>(scope->findSymbol(decl->name->value, SYM_LocalStruct));
+  bool appendPropSym = lss->getScriptType() == decl->type;
+
+  NoFreeAllocator& alloc = ctx.getAllocator();
+
+  for (uint32 i = 0; i < pCount; i++) {
+    StructPropertyDecl* propDecl = propertyDecls[i];
+    StructProperty* typeProp = type->getProperty(i);
+    typeProp->type = evaluateTypeExpr(ctx, propDecl->propertyType);
+
+    if (!appendPropSym) {
+      continue;
+    }
+
+    StructPropSymbol* sym = alloc.make<StructPropSymbol>(lss, propDecl->name->value, typeProp->type);
+    scope->pushSymbol(sym);
+  }
+}
+
+static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) {
+  resolveTypeExpr(ctx, v->returnType);
+
+  const uint32 paramCount = v->arguments.size();
+  ScriptType* params[paramCount];
+  ScriptType* returnType = v->returnType->referencedType;
+  bool varargs = false;
+  bool varargsFailReported = false;
+
+  for (uint32 i = 0; i < v->arguments.size(); i++) {
+    FunctionParam* p = v->arguments.at(i);
+
+    bool varargsParam = p->varargs;
+    ScriptType* trueType;
+
+    resolveTypeExpr(ctx, p->paramType);
+
+    if (varargsParam) {
+      trueType = getArrayType(ctx, p->paramType->referencedType);
+    } else {
+      trueType = p->paramType->referencedType;
+    }
+
+    if (varargsParam && varargs && !varargsFailReported) {
+      ctx.getErrors().error(p->location, "Function is declared with multiple variadic arguments");
+      varargsFailReported = true;
+    }
+
+    params[i] = trueType;
+    varargs |= varargsParam;
+  }
+
+  std::string funcSignStr;
+  FunctionSignature::composeName(funcSignStr, returnType, paramCount, params);
+
+  TypeTable& types = ctx.getTypes();
+  FunctionSignature* ftype = static_cast<FunctionSignature*>(types.lookupByName(funcSignStr));
+
+  if (!ftype) {
+    ftype = FunctionSignature::create(returnType, varargs, paramCount, params);
+    types.emplaceType(ftype);
+  }
+
+  v->signature = ftype;
+
+  Scope* scope = ctx.getScope();
+  const stringid funcName = v->name->value;
+
+  for (const Symbol* sym : scope->getSymbols()) {
+    if (sym->getName() != funcName) {
+      continue;
+    }
+    if (sym->getScriptType() != ftype) {
+      continue;
+    }
+
+    ctx.getErrors().error(v->location, "Duplicate function definition");
+    return;
+  }
+
+  NoFreeAllocator& alloc = ctx.getAllocator();
+
+  LocalFunction* lf = alloc.make<LocalFunction>(v->name->value, v, scope);
+  ctx.pushLocalFunction(lf);
+
+  LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(*lf);
+  scope->pushSymbol(sym);
+}
+
+void reportUnused(SemanticContext& ctx, Scope* scope) {
+  StringTable& strings = ctx.getStrings();
+  CompilerErrors& errors = ctx.getErrors();
+
+  for (Symbol* sym : scope->getSymbols()) {
+    if (sym->getFlags() & (SYMFLAG_BINDING | SYMFLAG_USED)) {
+      continue;
+    }
+
+    std::string_view name = strings.getview(sym->getName());
+    symboltype stype = sym->stype();
+
+    switch (stype) {
+      case SYM_LocalVar: {
+        LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(sym);
+        const uint32 reads = lvs->getReads().size();
+        const uint32 writes = lvs->getWrites().size();
+
+        if (reads != 0 && writes != 0) {
+          break;
+        }
+
+        if (lvs->getFlags() & SYMFLAG_CONST) {
+          if (reads == 0) {
+            errors.warn("Const variable '%.*s' is unused", PRINTVIEW(name));
+          }
+          break;
+        }
+
+        if (writes != 0 && reads == 0) {
+          errors.warn("Variable '%.*s' is written to but never read", PRINTVIEW(name));
+        }
+        if (writes == 0 && reads == 0) {
+          errors.warn("Variable '%.*s' is unused", PRINTVIEW(name));
+        }
+
+        break;
+      }
+      case SYM_LocalFunc:
+        if (static_cast<LocalFuncSymbol*>(sym)->getCalls() == 0) {
+          errors.warn("Function '%.*s' is never called", PRINTVIEW(name));
+        }
+        break;
+      case SYM_LocalStruct:
+        if (static_cast<LocalStructSymbol*>(sym)->getUses() == 0) {
+          errors.warn("Struct '%.*s' is unused", PRINTVIEW(name));
+        }
+        break;
+      case SYM_StructProp: {
+        const StructPropSymbol* sps = static_cast<StructPropSymbol*>(sym);
+        const uint32 writes = sps->getWrites();
+        const uint32 reads = sps->getReads();
+
+        if (writes != 0 && reads == 0) {
+          errors.warn("Struct property '%.*s' is written to but never read", PRINTVIEW(name));
+        }
+        if (writes == 0 && reads == 0) {
+          errors.warn("Struct property '%.*s' is unused", PRINTVIEW(name));
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
+
+static void acceptBlock(SemanticContext& ctx, Block* v) {
   NOT_MAIN("Code Block")
 
   STATPUSH
-  pushScope(SCOPE_BLOCK);
+
+  Scope* scope = ctx.pushScope(SCOPE_BLOCK);
 
   for (Statement* statement : v->statements) {
-    statement->acceptVisit(this);
+    acceptStatement(ctx, statement);
   }
 
-  popScope();
+  reportUnused(ctx, scope);
+  ctx.popScope();
+
   NOT_MAIN_TRAILING
   STATPOP
 }
@@ -1192,23 +1174,23 @@ static bool isAllowedLoopOrIfBody(Statement* stat) {
   }
 }
 
-void SemanticAnalyzer::acceptIfStatement(IfStatement* v) {
+static void acceptIfStatement(SemanticContext& ctx, IfStatement* v) {
   NOT_MAIN("If Statement")
   STATPUSH
 
-  v->condition->acceptVisit(this);
+  acceptExpr(ctx, v->condition);
 
   if (isAllowedLoopOrIfBody(v->body)) {
-    v->body->acceptVisit(this);
+    acceptStatement(ctx, v->body);
   } else {
-    m_errors->error(v->location, "Statement not allowed as if statement's body");
+    ctx.getErrors().error(v->location, "Statement not allowed as if statement's body");
   }
 
   if (v->elseBody) {
     if (isAllowedLoopOrIfBody(v->elseBody)) {
-      v->elseBody->acceptVisit(this);
+      acceptStatement(ctx, v->elseBody);
     } else {
-      m_errors->error(v->location, "Statement not allowed as if statement's else statement");
+      ctx.getErrors().error(v->location, "Statement not allowed as if statement's else statement");
     }
   }
 
@@ -1216,95 +1198,107 @@ void SemanticAnalyzer::acceptIfStatement(IfStatement* v) {
   STATPOP
 }
 
-void SemanticAnalyzer::acceptForStatement(ForStatement* v) {
+static void acceptForStatement(SemanticContext& ctx, ForStatement* v) {
   NOT_MAIN("For Loop")
 
   STATPUSH
-  pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
+  Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
-  v->first->acceptVisit(this);
-  v->second->acceptVisit(this);
-  v->third->acceptVisit(this);
+  acceptStatement(ctx, v->first);
+  acceptExpr(ctx, v->second);
+  acceptExpr(ctx, v->third);
 
-  acceptBodyNoScope(v->loopBody);
+  acceptBodyNoScope(ctx, v->loopBody);
 
-  popScope();
+  reportUnused(ctx, scope);
+  ctx.popScope();
 
   NOT_MAIN_TRAILING
   STATPOP
 }
 
-void SemanticAnalyzer::acceptLexicalDeclaration(LexicalDeclaration* v) {
+static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v) {
   STATPUSH;
 
-  v->typeExpr->acceptVisit(this);
+  resolveTypeExpr(ctx, v->typeExpr);
   ScriptType* declType = v->typeExpr->referencedType;
 
   if (v->value) {
-    m_expectedTypes.push_back(declType);
-    v->value->acceptVisit(this);
-    m_expectedTypes.pop_back();
+    ctx.pushExpectedType(declType);
+    acceptExpr(ctx, v->value);
+    ctx.popExpectedType();
 
     ScriptType* vartype = v->typeExpr->referencedType;
     ScriptType* valtype = v->value->resultType;
 
     if (!isAssignableTo(vartype, valtype)) {
-      m_errors->error(v->location,
+      ctx.getErrors().error(v->location,
         "Value of type %s is not assignable to variable with type %s",
         valtype->getTypeName(),
         vartype->getTypeName()
       );
     }
   } else if (v->isConstDeclaration) {
-    std::string_view view = m_strings->getview(v->variableName->value);
-    m_errors->error(v->location, "Const variable '%.*s' has no value", PRINTVIEW(view));
+    std::string_view view = ctx.getStrings().getview(v->variableName->value);
+    ctx.getErrors().error(v->location, "Const variable '%.*s' has no value", PRINTVIEW(view));
   }
 
-  Scope* scope = getScope();
-  Symbol* existingVar = scope->findVariable(v->variableName->value);
-  if (existingVar) {
-    m_errors->error(v->location, "Duplicate variable definition");
+  Scope* scope = ctx.getScope();
+  stringid nameId = v->variableName->value;
+
+  if (scope->findVariable(nameId)) {
+    ctx.getErrors().error(v->location, "Duplicate variable definition");
     STATPOP
     return;
   }
 
-  symboltype stype = v->isConstDeclaration ? SYM_CONST : SYM_VAR;
-  scope->pushSymbol(v->variableName->value, v->typeExpr->referencedType, stype);
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  const uint64 memSize = declType->stackSizeBytes();
+  const uint64 varOff = scope->getStackSize();
+
+  LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(nameId, declType, memSize, varOff, v);
+  scope->pushSymbol(lvs);
+
+  if (v->isConstDeclaration) {
+    lvs->setFlags(SYMFLAG_CONST);
+  }
 
   STATPOP;
 }
 
-void SemanticAnalyzer::acceptDoWhileStatement(DoWhileStatement* v) {
+static void acceptDoWhileStatement(SemanticContext& ctx, DoWhileStatement* v) {
   NOT_MAIN("Do While Loop")
 
   STATPUSH
-  pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
+  Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
-  acceptBodyNoScope(v->body);
-  v->condition->acceptVisit(this);
+  acceptBodyNoScope(ctx, v->body);
+  acceptExpr(ctx, v->condition);
 
-  popScope();
+  reportUnused(ctx, scope);
+  ctx.popScope();
 
   NOT_MAIN_TRAILING
   STATPOP
 }
 
-void SemanticAnalyzer::acceptWhileStatement(WhileStatement* v) {
+static void acceptWhileStatement(SemanticContext& ctx, WhileStatement* v) {
   NOT_MAIN("While Loop")
 
   STATPUSH
-  pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
+  Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
-  v->condition->acceptVisit(this);
-  acceptBodyNoScope(v->body);
+  acceptExpr(ctx, v->condition);
+  acceptBodyNoScope(ctx, v->body);
 
-  popScope();
+  reportUnused(ctx, scope);
+  ctx.popScope();
 
   NOT_MAIN_TRAILING
   STATPOP
 }
 
-void SemanticAnalyzer::acceptControlFlowStatement(ControlFlowStatement* v) {
+static void acceptControlFlowStatement(SemanticContext& ctx, ControlFlowStatement* v) {
   NOT_MAINR(v->type == CFT_BREAK ? "Break" : "Continue")
 
   //
@@ -1322,55 +1316,51 @@ void SemanticAnalyzer::acceptControlFlowStatement(ControlFlowStatement* v) {
   // 6. Report that control flow statement was used outside of a loop
   //
 
-  uint32 scopeOff = 0;
-  Scope* scope = nullptr;
+  Scope* scope = ctx.getScope();
   bool loopFound = false;
 
-  while (true) {
-    scope = getScope(scopeOff++);
-
-    if (!scope) {
-      break;
-    }
-
+  while (scope) {
     scopetype stype = scope->getType();
     if (stype == SCOPE_FUNCTION || stype == SCOPE_MAIN) {
       break;
     }
 
     if (stype != SCOPE_LOOP) {
+      scope = scope->getParent();
       continue;
     }
 
     loopFound = true;
 
-    if (!v->label || v->label->value == scope->getLabel()) {
+    if (!v->label || v->label->value == scope->getLoopLabel()) {
       return;
     }
+
+    scope = scope->getParent();
   }
 
   if (loopFound) {
-    const std::string_view view = m_strings->getview(v->label->value);
-    m_errors->error(v->location, "No loop with label '%.*s'",
+    const std::string_view view = ctx.getStrings().getview(v->label->value);
+    ctx.getErrors().error(v->location, "No loop with label '%.*s'",
       static_cast<int32>(view.length()), view.data()
     );
     return;
   }
 
-  m_errors->error(v->location, "Control flow statement used outside of loop");
+  ctx.getErrors().error(v->location, "Control flow statement used outside of loop");
 }
 
-void SemanticAnalyzer::acceptReturnStatement(ReturnStatement* v) {
+static void acceptReturnStatement(SemanticContext& ctx, ReturnStatement* v) {
   NOT_MAINR("Return statement")
 
-  ScriptType* expected = getScope()->getExpectedReturnType();
+  ScriptType* expected = ctx.getScope()->getExpectedReturnType();
 
   if (!v->value) {
     if (!expected || expected->kind() == TK_VOID) {
       return;
     }
 
-    m_errors->error(
+    ctx.getErrors().error(
       v->location,
       "Function expects return value with %s, cannot return nothing",
       expected->getTypeName()
@@ -1380,7 +1370,7 @@ void SemanticAnalyzer::acceptReturnStatement(ReturnStatement* v) {
   }
 
   STATPUSH
-  v->value->acceptVisit(this);
+  acceptExpr(ctx, v->value);
 
   ScriptType* rtype = v->value->resultType;
 
@@ -1390,12 +1380,12 @@ void SemanticAnalyzer::acceptReturnStatement(ReturnStatement* v) {
   }
 
   if (expected->kind() == TK_VOID) {
-    m_errors->error(v->location, "Cannot return a value in a void method");
+    ctx.getErrors().error(v->location, "Cannot return a value in a void method");
     STATPOP
     return;
   }
 
-  m_errors->error(v->location,
+  ctx.getErrors().error(v->location,
     "Returned value of type %s cannot be assigned to expected type %s",
     rtype->getTypeName(),
     expected->getTypeName()
@@ -1404,11 +1394,164 @@ void SemanticAnalyzer::acceptReturnStatement(ReturnStatement* v) {
   STATPOP
 }
 
-void SemanticAnalyzer::acceptScriptFileStatement(ScriptFileStatement* v) {
+static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatement* v) {
   STATPUSH
-  pushScope(SCOPE_MAIN);
 
-  Scope* scope = getScope();
+  Scope* parentScope = ctx.getScope();
+  if (parentScope->getType() != SCOPE_MAIN) {
+    createFuncSignature(ctx, v);
+  }
+
+  Scope* scope = ctx.pushScope(SCOPE_FUNCTION);
+  scope->setExpectedReturnType(v->returnType->referencedType);
+
+  FunctionSignature* sign = v->signature;
+  const uint32 args = v->arguments.size();
+
+  NoFreeAllocator& alloc = ctx.getAllocator();
+
+  for (uint32 i = 0; i < args; i++) {
+    ScriptType* signType = sign->getArgumentType(i);
+    FunctionParam* arg = v->arguments[i];
+
+    const uint64 memSize = signType->stackSizeBytes();
+    const uint64 memOff = scope->getStackSize();
+
+    LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, memOff, arg);
+  }
+
+  acceptBodyNoScope(ctx, v->functionBody);
+
+  if (sign->getReturnType()->kind() != TK_VOID && !everyBranchHasReturn(v->functionBody)) {
+    ctx.getErrors().error(v->location, "Non-void function has no return value");
+  }
+
+  reportUnused(ctx, scope);
+  ctx.popScope();
+
+  STATPOP
+}
+
+static void acceptExprStatement(SemanticContext& ctx, ExprStatement* v) {
+  NOT_MAIN("Expression")
+  STATPUSH
+  acceptExpr(ctx, v->expression);
+  NOT_MAIN_TRAILING
+  STATPOP
+}
+
+static void acceptStructDecl(SemanticContext& ctx, StructDecl* v) {
+  STATPUSH
+
+  Scope* scope = ctx.getScope();
+  if (scope->getType() != SCOPE_MAIN) {
+    ctx.getErrors().error(v->location, "Structs can only be declared in the global scope");
+    STATPOP
+    return;
+  }
+
+  const uint32 propCount = v->properties.size();
+  conststring typeName = v->type->getTypeName();
+
+  for (uint32 i = 0; i < propCount; i++) {
+    StructPropertyDecl* prop = v->properties.at(i);
+    StructProperty* typeProp = v->type->getProperty(i);
+
+    std::string& propertyName = typeProp->name;
+    ScriptType* propertyType = typeProp->type;
+
+    if (prop->value) {
+      acceptExpr(ctx, prop->value);
+      ScriptType* valueType = prop->value->resultType;
+
+      if (!isAssignableTo(propertyType, valueType)) {
+        ctx.getErrors().error(prop->location,
+          "Cannot assign %s value to property %s %s.%s",
+          valueType->getTypeName(),
+          propertyType->getTypeName(),
+          typeName,
+          propertyName.c_str()
+        );
+      }
+    }
+  }
+
+  STATPOP
+}
+
+static void acceptAssertStatement(SemanticContext& ctx, AssertStatement* v) {
+  acceptExpr(ctx, v->condition);
+  ScriptType* condType = v->condition->resultType;
+
+  if (!isAssignableTo(ConstTypes::BOOL(), condType)) {
+    ctx.getErrors().error(
+      v->condition->location,
+      "assert statement condition cannot be assigned to boolean"
+    );
+  }
+
+  if (v->message) {
+    acceptExpr(ctx, v->message);
+
+    ScriptType* msgType = v->message->resultType;
+
+    if (msgType->kind() != TK_STRING) {
+      ctx.getErrors().error(
+        v->message->location,
+        "assert statement message cannot be assigned to string"
+      );
+    }
+  }
+}
+
+static void acceptStatement(SemanticContext& ctx, Statement* stat) {
+  switch (stat->nodeKind()) {
+    case AST_Block:
+      acceptBlock(ctx, static_cast<Block*>(stat));
+      break;
+    case AST_IfStatement:
+      acceptIfStatement(ctx, static_cast<IfStatement*>(stat));
+      break;
+    case AST_ForStatement:
+      acceptForStatement(ctx, static_cast<ForStatement*>(stat));
+      break;
+    case AST_LexicalDeclaration:
+      acceptLexicalDeclaration(ctx, static_cast<LexicalDeclaration*>(stat));
+      break;
+    case AST_DoWhileStatement:
+      acceptDoWhileStatement(ctx, static_cast<DoWhileStatement*>(stat));
+      break;
+    case AST_WhileStatement:
+      acceptWhileStatement(ctx, static_cast<WhileStatement*>(stat));
+      break;
+    case AST_ControlFlowStatement:
+      acceptControlFlowStatement(ctx, static_cast<ControlFlowStatement*>(stat));
+      break;
+    case AST_ReturnStatement:
+      acceptReturnStatement(ctx, static_cast<ReturnStatement*>(stat));
+      break;
+    case AST_FunctionDeclStatement:
+      acceptFunctionDeclStatement(ctx, static_cast<FunctionDeclStatement*>(stat));
+      break;
+    case AST_ExprStatement:
+      acceptExprStatement(ctx, static_cast<ExprStatement*>(stat));
+      break;
+    case AST_StructDecl:
+      acceptStructDecl(ctx, static_cast<StructDecl*>(stat));
+      break;
+    case AST_AssertStatement:
+      acceptAssertStatement(ctx, static_cast<AssertStatement*>(stat));
+      break;
+    default:
+      break;
+  }
+}
+
+SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
+  STATPUSH
+  Scope* scope = ctx.pushScope(SCOPE_MAIN);
+  ctx.setGlobalScope(scope);
+
   scope->setExpectedReturnType(nullptr);
 
   std::vector<StructDecl*> structDeclarations;
@@ -1429,132 +1572,23 @@ void SemanticAnalyzer::acceptScriptFileStatement(ScriptFileStatement* v) {
   }
 
   for (StructDecl* decl : structDeclarations) {
-    createStructType(decl);
+    createStructType(ctx, decl);
   }
   for (StructDecl* decl : structDeclarations) {
-    resolveMissingProperties(decl);
+    resolveMissingProperties(ctx, decl);
   }
 
   for (FunctionDeclStatement* decl : functionDecls) {
-    createFuncSignature(decl);
+    createFuncSignature(ctx, decl);
   }
 
   for (Statement* s : v->statements) {
-    s->acceptVisit(this);
+    acceptStatement(ctx, s);
   }
 
-  popScope();
+  reportUnused(ctx, scope);
+  ctx.popScope();
   STATPOP
-}
 
-void SemanticAnalyzer::acceptFunctionParam(FunctionParam* v) {
-  // Should not be called
-}
-
-void SemanticAnalyzer::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
-  STATPUSH
-
-  Scope* parentScope = getScope();
-  if (parentScope->getType() != SCOPE_MAIN) {
-    createFuncSignature(v);
-  }
-
-  Scope* scope = pushScope(SCOPE_FUNCTION);
-  scope->setExpectedReturnType(v->returnType->referencedType);
-
-  FunctionSignature* sign = v->signature;
-  const uint32 args = v->arguments.size();
-
-  for (uint32 i = 0; i < args; i++) {
-    ScriptType* signType = sign->getArgumentType(i);
-    FunctionParam* arg = v->arguments[i];
-    scope->pushSymbol(arg->name->value, signType, SYM_VAR);
-  }
-
-  acceptBodyNoScope(v->functionBody);
-
-  if (sign->getReturnType()->kind() != TK_VOID && !everyBranchHasReturn(v->functionBody)) {
-    m_errors->error(v->location, "Non-void function has no return value");
-  }
-
-  popScope();
-
-  STATPOP
-}
-
-void SemanticAnalyzer::acceptExprStatement(ExprStatement* v) {
-  NOT_MAIN("Expression")
-  STATPUSH
-  v->expression->acceptVisit(this);
-
-  NOT_MAIN_TRAILING
-  STATPOP
-}
-
-void SemanticAnalyzer::acceptStructPropertyDecl(StructPropertyDecl* v) {
-  // Should not be called
-}
-
-void SemanticAnalyzer::acceptStructDecl(StructDecl* v) {
-  STATPUSH
-
-  Scope* scope = getScope();
-  if (scope->getType() != SCOPE_MAIN) {
-    m_errors->error(v->location, "Structs can only be declared in the global scope");
-    STATPOP
-    return;
-  }
-
-  const uint32 propCount = v->properties.size();
-  conststring typeName = v->type->getTypeName();
-
-  for (uint32 i = 0; i < propCount; i++) {
-    StructPropertyDecl* prop = v->properties.at(i);
-    StructProperty* typeProp = v->type->getProperty(i);
-
-    std::string& propertyName = typeProp->name;
-    ScriptType* propertyType = typeProp->type;
-
-    if (prop->value) {
-      prop->value->acceptVisit(this);
-      ScriptType* valueType = prop->value->resultType;
-
-      if (!isAssignableTo(propertyType, valueType)) {
-        m_errors->error(prop->location,
-          "Cannot assign %s value to property %s %s.%s",
-          valueType->getTypeName(),
-          propertyType->getTypeName(),
-          typeName,
-          propertyName.c_str()
-        );
-      }
-    }
-  }
-
-  STATPOP
-}
-
-void SemanticAnalyzer::acceptAssertStatement(AssertStatement* v) {
-  v->condition->acceptVisit(this);
-  ScriptType* condType = v->condition->resultType;
-
-  if (!isAssignableTo(ConstTypes::BOOL(), condType)) {
-    m_errors->error(
-      v->condition->location,
-      "assert statement condition cannot be assigned to boolean"
-    );
-  }
-
-  if (v->message) {
-    v->message->acceptVisit(this);
-
-    ScriptType* msgType = v->message->resultType;
-
-    if (msgType->kind() != TK_STRING) {
-      m_errors->error(
-        v->message->location,
-        "assert statement message cannot be assigned to string"
-      );
-    }
-  }
+  return ctx.makeSemanticFile();
 }

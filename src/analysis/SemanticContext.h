@@ -1,0 +1,83 @@
+#ifndef QUICKSCRIPT_SEMANTICCONTEXT_H
+#define QUICKSCRIPT_SEMANTICCONTEXT_H
+#include "semantictree.h"
+#include "../allocator.h"
+#include "../errors.h"
+#include "../stringtable.h"
+#include "../interpreter/nativeinterface.h"
+#include "../parse/syntaxtree.h"
+#include "../types/TypeTable.h"
+
+
+class SemanticContext {
+  TypeTable& m_types;
+  StringTable& m_strings;
+  CompilerErrors& m_errors;
+  Bindings& m_bindings;
+  NoFreeAllocator& m_allocator;
+
+  std::vector<ScriptType*> m_expectedTypes;
+  std::vector<Statement*> m_statementStack;
+  std::vector<bool> m_wrongScopeReports;
+
+  std::vector<LocalFunction*> m_localFunctions;
+
+  Scope* m_globalScope = nullptr;
+  Scope* m_currentScope = nullptr;
+
+  public:
+    SemanticContext(
+      TypeTable& types,
+      StringTable& strings,
+      CompilerErrors& errors,
+      Bindings& bindings,
+      NoFreeAllocator& allocator
+    );
+
+    SemanticFile* makeSemanticFile();
+
+    void pushLocalFunction(LocalFunction* func);
+
+    std::vector<LocalFunction*>& getLocalFunctions();
+
+    void pushWrongScopeTypeReported(bool reported);
+
+    void popWrongScopeReported();
+
+    bool wasWrongScopeReported() const;
+
+    void pushExpectedType(ScriptType* type);
+
+    ScriptType* getExpectedType() const;
+
+    void popExpectedType();
+
+    void pushStatement(Statement* stat);
+
+    Statement* getCurrentStatement() const;
+
+    void popStatement();
+
+    void popScope();
+
+    Scope* pushScope(scopetype stype, stringid label = EMPTY_STRING);
+
+    Scope* getScope(uint32 off = 0) const;
+
+    Scope* getGlobalScope() const;
+
+    void setGlobalScope(Scope* scope);
+
+    TypeTable& getTypes() const;
+
+    StringTable& getStrings() const;
+
+    CompilerErrors& getErrors() const;
+
+    Bindings& getBindings() const;
+
+    NoFreeAllocator& getAllocator();
+};
+
+
+#endif //QUICKSCRIPT_SEMANTICCONTEXT_H

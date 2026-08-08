@@ -69,4 +69,9 @@ add_executable(quickscript src/main.cpp
         src/interpreter/StringPool.cc
         src/interpreter/StringPool.h
         src/args.h
-        src/args.cc)
+        src/args.cc
+        src/analysis/semantictree.h
+        src/analysis/semantictree.h
+        src/analysis/semantictree.cc
+        src/analysis/SemanticContext.cc
+        src/analysis/SemanticContext.h)

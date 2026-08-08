@@ -1,0 +1,243 @@
+#include "semantictree.h"
+
+Symbol::Symbol(const stringid name, ScriptType* scriptType)
+  : m_name(name), m_type(scriptType), m_flags(0)
+{
+
+}
+
+symflags Symbol::getFlags() const {
+  return m_flags;
+}
+
+void Symbol::setFlags(symflags f) {
+  m_flags = f;
+}
+
+stringid Symbol::getName() const {
+  return m_name;
+}
+
+ScriptType* Symbol::getScriptType() const {
+  return m_type;
+}
+
+LocalFuncSymbol::LocalFuncSymbol(LocalFunction& func)
+  : Symbol(func.getName(), func.getSignature()), m_function(func), m_calls(0)
+{
+
+}
+
+LocalFunction& LocalFuncSymbol::getFunction() const {
+  return m_function;
+}
+
+uint32 LocalFuncSymbol::getCalls() const {
+  return m_calls;
+}
+
+void LocalFuncSymbol::onCalled() {
+  m_calls++;
+}
+
+symboltype LocalFuncSymbol::stype() const {
+  return SYM_LocalFunc;
+}
+
+LocalVarSymbol::LocalVarSymbol(
+  stringid name,
+  ScriptType* type,
+  const uint64 size,
+  const uint64 off,
+  Statement* decl
+)
+  : Symbol(name, type),
+    m_size(size),
+    m_offset(off),
+    m_decl(decl)
+{
+
+}
+
+Statement* LocalVarSymbol::getDecl() const {
+  return m_decl;
+}
+
+uint64 LocalVarSymbol::getStackSize() const {
+  return m_size;
+}
+
+uint64 LocalVarSymbol::getStackOffset() const {
+  return m_offset;
+}
+
+std::vector<Location>& LocalVarSymbol::getReads() {
+  return m_reads;
+}
+
+std::vector<Location>& LocalVarSymbol::getWrites() {
+  return m_writes;
+}
+
+symboltype LocalVarSymbol::stype() const {
+  return SYM_LocalVar;
+}
+
+StructPropSymbol::StructPropSymbol(Symbol* structSym, stringid name, ScriptType* type)
+  : Symbol(name, type), m_structSym(structSym) {
+}
+
+Symbol* StructPropSymbol::getStructSymbol() const {
+  return m_structSym;
+}
+
+symboltype StructPropSymbol::stype() const {
+  return SYM_StructProp;
+}
+
+LocalFunction::LocalFunction(stringid name, FunctionDeclStatement* decl, Scope* scope)
+  : m_name(name), m_decl(decl), m_signature(decl->signature), m_bodyScope(scope)
+{
+
+}
+
+stringid LocalFunction::getName() const {
+  return m_name;
+}
+
+FunctionDeclStatement* LocalFunction::getDecl() const {
+  return m_decl;
+}
+
+Scope* LocalFunction::getScope() const {
+  return m_bodyScope;
+}
+
+FunctionSignature* LocalFunction::getSignature() const {
+  return m_signature;
+}
+
+Scope::Scope(scopetype type, Scope* parent)
+  : m_type(type), m_parentScope(parent), m_stackSize(0) {
+}
+
+std::vector<Symbol*>& Scope::getSymbols() {
+  return m_symbols;
+}
+
+void Scope::pushSymbol(Symbol* sym) {
+  m_symbols.push_back(sym);
+}
+
+Symbol* Scope::findVariable(const stringid name) const {
+  for (Symbol* sym : m_symbols) {
+    if (sym->getName() != name) {
+      continue;
+    }
+
+    symboltype stype = sym->stype();
+    if (stype != SYM_LocalVar) {
+      continue;
+    }
+
+    return sym;
+  }
+  return nullptr;
+}
+
+Symbol* Scope::findSymbol(const stringid name, const symboltype st) const {
+  for (Symbol* sym : m_symbols) {
+    if (sym->getName() != name) {
+      continue;
+    }
+    if (st != SYM_NIL && sym->stype() != st) {
+      continue;
+    }
+    return sym;
+  }
+  return nullptr;
+}
+
+ScriptType* Scope::getExpectedReturnType() const {
+  return m_expectedReturnType;
+}
+
+void Scope::setExpectedReturnType(ScriptType* type) {
+  m_expectedReturnType = type;
+}
+
+stringid Scope::getLoopLabel() const {
+  return m_loopLabel;
+}
+
+void Scope::setLoopLabel(stringid loopLabel) {
+  m_loopLabel = loopLabel;
+}
+
+uint64 Scope::getStackSize() const {
+  return m_stackSize;
+}
+
+void Scope::setStackSize(uint64 size) {
+  m_stackSize = size;
+}
+
+scopetype Scope::getType() const {
+  return m_type;
+}
+Scope* Scope::getParent() const {
+  return m_parentScope;
+}
+
+SemanticFile::SemanticFile(Scope* globalScope) : m_globalScope(globalScope) {
+}
+
+Scope* SemanticFile::getGlobalScope() const {
+  return m_globalScope;
+}
+
+std::vector<LocalFunction*>& SemanticFile::getLocalFunctions() {
+  return m_localFunctions;
+}
+
+std::unordered_map<Identifier*, Symbol*>& SemanticFile::getLookupCache() {
+  return m_symLookupCache;
+}
+uint32 StructPropSymbol::getReads() const {
+  return m_reads;
+}
+void StructPropSymbol::setReads(uint32 reads) {
+  m_reads = reads;
+}
+uint32 StructPropSymbol::getWrites() const {
+  return m_writes;
+}
+void StructPropSymbol::setWrites(uint32 writes) {
+  m_writes = writes;
+}
+
+LocalStructSymbol::LocalStructSymbol(stringid name, ScriptStructType* type, StructDecl* decl)
+  : Symbol(name,type), m_decl(decl), m_uses(0)
+{
+
+}
+
+StructDecl* LocalStructSymbol::getDecl() const {
+  return m_decl;
+}
+
+symboltype LocalStructSymbol::stype() const {
+  return SYM_LocalStruct;
+}
+
+uint32 LocalStructSymbol::getUses() const {
+  return m_uses;
+}
+
+void LocalStructSymbol::setUses(uint32 uses) {
+  m_uses = uses;
+}
+
+void LocalStructSymbol::used() {
+  m_uses++;
+}

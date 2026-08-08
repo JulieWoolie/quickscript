@@ -60,8 +60,8 @@ int32 main(int32 argc, cstring argv[]) {
   TypeTable lookup = TypeTable();
   Bindings bindings = createStandardBindings();
 
-  SemanticAnalyzer resolver = SemanticAnalyzer(&lookup, &table, &errors, &bindings);
-  resolver.acceptScriptFileStatement(sfs);
+  SemanticContext ctx = SemanticContext(lookup, table, errors, bindings, pool);
+  runSemanticAnalysis(sfs, ctx);
 
   if (errors.getErrorCount() != 0) {
     return EXIT_FAILURE;
