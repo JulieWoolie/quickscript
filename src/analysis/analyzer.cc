@@ -1738,6 +1738,8 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
     ctx.getErrors().warn(
       "No possible main(string[]) functions found. Script will have no entry point"
     );
+  } else if (mainCandidates.size() > 1) {
+    ctx.getErrors().warn("Multiple main functions found. First one will be used");
   }
 
   reportUnused(ctx, scope);
