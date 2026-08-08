@@ -27,8 +27,6 @@ add_executable(quickscript src/main.cpp
         src/types/types.cc
         src/analysis/analyzer.cc
         src/analysis/analyzer.h
-        src/optimizations.h
-        src/optimizations.cc
         src/interpreter/nativeinterface.h
         src/interpreter/nativeinterface.cc
         src/interpreter/interpreter.h
