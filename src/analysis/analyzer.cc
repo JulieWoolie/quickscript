@@ -6,8 +6,8 @@
 
 #include "../types/ConstTypes.h"
 
-#define STATPUSH ctx.pushStatement(v);
-#define STATPOP ctx.popStatement();
+#define STAT_PUSH ctx.pushStatement(v);
+#define STAT_POP ctx.popStatement();
 
 #define NOT_MAIN(name) \
   if (ctx.getScope()->getType() == SCOPE_MAIN && !ctx.wasWrongScopeReported()) { \
@@ -17,7 +17,7 @@
     ctx.pushWrongScopeTypeReported(false);\
   }
 
-#define NOT_MAINR(name) if (ctx.getScope()->getType() == SCOPE_MAIN) { ctx.getErrors().error(v->location, "%s not allowed here", name); return; }
+#define NOT_MAIN_RETURN(name) if (ctx.getScope()->getType() == SCOPE_MAIN) { ctx.getErrors().error(v->location, "%s not allowed here", name); return; }
 #define NOT_MAIN_TRAILING ctx.popWrongScopeReported();
 
 static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* id, ScriptType* expectedType) {
@@ -26,8 +26,8 @@ static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Ident
     return cache[id];
   }
 
-  stringid name = id->value;
-  typekind expectedKind = expectedType ? expectedType->kind() : TK_UNKNOWN;
+  const stringid name = id->value;
+  const typekind expectedKind = expectedType ? expectedType->kind() : TK_UNKNOWN;
 
   uint32 scores[10];
   Symbol* signatures[10];
@@ -97,7 +97,7 @@ static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Ident
   return best;
 }
 
-ScriptType* getArrayType(SemanticContext& ctx, ScriptType* componentType) {
+static ScriptType* getArrayType(const SemanticContext& ctx, ScriptType* componentType) {
   if (!componentType) {
     return nullptr;
   }
@@ -116,7 +116,7 @@ ScriptType* getArrayType(SemanticContext& ctx, ScriptType* componentType) {
   return found;
 }
 
-primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {
+static primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {
   switch (ppt) {
     case PPT_BOOL: return PK_BOOL;
     case PPT_UINT8: return PK_UINT8;
@@ -134,9 +134,7 @@ primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {
 }
 
 static ScriptType* evaluateTypeExpr(SemanticContext& ctx, TypeExpr* v) {
-  astnodetype kind = v->nodeKind();
-
-  switch (kind) {
+  switch (v->nodeKind()) {
     case AST_PrimitiveTypeExpr: {
       PrimitiveTypeExpr* pr = static_cast<PrimitiveTypeExpr*>(v);
       if (pr->primType == PPT_STRING) {
@@ -167,9 +165,7 @@ static ScriptType* evaluateTypeExpr(SemanticContext& ctx, TypeExpr* v) {
 }
 
 static void resolveTypeExpr(SemanticContext& ctx, TypeExpr* typeExpr) {
-  astnodetype kind = typeExpr->nodeKind();
-
-  switch (kind) {
+  switch (typeExpr->nodeKind()) {
     case AST_TypeNameExpr: {
       TypeNameExpr* v = static_cast<TypeNameExpr*>(typeExpr);
       std::string typeName = ctx.getStrings().getstring(v->typeName);
@@ -225,6 +221,9 @@ static void resolveTypeExpr(SemanticContext& ctx, TypeExpr* typeExpr) {
       primitivekind pk = parsedPrimitiveToTypeKind(ppt);
       v->referencedType = ConstTypes::getPrimitiveType(pk);
     }
+
+    default:
+      break;
   }
 }
 
@@ -315,7 +314,7 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
   v->resultType = static_cast<FunctionSignature*>(targetType)->getReturnType();
 }
 
-PropertySymbol* findPropSymbol(Scope* scope, ScriptType* structType, stringid propName) {
+static PropertySymbol* findPropSymbol(Scope* scope, const ScriptType* structType, const stringid propName) {
   while (scope) {
     for (Symbol* symbol : scope->getSymbols()) {
       if (symbol->getName() != propName || symbol->stype() != SYM_Property) {
@@ -482,44 +481,42 @@ static void acceptObjectLiteral(SemanticContext& ctx, ObjectLiteral* v) {
   }
 
   ScriptStructType* structType = static_cast<ScriptStructType*>(expectedType);
-  uint32 pcount = structType->getPropertyCount();
 
   v->resultType = structType;
 
-  for (ObjectLiteralProperty* prop : v->properties) {
-    std::string propertyName = ctx.getStrings().getstring(prop->propertyName->value);
-    ScriptType* proptype = nullptr;
+  Scope* scope = ctx.getScope();
+  StringTable& table = ctx.getStrings();
 
-    for (uint32 pi = 0; pi < pcount; pi++) {
-      StructProperty* prop = structType->getProperty(pi);
+  for (ObjectLiteralProperty* propExpr : v->properties) {
+    stringid nameId = propExpr->propertyName->value;
+    PropertySymbol* sym = findPropSymbol(scope, structType, nameId);
 
-      if (prop->name != propertyName) {
-        continue;
-      }
+    if (!sym) {
+      std::string_view propertyName = table.getview(nameId);
 
-      proptype = prop->type;
-      break;
-    }
-
-    if (!proptype) {
-      ctx.getErrors().error(prop->location, "No such property named '%s' on struct %s",
-        propertyName.c_str(),
+      ctx.getErrors().error(propExpr->location, "No such property named '%.*s' on struct %s",
+        PRINTVIEW(propertyName),
         structType->getTypeName()
       );
+
       continue;
     }
 
-    ctx.pushExpectedType(proptype);
-    acceptExpr(ctx, prop->value);
+    ctx.getSymbolCache()[propExpr] = sym;
+
+    ScriptType* propType = sym->getScriptType();
+
+    ctx.pushExpectedType(propType);
+    acceptExpr(ctx, propExpr->value);
     ctx.popExpectedType();
 
-    ScriptType* pvalType = prop->value->resultType;
+    ScriptType* valueType = propExpr->value->resultType;
 
-    if (!isAssignableTo(proptype, pvalType)) {
-      ctx.getErrors().error(prop->location,
+    if (!isAssignableTo(propType, valueType)) {
+      ctx.getErrors().error(propExpr->location,
         "Cannot assign value of type %s to property of type %s",
-        pvalType->getTypeName(),
-        proptype->getTypeName()
+        valueType->getTypeName(),
+        propType->getTypeName()
       );
     }
   }
@@ -565,7 +562,7 @@ static void acceptArrayLiteral(SemanticContext& ctx, ArrayLiteral* v) {
   v->resultType = type;
 }
 
-static bool isArrayTypeComparable(ScriptArrayType* type) {
+static bool isArrayTypeComparable(const ScriptArrayType* type) {
   ScriptType* compType = type->getComponentType();
   switch (compType->kind()) {
     case TK_PRIMITIVE:
@@ -613,7 +610,7 @@ static bool isArrayTypeComparable(ScriptArrayType* type) {
 // strings ('+' for string concatenating, or '*' for repeating strings)
 //
 static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop op) {
-  bool isAssign = op & BOP_ASSIGN_FLAG;
+  const bool isAssign = op & BOP_ASSIGN_FLAG;
 
   if (op == BOP_ASSIGN) {
     if (isAssignableTo(left, right)) {
@@ -625,8 +622,8 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
   // Clear the assignment flag
   op &= ~BOP_ASSIGN_FLAG;
 
-  typekind lkind = left->kind();
-  typekind rkind = right->kind();
+  const typekind leftKind = left->kind();
+  const typekind rightKind = right->kind();
 
   switch (op) {
     case BOP_GT:
@@ -636,12 +633,12 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
       if (isNumberType(left) && isNumberType(right)) {
         return ConstTypes::BOOL();
       }
-      if (lkind == TK_STRING && rkind == TK_STRING) {
+      if (leftKind == TK_STRING && rightKind == TK_STRING) {
         return ConstTypes::BOOL();
       }
-      if (lkind == TK_ARRAY && rkind == TK_ARRAY) {
-        ScriptArrayType* larr = static_cast<ScriptArrayType*>(left);
-        ScriptArrayType* rarr = static_cast<ScriptArrayType*>(right);
+      if (leftKind == TK_ARRAY && rightKind == TK_ARRAY) {
+        const ScriptArrayType* larr = static_cast<ScriptArrayType*>(left);
+        const ScriptArrayType* rarr = static_cast<ScriptArrayType*>(right);
 
         if (larr != rarr || !isArrayTypeComparable(larr)) {
           return nullptr;
@@ -653,7 +650,7 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
 
     case BOP_EQ:
     case BOP_NEQ:
-      if (lkind == TK_PRIMITIVE && rkind == TK_PRIMITIVE) {
+      if (leftKind == TK_PRIMITIVE && rightKind == TK_PRIMITIVE) {
         return ConstTypes::BOOL();
       }
       if (left == right) {
@@ -662,13 +659,13 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
       return nullptr;
 
     case BOP_ADD:
-      if (lkind == TK_STRING) {
+      if (leftKind == TK_STRING) {
         return left;
       }
     case BOP_MUL:
       // Holy nesting, but kinda needed for pass through from above case
       if (op == BOP_MUL) {
-        if (lkind == TK_STRING) {
+        if (leftKind == TK_STRING) {
           if (isIntegerType(right)) {
             return left;
           }
@@ -679,7 +676,7 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
     case BOP_DIV:
     case BOP_POW:
     case BOP_MOD:
-      if (lkind != TK_PRIMITIVE || rkind != TK_PRIMITIVE) {
+      if (leftKind != TK_PRIMITIVE || rightKind != TK_PRIMITIVE) {
         return nullptr;
       }
       if (isAssign) {
@@ -738,9 +735,7 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
 }
 
 static void checkAssignability(SemanticContext& ctx, Expr* expr) {
-  astnodetype kind = expr->nodeKind();
-
-  switch (kind) {
+  switch (expr->nodeKind()) {
     case AST_Identifier: {
       Identifier* id = static_cast<Identifier*>(expr);
       Symbol* sym = resolveReferencedSymbol(ctx, ctx.getScope(), id, id->resultType);
@@ -754,7 +749,7 @@ static void checkAssignability(SemanticContext& ctx, Expr* expr) {
       }
 
       if (sym->getFlags() & SYMFLAG_CONST) {
-        std::string_view view = ctx.getStrings().getview(id->value);
+        const std::string_view view = ctx.getStrings().getview(id->value);
         ctx.getErrors().error(expr->location, "Cannot reassign const variable '%.*s'",
           PRINTVIEW(view)
         );
@@ -766,7 +761,7 @@ static void checkAssignability(SemanticContext& ctx, Expr* expr) {
 
     case AST_PropertyAccessExpr: {
       const PropertyAccessExpr* prop = static_cast<PropertyAccessExpr*>(expr);
-      ScriptType* objType = prop->target->resultType;
+      const ScriptType* objType = prop->target->resultType;
 
       if (prop->resultType->kind() == TK_VOID) {
         // Property not found, don't try to check
@@ -795,7 +790,7 @@ static void checkAssignability(SemanticContext& ctx, Expr* expr) {
 
     case AST_IndexAccessExpr: {
       const IndexAccessExpr* idx = static_cast<IndexAccessExpr*>(expr);
-      ScriptType* type = idx->target->resultType;
+      const ScriptType* type = idx->target->resultType;
 
       if (type->kind() == TK_STRING) {
         ctx.getErrors().error(expr->location, "Cannot mutate strings");
@@ -814,24 +809,24 @@ static void acceptBinaryExpr(SemanticContext& ctx, BinaryExpr* v) {
   acceptExpr(ctx, v->lhs);
   acceptExpr(ctx, v->rhs);
 
-  ScriptType* ltype = v->lhs->resultType;
-  ScriptType* rtype = v->rhs->resultType;
+  ScriptType* leftType = v->lhs->resultType;
+  ScriptType* rightType = v->rhs->resultType;
 
-  if (ltype->kind() == TK_UNKNOWN || rtype->kind() == TK_UNKNOWN) {
+  if (leftType->kind() == TK_UNKNOWN || rightType->kind() == TK_UNKNOWN) {
     v->resultType = ConstTypes::UNKNOWN();
     return;
   }
 
-  binaryop op = v->op;
-  ScriptType* res = getOpResultType(ltype, rtype, op);
+  const binaryop op = v->op;
+  ScriptType* res = getOpResultType(leftType, rightType, op);
 
   if (!res) {
     ctx.getErrors().error(v->location,
       "Cannot use %s operator on %s and %s",
-      binaryop_name(op), ltype->getTypeName(), rtype->getTypeName()
+      binaryop_name(op), leftType->getTypeName(), rightType->getTypeName()
     );
 
-    v->resultType = ltype;
+    v->resultType = leftType;
     return;
   }
 
@@ -842,12 +837,12 @@ static void acceptBinaryExpr(SemanticContext& ctx, BinaryExpr* v) {
   v->resultType = res;
 }
 
-static ScriptType* getUnaryOpResult(unaryop op, ScriptType* type) {
+static ScriptType* getUnaryOpResult(const unaryop op, ScriptType* type) {
   if (type->kind() != TK_PRIMITIVE) {
     return nullptr;
   }
 
-  PrimitiveScriptType* p = (PrimitiveScriptType*) type;
+  PrimitiveScriptType* p = static_cast<PrimitiveScriptType*>(type);
 
   switch (op) {
     case UOP_BIT_NOT:
@@ -949,9 +944,7 @@ static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
 }
 
 static void acceptExpr(SemanticContext& ctx, Expr* v) {
-  astnodetype kind = v->nodeKind();
-  
-  switch (kind) {
+  switch (v->nodeKind()) {
     case AST_Identifier:
       acceptIdentifier(ctx, static_cast<Identifier*>(v));
       break;
@@ -1024,7 +1017,7 @@ static void createStructType(SemanticContext& ctx, StructDecl* v) {
 
   if (existing) {
     ctx.getErrors().error(v->location, "Double declaration of struct type '%s'", name.c_str());
-    STATPOP
+    STAT_POP
     return;
   }
 
@@ -1151,7 +1144,7 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
   ctx.getSymbolCache()[v] = sym;
 }
 
-static void reportUnused(SemanticContext& ctx, Scope* scope) {
+static void reportUnused(const SemanticContext& ctx, Scope* scope) {
   StringTable& strings = ctx.getStrings();
   CompilerErrors& errors = ctx.getErrors();
 
@@ -1161,9 +1154,8 @@ static void reportUnused(SemanticContext& ctx, Scope* scope) {
     }
 
     std::string_view name = strings.getview(sym->getName());
-    symboltype stype = sym->stype();
 
-    switch (stype) {
+    switch (sym->stype()) {
       case SYM_LocalVar: {
         LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(sym);
         const uint32 reads = lvs->getReads().size();
@@ -1221,7 +1213,7 @@ static void reportUnused(SemanticContext& ctx, Scope* scope) {
 static void acceptBlock(SemanticContext& ctx, Block* v) {
   NOT_MAIN("Code Block")
 
-  STATPUSH
+  STAT_PUSH
 
   Scope* scope = ctx.pushScope(SCOPE_BLOCK);
 
@@ -1233,7 +1225,7 @@ static void acceptBlock(SemanticContext& ctx, Block* v) {
   ctx.popScope();
 
   NOT_MAIN_TRAILING
-  STATPOP
+  STAT_POP
 }
 
 static bool isAllowedLoopOrIfBody(Statement* stat) {
@@ -1254,7 +1246,7 @@ static bool isAllowedLoopOrIfBody(Statement* stat) {
 
 static void acceptIfStatement(SemanticContext& ctx, IfStatement* v) {
   NOT_MAIN("If Statement")
-  STATPUSH
+  STAT_PUSH
 
   acceptExpr(ctx, v->condition);
 
@@ -1273,13 +1265,13 @@ static void acceptIfStatement(SemanticContext& ctx, IfStatement* v) {
   }
 
   NOT_MAIN_TRAILING
-  STATPOP
+  STAT_POP
 }
 
 static void acceptForStatement(SemanticContext& ctx, ForStatement* v) {
   NOT_MAIN("For Loop")
 
-  STATPUSH
+  STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
   acceptStatement(ctx, v->first);
@@ -1292,11 +1284,11 @@ static void acceptForStatement(SemanticContext& ctx, ForStatement* v) {
   ctx.popScope();
 
   NOT_MAIN_TRAILING
-  STATPOP
+  STAT_POP
 }
 
 static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v) {
-  STATPUSH;
+  STAT_PUSH;
 
   resolveTypeExpr(ctx, v->typeExpr);
   ScriptType* declType = v->typeExpr->referencedType;
@@ -1325,7 +1317,7 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
 
   if (scope->findVariable(nameId)) {
     ctx.getErrors().error(v->location, "Duplicate variable definition");
-    STATPOP
+    STAT_POP
     return;
   }
 
@@ -1342,13 +1334,13 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
 
   ctx.getSymbolCache()[v] = lvs;
 
-  STATPOP;
+  STAT_POP;
 }
 
 static void acceptDoWhileStatement(SemanticContext& ctx, DoWhileStatement* v) {
   NOT_MAIN("Do While Loop")
 
-  STATPUSH
+  STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
   acceptBodyNoScope(ctx, v->body);
@@ -1358,13 +1350,13 @@ static void acceptDoWhileStatement(SemanticContext& ctx, DoWhileStatement* v) {
   ctx.popScope();
 
   NOT_MAIN_TRAILING
-  STATPOP
+  STAT_POP
 }
 
 static void acceptWhileStatement(SemanticContext& ctx, WhileStatement* v) {
   NOT_MAIN("While Loop")
 
-  STATPUSH
+  STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
   acceptExpr(ctx, v->condition);
@@ -1374,11 +1366,11 @@ static void acceptWhileStatement(SemanticContext& ctx, WhileStatement* v) {
   ctx.popScope();
 
   NOT_MAIN_TRAILING
-  STATPOP
+  STAT_POP
 }
 
-static void acceptControlFlowStatement(SemanticContext& ctx, ControlFlowStatement* v) {
-  NOT_MAINR(v->type == CFT_BREAK ? "Break" : "Continue")
+static void acceptControlFlowStatement(const SemanticContext& ctx, ControlFlowStatement* v) {
+  NOT_MAIN_RETURN(v->type == CFT_BREAK ? "Break" : "Continue")
 
   //
   // 1. Go up the scope stack until you find a loop
@@ -1430,7 +1422,7 @@ static void acceptControlFlowStatement(SemanticContext& ctx, ControlFlowStatemen
 }
 
 static void acceptReturnStatement(SemanticContext& ctx, ReturnStatement* v) {
-  NOT_MAINR("Return statement")
+  NOT_MAIN_RETURN("Return statement")
 
   ScriptType* expected = ctx.getScope()->getExpectedReturnType();
 
@@ -1448,24 +1440,24 @@ static void acceptReturnStatement(SemanticContext& ctx, ReturnStatement* v) {
     return;
   }
 
-  STATPUSH
+  STAT_PUSH
   acceptExpr(ctx, v->value);
 
   ScriptType* rtype = v->value->resultType;
 
   if (!expected || isAssignableTo(expected, rtype)) {
-    STATPOP
+    STAT_POP
     return;
   }
 
   if (expected->kind() == TK_VOID) {
     ctx.getErrors().error(v->location, "Cannot return a value in a void method");
-    STATPOP
+    STAT_POP
     return;
   }
 
   if (rtype->kind() == TK_UNKNOWN) {
-    STATPOP
+    STAT_POP
     return;
   }
 
@@ -1475,11 +1467,11 @@ static void acceptReturnStatement(SemanticContext& ctx, ReturnStatement* v) {
     expected->getTypeName()
   );
 
-  STATPOP
+  STAT_POP
 }
 
 static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatement* v) {
-  STATPUSH
+  STAT_PUSH
 
   Scope* parentScope = ctx.getScope();
   if (parentScope->getType() != SCOPE_MAIN) {
@@ -1517,24 +1509,24 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
   reportUnused(ctx, scope);
   ctx.popScope();
 
-  STATPOP
+  STAT_POP
 }
 
 static void acceptExprStatement(SemanticContext& ctx, ExprStatement* v) {
   NOT_MAIN("Expression")
-  STATPUSH
+  STAT_PUSH
   acceptExpr(ctx, v->expression);
   NOT_MAIN_TRAILING
-  STATPOP
+  STAT_POP
 }
 
 static void acceptStructDecl(SemanticContext& ctx, StructDecl* v) {
-  STATPUSH
+  STAT_PUSH
 
   Scope* scope = ctx.getScope();
   if (scope->getType() != SCOPE_MAIN) {
     ctx.getErrors().error(v->location, "Structs can only be declared in the global scope");
-    STATPOP
+    STAT_POP
     return;
   }
 
@@ -1568,10 +1560,10 @@ static void acceptStructDecl(SemanticContext& ctx, StructDecl* v) {
     }
   }
 
-  STATPOP
+  STAT_POP
 }
 
-static void acceptAssertStatement(SemanticContext& ctx, AssertStatement* v) {
+static void acceptAssertStatement(SemanticContext& ctx, const AssertStatement* v) {
   acceptExpr(ctx, v->condition);
   ScriptType* condType = v->condition->resultType;
 
@@ -1651,7 +1643,7 @@ static void addDefaultSymbols(SemanticContext& ctx, Scope* scope) {
 }
 
 SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
-  STATPUSH
+  STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
   ctx.setGlobalScope(scope);
 
@@ -1693,7 +1685,7 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
 
   reportUnused(ctx, scope);
   ctx.popScope();
-  STATPOP
+  STAT_POP
 
   return ctx.makeSemanticFile(v);
 }
