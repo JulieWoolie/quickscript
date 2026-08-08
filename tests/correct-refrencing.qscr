@@ -1,0 +1,21 @@
+struct vec2 {
+  float32 x = 0.0
+  float32 y = 0.0
+}
+
+uint32 f() {
+  return 0
+}
+
+void main() {
+  # ERROR message="Unknown symbol 'x'"
+  x = 0
+
+  # ERROR message="Unknown symbol 'f'"
+  f = 0
+  # ^ That should fail because f() should only be found
+  #   when we're looking for a function specifically
+
+  # This shouldn't fail
+  f()
+}
