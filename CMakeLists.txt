@@ -25,8 +25,8 @@ add_executable(quickscript src/main.cpp
         src/interpreter/opcodes.h
         src/interpreter/opcodes.cc
         src/types/types.cc
-        src/analysis/SemanticAnalyzer.cc
-        src/analysis/SemanticAnalyzer.h
+        src/analysis/analyzer.cc
+        src/analysis/analyzer.h
         src/optimizations.h
         src/optimizations.cc
         src/interpreter/nativeinterface.h
@@ -74,4 +74,6 @@ add_executable(quickscript src/main.cpp
         src/analysis/semantictree.h
         src/analysis/semantictree.cc
         src/analysis/SemanticContext.cc
-        src/analysis/SemanticContext.h)
+        src/analysis/SemanticContext.h
+        src/analysis/transformer.h
+        src/analysis/transformer.cc)

@@ -5,7 +5,7 @@
 
 #include "allocator.h"
 #include "common.h"
-#include "analysis/SemanticAnalyzer.h"
+#include "analysis/analyzer.h"
 #include "interpreter/nativeinterface.h"
 #include "errors.h"
 #include "tester.h"

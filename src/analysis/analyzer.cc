@@ -1,4 +1,4 @@
-#include "SemanticAnalyzer.h"
+#include "analyzer.h"
 
 #include <bitset>
 #include <functional>

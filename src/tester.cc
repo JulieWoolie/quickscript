@@ -8,7 +8,7 @@
 
 #include "allocator.h"
 #include "errors.h"
-#include "analysis/SemanticAnalyzer.h"
+#include "analysis/analyzer.h"
 #include "parse/lexer.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
