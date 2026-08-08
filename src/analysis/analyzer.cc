@@ -20,7 +20,13 @@
 #define NOT_MAINR(name) if (ctx.getScope()->getType() == SCOPE_MAIN) { ctx.getErrors().error(v->location, "%s not allowed here", name); return; }
 #define NOT_MAIN_TRAILING ctx.popWrongScopeReported();
 
-Symbol* resolveReferencedSymbol(Scope* start, stringid name, ScriptType* expectedType) {
+Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* id, ScriptType* expectedType) {
+  std::unordered_map<Identifier*, Symbol*>& cache = ctx.getSymbolCache();
+  if (cache.contains(id)) {
+    return cache[id];
+  }
+
+  stringid name = id->value;
   typekind expectedKind = expectedType ? expectedType->kind() : TK_NIL;
 
   uint32 scores[10];
@@ -40,6 +46,8 @@ Symbol* resolveReferencedSymbol(Scope* start, stringid name, ScriptType* expecte
         if (stype->kind() == TK_FUNC) {
           continue;
         }
+
+        cache[id] = symbol;
         return symbol;
       }
 
@@ -65,7 +73,7 @@ Symbol* resolveReferencedSymbol(Scope* start, stringid name, ScriptType* expecte
     return nullptr;
   }
   if (scoreLen == 1) {
-    return signatures[0];
+    return cache[id] = signatures[0];
   }
 
   uint32 highest = -1;
@@ -82,6 +90,7 @@ Symbol* resolveReferencedSymbol(Scope* start, stringid name, ScriptType* expecte
     best = signatures[idx];
   }
 
+  cache[id] = best;
   return best;
 }
 
@@ -250,7 +259,7 @@ static void acceptExpr(SemanticContext& ctx, Expr* v);
 
 static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
   ScriptType* expectedType = ctx.getExpectedType();
-  Symbol* referenced = resolveReferencedSymbol(ctx.getScope(), v->value, expectedType);
+  Symbol* referenced = resolveReferencedSymbol(ctx, ctx.getScope(), v, expectedType);
 
   if (!referenced) {
     std::string_view name = ctx.getStrings().getview(v->value);
@@ -297,6 +306,26 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
   v->resultType = static_cast<FunctionSignature*>(targetType)->getReturnType();
 }
 
+PropertySymbol* findPropSymbol(Scope* scope, ScriptType* structType, stringid propName) {
+  while (scope) {
+    for (Symbol* symbol : scope->getSymbols()) {
+      if (symbol->getName() != propName || symbol->stype() != SYM_StructProp) {
+        continue;
+      }
+
+      PropertySymbol* sps = static_cast<PropertySymbol*>(symbol);
+      if (sps->getStructSymbol()->getScriptType() != structType) {
+        continue;
+      }
+
+      return sps;
+    }
+
+    scope = scope->getParent();
+  }
+  return nullptr;
+}
+
 static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v) {
   acceptExpr(ctx, v->target);
   ScriptType* resType = v->target->resultType;
@@ -309,15 +338,26 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
     return;
   }
 
-  std::string queriedProp = ctx.getStrings().getstring(v->property->value);
-  ScriptType* propertyType = resType->getPropertyType(queriedProp);
+  std::string_view queriedProp = ctx.getStrings().getview(v->property->value);
+  ScriptType* propertyType = nullptr;
+  
+  if (resType->kind() != TK_STRUCT) {
+    propertyType = resType->getPropertyType(queriedProp);
+  } else {
+    PropertySymbol* sps = findPropSymbol(ctx.getScope(), resType, v->property->value);
+    if (sps) {
+      propertyType = sps->getScriptType();
+      ctx.getSymbolCache()[v->property] = sps;
+    }
+  }
 
-  if (propertyType == nullptr) {
+  if (!propertyType) {
     ctx.getErrors().error(v->location,
-      "No such property '%s' on %s",
-      queriedProp.c_str(), resType->getTypeName()
+      "No such property '%.*s' on %s",
+      PRINTVIEW(queriedProp), resType->getTypeName()
     );
-    propertyType = ConstTypes::VOID();
+    v->resultType = ConstTypes::VOID();
+    return;
   }
 
   v->resultType = propertyType;
@@ -668,25 +708,13 @@ static ScriptType* getOpResultType(ScriptType* left, ScriptType* right, binaryop
   }
 }
 
-StructPropSymbol* findPropSymbol(Scope* scope, ScriptStructType* structType, stringid propName) {
-  while (scope) {
-    Symbol* sym = scope->findSymbol(propName, SYM_StructProp);
-    if (!sym) {
-      scope = scope->getParent();
-      continue;
-    }
-    return static_cast<StructPropSymbol*>(sym);
-  }
-  return nullptr;
-}
-
 static void checkAssignability(SemanticContext& ctx, Expr* expr) {
   astnodetype kind = expr->nodeKind();
 
   switch (kind) {
     case AST_Identifier: {
-      const Identifier* id = static_cast<Identifier*>(expr);
-      Symbol* sym = resolveReferencedSymbol(ctx.getScope(), id->value, id->resultType);
+      Identifier* id = static_cast<Identifier*>(expr);
+      Symbol* sym = resolveReferencedSymbol(ctx, ctx.getScope(), id, id->resultType);
 
       if (!sym) {
         return;
@@ -724,8 +752,7 @@ static void checkAssignability(SemanticContext& ctx, Expr* expr) {
       }
 
       if (objType->kind() == TK_STRUCT) {
-        ScriptStructType* structType = static_cast<ScriptStructType*>(objType);
-        StructPropSymbol* pSym = findPropSymbol(ctx.getScope(), structType, prop->property->value);
+        PropertySymbol* pSym = static_cast<PropertySymbol*>(ctx.getSymbolCache()[prop->property]);
 
         if (!pSym) {
           return;
@@ -999,7 +1026,7 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
       continue;
     }
 
-    StructPropSymbol* sym = alloc.make<StructPropSymbol>(lss, propDecl->name->value, typeProp->type);
+    PropertySymbol* sym = alloc.make<PropertySymbol>(lss, propDecl->name->value, typeProp->type);
     scope->pushSymbol(sym);
   }
 }
@@ -1122,7 +1149,7 @@ void reportUnused(SemanticContext& ctx, Scope* scope) {
         }
         break;
       case SYM_StructProp: {
-        const StructPropSymbol* sps = static_cast<StructPropSymbol*>(sym);
+        const PropertySymbol* sps = static_cast<PropertySymbol*>(sym);
         const uint32 writes = sps->getWrites();
         const uint32 reads = sps->getReads();
 
