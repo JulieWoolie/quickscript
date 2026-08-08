@@ -55,11 +55,24 @@ typedef uint8 scopetype;
 #define SYM_LocalStruct   4
 typedef uint8 symboltype;
 
+// Symbol is a native binding
 #define SYMFLAG_BINDING   (0x1 << 0)
+
+// Symbol is a constant variable
 #define SYMFLAG_CONST     (0x1 << 1)
+
+// Symbol can be evaluated by the compiler and can be optimized
 #define SYMFLAG_CONSTEXPR (0x1 << 2)
+
+// Symbol is a pure function with no side effects
 #define SYMFLAG_PUREFUNC  (0x1 << 3)
+
+// Symbol has been used (read or written to at least once)
 #define SYMFLAG_USED      (0x1 << 4)
+
+// Symbol is a variable that's in the middle of being initialised
+#define SYMFLAG_MID_INIT  (0x1 << 6)
+
 typedef uint8 symflags;
 
 class LocalFunction;
