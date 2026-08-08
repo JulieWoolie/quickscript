@@ -29,11 +29,11 @@ class NoFreeAllocator {
     NoFreeAllocator() = default;
     ~NoFreeAllocator();
 
-    template<typename T>
+    template<class T>
     T* emplace(T node);
 
-    template<typename T>
-    T* make();
+    template<typename T, typename... Args>
+    T* make(Args&&... args);
 
     template<typename T>
     T* arrayAlloc(uint32 count);
@@ -52,11 +52,11 @@ T* NoFreeAllocator::emplace(T node) {
   return new (ptr) T(std::move(node));
 }
 
-template<typename T>
-T* NoFreeAllocator::make() {
+template<typename T, typename... Args>
+T* NoFreeAllocator::make(Args&&... args) {
   uint64 msize = sizeof(T);
   uint8* ptr = allocate(msize);
-  return new (ptr) T();
+  return new (ptr) T(std::forward<Args>(args)...);
 }
 
 template<typename T>
