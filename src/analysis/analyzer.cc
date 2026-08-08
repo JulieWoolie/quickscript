@@ -1293,6 +1293,8 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
     lvs->setFlags(SYMFLAG_CONST);
   }
 
+  ctx.getSymbolCache()[v->variableName] = lvs;
+
   STATPOP;
 }
 
