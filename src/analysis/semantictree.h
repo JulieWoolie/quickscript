@@ -126,15 +126,15 @@ class LocalVarSymbol: public Symbol {
 };
 
 class PropertySymbol: public Symbol {
-  Symbol* const m_structSym;
+  ScriptType* const m_holderType;
 
   uint32 m_writes = 0;
   uint32 m_reads = 0;
 
   public:
-    explicit PropertySymbol(Symbol* structSym, stringid name, ScriptType* type);
+    explicit PropertySymbol(ScriptType* holderType, stringid name, ScriptType* type);
 
-    Symbol* getStructSymbol() const;
+    ScriptType* getHolderType() const;
 
     symboltype stype() const override;
 

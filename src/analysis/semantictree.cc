@@ -83,12 +83,12 @@ symboltype LocalVarSymbol::stype() const {
   return SYM_LocalVar;
 }
 
-PropertySymbol::PropertySymbol(Symbol* structSym, stringid name, ScriptType* type)
-  : Symbol(name, type), m_structSym(structSym) {
+PropertySymbol::PropertySymbol(ScriptType* holderType, stringid name, ScriptType* type)
+  : Symbol(name, type), m_holderType(holderType) {
 }
 
-Symbol* PropertySymbol::getStructSymbol() const {
-  return m_structSym;
+ScriptType* PropertySymbol::getHolderType() const {
+  return m_holderType;
 }
 
 symboltype PropertySymbol::stype() const {
