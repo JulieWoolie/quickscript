@@ -36,7 +36,7 @@ class SemanticContext {
       NoFreeAllocator& allocator
     );
 
-    SemanticFile* makeSemanticFile();
+    SemanticFile* makeSemanticFile(ScriptFileStatement* sfs);
 
     void pushLocalFunction(LocalFunction* func);
 

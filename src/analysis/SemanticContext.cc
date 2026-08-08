@@ -17,8 +17,8 @@ SemanticContext::SemanticContext(
 
 }
 
-SemanticFile* SemanticContext::makeSemanticFile() {
-  SemanticFile* file = m_allocator.make<SemanticFile>(m_globalScope);
+SemanticFile* SemanticContext::makeSemanticFile(ScriptFileStatement* sfs) {
+  SemanticFile* file = m_allocator.make<SemanticFile>(m_globalScope, sfs);
   for (LocalFunction* lf : m_localFunctions) {
     file->getLocalFunctions().push_back(lf);
   }

@@ -197,7 +197,7 @@ Scope* Scope::getParent() const {
   return m_parentScope;
 }
 
-SemanticFile::SemanticFile(Scope* globalScope) : m_globalScope(globalScope) {
+SemanticFile::SemanticFile(Scope* globalScope, ScriptFileStatement* sfs) : m_globalScope(globalScope), m_scriptFile(sfs) {
 }
 
 Scope* SemanticFile::getGlobalScope() const {

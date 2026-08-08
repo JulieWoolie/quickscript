@@ -222,18 +222,21 @@ class Scope {
 
 class SemanticFile {
   Scope* m_globalScope;
+  ScriptFileStatement* const m_scriptFile;
 
   std::vector<LocalFunction*> m_localFunctions;
   std::unordered_map<Identifier*, Symbol*> m_symLookupCache;
 
   public:
-    explicit SemanticFile(Scope* globalScope);
+    explicit SemanticFile(Scope* globalScope, ScriptFileStatement* sfs);
 
     Scope* getGlobalScope() const;
 
     std::vector<LocalFunction*>& getLocalFunctions();
 
     std::unordered_map<Identifier*, Symbol*>& getLookupCache();
+
+    ScriptFileStatement* getScriptFile() const;
 };
 
 #endif //QUICKSCRIPT_SEMANTICTREE_H
