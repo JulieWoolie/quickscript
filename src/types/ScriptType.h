@@ -6,7 +6,7 @@
 
 #define POINTER_SIZE 8
 
-#define TK_NIL        0
+#define TK_UNKNOWN    0
 #define TK_PRIMITIVE  1
 #define TK_STRING     2
 #define TK_STRUCT     3

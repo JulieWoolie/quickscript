@@ -27,7 +27,7 @@ static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Ident
   }
 
   stringid name = id->value;
-  typekind expectedKind = expectedType ? expectedType->kind() : TK_NIL;
+  typekind expectedKind = expectedType ? expectedType->kind() : TK_UNKNOWN;
 
   uint32 scores[10];
   Symbol* signatures[10];
@@ -176,7 +176,7 @@ static void resolveTypeExpr(SemanticContext& ctx, TypeExpr* typeExpr) {
       v->referencedType = ctx.getTypes().lookupByName(typeName);
 
       if (!v->referencedType) {
-        v->referencedType = ConstTypes::VOID();
+        v->referencedType = ConstTypes::UNKNOWN();
         ctx.getErrors().error(v->location, "Unknown type '%s'", typeName.c_str());
         return;
       }
@@ -195,8 +195,9 @@ static void resolveTypeExpr(SemanticContext& ctx, TypeExpr* typeExpr) {
       resolveTypeExpr(ctx, v->componentType);
       ScriptType* compType = v->componentType->referencedType;
 
-      if (!compType) {
-        compType = ConstTypes::VOID();
+      if (compType->kind() == TK_UNKNOWN) {
+        v->referencedType = ConstTypes::UNKNOWN();
+        return;
       }
 
       v->referencedType = getArrayType(ctx, compType);
@@ -271,7 +272,7 @@ static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
       PRINTVIEW(name)
     );
 
-    v->resultType = ConstTypes::VOID();
+    v->resultType = ConstTypes::UNKNOWN();
     return;
   }
 
@@ -296,6 +297,11 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
   ctx.popExpectedType();
 
   ScriptType* targetType = v->target->resultType;
+  if (targetType->kind() == TK_UNKNOWN) {
+    v->resultType = ConstTypes::UNKNOWN();
+    return;
+  }
+
   if (targetType->kind() != TK_FUNC) {
     ctx.getErrors().error(v->location,
       "Expression does not return a callable function, but returns a %s",
@@ -333,11 +339,18 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
   acceptExpr(ctx, v->target);
   ScriptType* resType = v->target->resultType;
 
+  if (resType->kind() == TK_UNKNOWN) {
+    v->resultType = ConstTypes::UNKNOWN();
+    return;
+  }
+
   if (!(resType->typeFlags() & TFLAG_PROPERTY_HOLDER)) {
     ctx.getErrors().error(v->location,
       "%s has no properties that can be accessed",
       resType->getTypeName()
     );
+
+    v->resultType = ConstTypes::UNKNOWN();
     return;
   }
 
@@ -361,7 +374,7 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
       "No such property '%.*s' on %s",
       PRINTVIEW(queriedProp), resType->getTypeName()
     );
-    v->resultType = ConstTypes::VOID();
+    v->resultType = ConstTypes::UNKNOWN();
     return;
   }
 
@@ -376,13 +389,18 @@ static void acceptIndexAccessExpr(SemanticContext& ctx, IndexAccessExpr* v) {
   acceptExpr(ctx, v->target);
   ScriptType* resultType = v->target->resultType;
 
+  if (resultType->kind() == TK_UNKNOWN) {
+    v->resultType = TK_UNKNOWN;
+    return;
+  }
+
   if (!(resultType->typeFlags() & TFLAG_INDEXABLE)) {
     ctx.getErrors().error(v->location, "Type %s cannot be indexed", resultType->getTypeName());
     v->resultType = ConstTypes::VOID();
     return;
   }
 
-  if (!isIntegerType(indexType)) {
+  if (indexType->kind() != TK_UNKNOWN && !isIntegerType(indexType)) {
     ctx.getErrors().error(v->index->location,
       "%s cannot be used to index an array or string",
       indexType->getTypeName()
@@ -510,13 +528,15 @@ static void acceptObjectLiteral(SemanticContext& ctx, ObjectLiteral* v) {
 static void acceptArrayLiteral(SemanticContext& ctx, ArrayLiteral* v) {
   ScriptType* type = ctx.getExpectedType();
   if (type->kind() != TK_ARRAY) {
-    ctx.getErrors().error(
-      v->location,
-      "Type %s cannot be initialized with an array literal",
-      type->getTypeName()
-    );
+    if (type->kind() != TK_UNKNOWN) {
+      ctx.getErrors().error(
+        v->location,
+        "Type %s cannot be initialized with an array literal",
+        type->getTypeName()
+      );
+    }
 
-    v->resultType = ConstTypes::VOID();
+    v->resultType = ConstTypes::UNKNOWN();
     return;
   }
 
@@ -528,6 +548,9 @@ static void acceptArrayLiteral(SemanticContext& ctx, ArrayLiteral* v) {
 
     ScriptType* valType = expr->resultType;
     if (isAssignableTo(componentType, valType)) {
+      continue;
+    }
+    if (valType->kind() == TK_UNKNOWN) {
       continue;
     }
 
@@ -794,6 +817,11 @@ static void acceptBinaryExpr(SemanticContext& ctx, BinaryExpr* v) {
   ScriptType* ltype = v->lhs->resultType;
   ScriptType* rtype = v->rhs->resultType;
 
+  if (ltype->kind() == TK_UNKNOWN || rtype->kind() == TK_UNKNOWN) {
+    v->resultType = ConstTypes::UNKNOWN();
+    return;
+  }
+
   binaryop op = v->op;
   ScriptType* res = getOpResultType(ltype, rtype, op);
 
@@ -859,6 +887,11 @@ static ScriptType* getUnaryOpResult(unaryop op, ScriptType* type) {
 static void acceptUnaryExpr(SemanticContext& ctx, UnaryExpr* v) {
   acceptExpr(ctx, v->target);
 
+  if (v->target->resultType->kind() == TK_UNKNOWN) {
+    v->resultType = ConstTypes::UNKNOWN();
+    return;
+  }
+
   ScriptType* resType = getUnaryOpResult(v->op, v->target->resultType);
 
   if (resType) {
@@ -878,7 +911,9 @@ static void acceptUnaryExpr(SemanticContext& ctx, UnaryExpr* v) {
 static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
   acceptExpr(ctx, v->condition);
 
-  if (!isAssignableTo(ConstTypes::BOOL(), v->condition->resultType)) {
+  ScriptType* condType = v->condition->resultType;
+
+  if (condType->kind() != TK_UNKNOWN && !isAssignableTo(ConstTypes::BOOL(), condType)) {
     ctx.getErrors().error(v->condition->location, "%s is not assignable to a bool condition",
       v->condition->resultType->getTypeName()
     );
@@ -889,10 +924,17 @@ static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
 
   ScriptType* lType = v->left->resultType;
   ScriptType* rType = v->right->resultType;
+  ScriptType* resultType = nullptr;
 
-  ScriptType* common = getCommonType(lType, rType);
+  if (lType->kind() == TK_UNKNOWN) {
+    resultType = rType;
+  } else if (rType->kind() == TK_UNKNOWN) {
+    resultType = lType;
+  } else {
+    resultType = getCommonType(lType, rType);
+  }
 
-  if (!common) {
+  if (!resultType) {
     ctx.getErrors().error(
       v->location,
       "Ternary operator left and right values have incompatible types: %s and %s",
@@ -903,7 +945,7 @@ static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
     return;
   }
 
-  v->resultType = common;
+  v->resultType = resultType;
 }
 
 static void acceptExpr(SemanticContext& ctx, Expr* v) {
@@ -1261,14 +1303,13 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
     acceptExpr(ctx, v->value);
     ctx.popExpectedType();
 
-    ScriptType* vartype = v->typeExpr->referencedType;
-    ScriptType* valtype = v->value->resultType;
+    ScriptType* valueType = v->value->resultType;
 
-    if (!isAssignableTo(vartype, valtype)) {
+    if (valueType->kind() != TK_UNKNOWN && !isAssignableTo(declType, valueType)) {
       ctx.getErrors().error(v->location,
         "Value of type %s is not assignable to variable with type %s",
-        valtype->getTypeName(),
-        vartype->getTypeName()
+        valueType->getTypeName(),
+        declType->getTypeName()
       );
     }
   } else if (v->isConstDeclaration) {
@@ -1420,6 +1461,11 @@ static void acceptReturnStatement(SemanticContext& ctx, ReturnStatement* v) {
     return;
   }
 
+  if (rtype->kind() == TK_UNKNOWN) {
+    STATPOP
+    return;
+  }
+
   ctx.getErrors().error(v->location,
     "Returned value of type %s cannot be assigned to expected type %s",
     rtype->getTypeName(),
@@ -1499,6 +1545,10 @@ static void acceptStructDecl(SemanticContext& ctx, StructDecl* v) {
       acceptExpr(ctx, prop->value);
       ScriptType* valueType = prop->value->resultType;
 
+      if (valueType->kind() == TK_UNKNOWN) {
+        continue;
+      }
+
       if (!isAssignableTo(propertyType, valueType)) {
         ctx.getErrors().error(prop->location,
           "Cannot assign %s value to property %s %s.%s",
@@ -1518,7 +1568,7 @@ static void acceptAssertStatement(SemanticContext& ctx, AssertStatement* v) {
   acceptExpr(ctx, v->condition);
   ScriptType* condType = v->condition->resultType;
 
-  if (!isAssignableTo(ConstTypes::BOOL(), condType)) {
+  if (condType->kind() != TK_UNKNOWN && !isAssignableTo(ConstTypes::BOOL(), condType)) {
     ctx.getErrors().error(
       v->condition->location,
       "assert statement condition cannot be assigned to boolean"
@@ -1528,9 +1578,10 @@ static void acceptAssertStatement(SemanticContext& ctx, AssertStatement* v) {
   if (v->message) {
     acceptExpr(ctx, v->message);
 
-    ScriptType* msgType = v->message->resultType;
+    const ScriptType* msgType = v->message->resultType;
+    const typekind msgKind = msgType->kind();
 
-    if (msgType->kind() != TK_STRING) {
+    if (msgKind != TK_UNKNOWN && msgKind != TK_STRING) {
       ctx.getErrors().error(
         v->message->location,
         "assert statement message cannot be assigned to string"

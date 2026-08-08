@@ -76,4 +76,6 @@ add_executable(quickscript src/main.cpp
         src/analysis/SemanticContext.cc
         src/analysis/SemanticContext.h
         src/analysis/transformer.h
-        src/analysis/transformer.cc)
+        src/analysis/transformer.cc
+        src/types/ScriptErroneousType.cc
+        src/types/ScriptErroneousType.h)

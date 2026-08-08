@@ -20,6 +20,8 @@ static VoidScriptType TC_VOID = VoidScriptType();
 
 static ScriptStringType TC_STRING = ScriptStringType();
 
+static ScriptErroneousType TC_ERROR = ScriptErroneousType();
+
 CONST_TYPE_GETTER(PrimitiveScriptType, TC_BOOL, BOOL)
 
 CONST_TYPE_GETTER(PrimitiveScriptType, TC_INT8, INT8)
@@ -37,6 +39,8 @@ CONST_TYPE_GETTER(PrimitiveScriptType, TC_FLOAT64, FLOAT64)
 CONST_TYPE_GETTER(VoidScriptType, TC_VOID, VOID)
 
 CONST_TYPE_GETTER(ScriptStringType, TC_STRING, STRING)
+
+CONST_TYPE_GETTER(ScriptErroneousType, TC_ERROR, UNKNOWN)
 
 PrimitiveScriptType* ConstTypes::getPrimitiveType(primitivekind kind) {
   switch (kind) {

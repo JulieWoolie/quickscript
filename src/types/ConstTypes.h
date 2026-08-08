@@ -2,11 +2,14 @@
 #define QUICKSCRIPT_CONSTTYPES_H
 
 #include "PrimitiveScriptType.h"
+#include "ScriptErroneousType.h"
 #include "ScriptStringType.h"
 #include "VoidScriptType.h"
 
 class ConstTypes {
   public:
+    static ScriptErroneousType* UNKNOWN();
+
     static PrimitiveScriptType* BOOL();
 
     static PrimitiveScriptType* INT8();
