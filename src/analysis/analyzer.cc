@@ -21,7 +21,7 @@
 #define NOT_MAIN_TRAILING ctx.popWrongScopeReported();
 
 static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* id, ScriptType* expectedType) {
-  std::unordered_map<Identifier*, Symbol*>& cache = ctx.getSymbolCache();
+  std::unordered_map<Node*, Symbol*>& cache = ctx.getSymbolCache();
   if (cache.contains(id)) {
     return cache[id];
   }
@@ -1051,6 +1051,7 @@ static void createStructType(SemanticContext& ctx, StructDecl* v) {
   LocalStructSymbol* symb = ctx.getAllocator().make<LocalStructSymbol>(v->name->value, type, v);
 
   scope->pushSymbol(symb);
+  ctx.getSymbolCache()[v] = symb;
 }
 
 static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* decl) {
@@ -1146,9 +1147,11 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
 
   LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(*lf);
   scope->pushSymbol(sym);
+
+  ctx.getSymbolCache()[v] = sym;
 }
 
-void reportUnused(SemanticContext& ctx, Scope* scope) {
+static void reportUnused(SemanticContext& ctx, Scope* scope) {
   StringTable& strings = ctx.getStrings();
   CompilerErrors& errors = ctx.getErrors();
 
@@ -1297,6 +1300,7 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
 
   resolveTypeExpr(ctx, v->typeExpr);
   ScriptType* declType = v->typeExpr->referencedType;
+  const stringid nameId = v->variableName->value;
 
   if (v->value) {
     ctx.pushExpectedType(declType);
@@ -1313,12 +1317,11 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
       );
     }
   } else if (v->isConstDeclaration) {
-    std::string_view view = ctx.getStrings().getview(v->variableName->value);
+    std::string_view view = ctx.getStrings().getview(nameId);
     ctx.getErrors().error(v->location, "Const variable '%.*s' has no value", PRINTVIEW(view));
   }
 
   Scope* scope = ctx.getScope();
-  stringid nameId = v->variableName->value;
 
   if (scope->findVariable(nameId)) {
     ctx.getErrors().error(v->location, "Duplicate variable definition");
@@ -1337,7 +1340,7 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
     lvs->setFlags(SYMFLAG_CONST);
   }
 
-  ctx.getSymbolCache()[v->variableName] = lvs;
+  ctx.getSymbolCache()[v] = lvs;
 
   STATPOP;
 }
@@ -1499,6 +1502,10 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
     const uint64 memOff = scope->getStackSize();
 
     LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, memOff, arg);
+    scope->pushSymbol(lvs);
+    scope->setStackSize(scope->getStackSize() + memSize);
+
+    ctx.getSymbolCache()[arg] = lvs;
   }
 
   acceptBodyNoScope(ctx, v->functionBody);

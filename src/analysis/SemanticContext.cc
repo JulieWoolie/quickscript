@@ -33,6 +33,10 @@ std::vector<LocalFunction*>& SemanticContext::getLocalFunctions() {
   return m_localFunctions;
 }
 
+std::vector<LocalFunction*>& SemanticContext::getMainFuncCandidates() {
+  return m_mainCandidates;
+}
+
 void SemanticContext::pushWrongScopeTypeReported(bool reported) {
   m_wrongScopeReports.push_back(reported);
 }
@@ -142,6 +146,6 @@ NoFreeAllocator& SemanticContext::getAllocator() {
   return m_allocator;
 }
 
-std::unordered_map<Identifier*, Symbol*>& SemanticContext::getSymbolCache() {
+std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolCache() {
   return m_symbolCache;
 }

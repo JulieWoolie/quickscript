@@ -21,8 +21,15 @@ class SemanticContext {
   std::vector<bool> m_wrongScopeReports;
 
   std::vector<LocalFunction*> m_localFunctions;
+  std::vector<LocalFunction*> m_mainCandidates;
 
-  std::unordered_map<Identifier*, Symbol*> m_symbolCache;
+  //
+  // Notes on this cache:
+  //
+  // Identifier* keys => Symbol the ID is referencing
+  // Statement* keys => Symbol the statement is declaring
+  //
+  std::unordered_map<Node*, Symbol*> m_symbolCache;
 
   Scope* m_globalScope = nullptr;
   Scope* m_currentScope = nullptr;
@@ -41,6 +48,8 @@ class SemanticContext {
     void pushLocalFunction(LocalFunction* func);
 
     std::vector<LocalFunction*>& getLocalFunctions();
+
+    std::vector<LocalFunction*>& getMainFuncCandidates();
 
     void pushWrongScopeTypeReported(bool reported);
 
@@ -80,7 +89,7 @@ class SemanticContext {
 
     NoFreeAllocator& getAllocator();
 
-    std::unordered_map<Identifier*, Symbol*>& getSymbolCache();
+    std::unordered_map<Node*, Symbol*>& getSymbolCache();
 };
 
 
