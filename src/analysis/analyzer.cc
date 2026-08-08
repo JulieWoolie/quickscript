@@ -309,7 +309,7 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
 PropertySymbol* findPropSymbol(Scope* scope, ScriptType* structType, stringid propName) {
   while (scope) {
     for (Symbol* symbol : scope->getSymbols()) {
-      if (symbol->getName() != propName || symbol->stype() != SYM_StructProp) {
+      if (symbol->getName() != propName || symbol->stype() != SYM_Property) {
         continue;
       }
 
@@ -1151,7 +1151,7 @@ void reportUnused(SemanticContext& ctx, Scope* scope) {
           errors.warn("Struct '%.*s' is unused", PRINTVIEW(name));
         }
         break;
-      case SYM_StructProp: {
+      case SYM_Property: {
         const PropertySymbol* sps = static_cast<PropertySymbol*>(sym);
         const uint32 writes = sps->getWrites();
         const uint32 reads = sps->getReads();

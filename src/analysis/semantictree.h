@@ -51,7 +51,7 @@ typedef uint8 scopetype;
 #define SYM_NIL           0
 #define SYM_LocalVar      1
 #define SYM_LocalFunc     2
-#define SYM_StructProp    3
+#define SYM_Property      3
 #define SYM_LocalStruct   4
 typedef uint8 symboltype;
 

@@ -92,7 +92,7 @@ ScriptType* PropertySymbol::getHolderType() const {
 }
 
 symboltype PropertySymbol::stype() const {
-  return SYM_StructProp;
+  return SYM_Property;
 }
 
 LocalFunction::LocalFunction(stringid name, FunctionDeclStatement* decl, Scope* scope)
