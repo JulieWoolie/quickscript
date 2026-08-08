@@ -1,6 +1,5 @@
 
 #include "parser.h"
-#include "../optimizations.h"
 
 #define FATAL(...) m_errors->fatal(__VA_ARGS__)
 #define ERROR(...) m_errors->error(__VA_ARGS__)
@@ -25,13 +24,6 @@ Expr* Parser::name() {\
     bin.op = mapTokenToOp(ttype);\
     bin.lhs = expr;\
     bin.rhs = calls();\
-\
-    Expr* optimized = optimizeBinaryOpIfPossible(&bin, m_pool);\
-    if (optimized) {\
-      expr = optimized;\
-    } else {\
-      expr = m_pool->emplace(bin);\
-    }\
 \
     p = peek();\
     ttype = p->ttype;\
@@ -866,11 +858,6 @@ Expr* Parser::unaryExpr() {
 
   next();
   u.target = unaryExpr();
-
-  Expr* opt = optimizeUnaryOpIfPossible(&u);
-  if (opt) {
-    return opt;
-  }
 
   return EMPLACE(u);
 }
