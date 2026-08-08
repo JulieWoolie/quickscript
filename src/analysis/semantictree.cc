@@ -83,15 +83,15 @@ symboltype LocalVarSymbol::stype() const {
   return SYM_LocalVar;
 }
 
-StructPropSymbol::StructPropSymbol(Symbol* structSym, stringid name, ScriptType* type)
+PropertySymbol::PropertySymbol(Symbol* structSym, stringid name, ScriptType* type)
   : Symbol(name, type), m_structSym(structSym) {
 }
 
-Symbol* StructPropSymbol::getStructSymbol() const {
+Symbol* PropertySymbol::getStructSymbol() const {
   return m_structSym;
 }
 
-symboltype StructPropSymbol::stype() const {
+symboltype PropertySymbol::stype() const {
   return SYM_StructProp;
 }
 
@@ -203,16 +203,16 @@ std::vector<LocalFunction*>& SemanticFile::getLocalFunctions() {
 std::unordered_map<Identifier*, Symbol*>& SemanticFile::getLookupCache() {
   return m_symLookupCache;
 }
-uint32 StructPropSymbol::getReads() const {
+uint32 PropertySymbol::getReads() const {
   return m_reads;
 }
-void StructPropSymbol::setReads(uint32 reads) {
+void PropertySymbol::setReads(uint32 reads) {
   m_reads = reads;
 }
-uint32 StructPropSymbol::getWrites() const {
+uint32 PropertySymbol::getWrites() const {
   return m_writes;
 }
-void StructPropSymbol::setWrites(uint32 writes) {
+void PropertySymbol::setWrites(uint32 writes) {
   m_writes = writes;
 }
 
