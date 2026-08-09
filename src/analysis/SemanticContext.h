@@ -8,6 +8,16 @@
 #include "../parse/syntaxtree.h"
 #include "../types/TypeTable.h"
 
+class DependencyGraph {
+  std::unordered_map<Symbol*, std::vector<Symbol*>> m_graph;
+
+  public:
+    std::vector<Symbol*>& getDependencies(Symbol* symb);
+
+    bool hasDependencies(Symbol* sym) const;
+
+    bool addDependency(Symbol* sym, Symbol* dependency);
+};
 
 class SemanticContext {
   TypeTable& m_types;
@@ -30,6 +40,8 @@ class SemanticContext {
   // Statement* keys => Symbol the statement is declaring
   //
   std::unordered_map<Node*, Symbol*> m_symbolCache;
+
+  DependencyGraph m_dependencyGraph;
 
   Scope* m_globalScope = nullptr;
   Scope* m_currentScope = nullptr;
@@ -90,6 +102,8 @@ class SemanticContext {
     NoFreeAllocator& getAllocator();
 
     std::unordered_map<Node*, Symbol*>& getSymbolCache();
+
+    DependencyGraph& getDependencyGraph();
 };
 
 

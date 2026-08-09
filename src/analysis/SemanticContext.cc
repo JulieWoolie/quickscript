@@ -1,6 +1,35 @@
 #include "SemanticContext.h"
 
 
+std::vector<Symbol*>& DependencyGraph::getDependencies(Symbol* symb) {
+  return m_graph[symb];
+}
+
+bool DependencyGraph::hasDependencies(Symbol* sym) const {
+  return m_graph.contains(sym);
+}
+
+bool DependencyGraph::addDependency(Symbol* sym, Symbol* dependency) {
+  if (!m_graph.contains(sym)) {
+    std::vector<Symbol*> dependsList;
+    dependsList.push_back(dependency);
+    m_graph[sym] = dependsList;
+    return true;
+  }
+
+  std::vector<Symbol*>& dependsList = m_graph[sym];
+  for (const Symbol* existingDepend : dependsList) {
+    if (existingDepend != dependency) {
+      continue;
+    }
+    return false;
+  }
+
+  dependsList.push_back(dependency);
+  return true;
+}
+
+
 SemanticContext::SemanticContext(
   TypeTable& types,
   StringTable& strings,
@@ -148,4 +177,8 @@ NoFreeAllocator& SemanticContext::getAllocator() {
 
 std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolCache() {
   return m_symbolCache;
+}
+
+DependencyGraph& SemanticContext::getDependencyGraph() {
+  return m_dependencyGraph;
 }
