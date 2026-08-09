@@ -29,6 +29,10 @@ bool DependencyGraph::addDependency(Symbol* sym, Symbol* dependency) {
   return true;
 }
 
+std::unordered_map<Symbol*, std::vector<Symbol*>>& DependencyGraph::getUnderlyingMap() {
+  return m_graph;
+}
+
 
 SemanticContext::SemanticContext(
   TypeTable& types,

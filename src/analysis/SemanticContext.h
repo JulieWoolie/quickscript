@@ -17,6 +17,8 @@ class DependencyGraph {
     bool hasDependencies(Symbol* sym) const;
 
     bool addDependency(Symbol* sym, Symbol* dependency);
+
+    std::unordered_map<Symbol*, std::vector<Symbol*>>& getUnderlyingMap();
 };
 
 class SemanticContext {
