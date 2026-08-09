@@ -10,10 +10,12 @@
 
 #define RECURSIVE_FUNC(name, cond, calls) \
 Expr* Parser::name() {\
-  Location l = peek()->start;\
+  Token* p = peek();\
+  Location l = p->start;\
+\
   Expr* expr = calls();\
 \
-  Token* p = peek();\
+  p = peek();\
   tokentype ttype = p->ttype;\
 \
   while (cond) {\
@@ -24,6 +26,8 @@ Expr* Parser::name() {\
     bin.op = mapTokenToOp(ttype);\
     bin.lhs = expr;\
     bin.rhs = calls();\
+\
+    expr = m_pool->emplace(bin);\
 \
     p = peek();\
     ttype = p->ttype;\
