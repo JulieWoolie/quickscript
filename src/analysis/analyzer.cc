@@ -272,6 +272,10 @@ static void putCurrentStatementsDependOn(SemanticContext& ctx, Symbol* reference
     }
 
     Symbol* statSym = symLookup[stat];
+    if (!statSym) {
+      continue;
+    }
+
     graph.addDependency(statSym, referenced);
   }
 }
@@ -1364,29 +1368,12 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
   ScriptType* declType = v->typeExpr->referencedType;
   const stringid nameId = v->variableName->value;
 
-  if (v->value) {
-    ctx.pushExpectedType(declType);
-    acceptExpr(ctx, v->value);
-    ctx.popExpectedType();
-
-    ScriptType* valueType = v->value->resultType;
-
-    if (valueType->kind() != TK_UNKNOWN && !isAssignableTo(declType, valueType)) {
-      ctx.getErrors().error(v->location,
-        "Value of type %s is not assignable to variable with type %s",
-        valueType->getTypeName(),
-        declType->getTypeName()
-      );
-    }
-  } else if (v->isConstDeclaration) {
-    std::string_view view = ctx.getStrings().getview(nameId);
-    ctx.getErrors().error(v->location, "Const variable '%.*s' has no value", PRINTVIEW(view));
-  }
-
   Scope* scope = ctx.getScope();
   if (scope->getType() == SCOPE_MAIN) {
     ctx.getGlobalVariables().push_back(v);
   }
+
+  ctx.getAllVariables().push_back(v);
 
   if (scope->findVariable(nameId)) {
     ctx.getErrors().error(v->location, "Duplicate variable definition");
@@ -1406,6 +1393,25 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
   }
 
   ctx.getSymbolLookup()[v] = lvs;
+
+  if (v->value) {
+    ctx.pushExpectedType(declType);
+    acceptExpr(ctx, v->value);
+    ctx.popExpectedType();
+
+    ScriptType* valueType = v->value->resultType;
+
+    if (valueType->kind() != TK_UNKNOWN && !isAssignableTo(declType, valueType)) {
+      ctx.getErrors().error(v->location,
+        "Value of type %s is not assignable to variable with type %s",
+        valueType->getTypeName(),
+        declType->getTypeName()
+      );
+    }
+  } else if (v->isConstDeclaration) {
+    std::string_view view = ctx.getStrings().getview(nameId);
+    ctx.getErrors().error(v->location, "Const variable '%.*s' has no value", PRINTVIEW(view));
+  }
 
   STAT_POP;
 }
@@ -1715,6 +1721,64 @@ static void addDefaultSymbols(SemanticContext& ctx, Scope* scope) {
   scope->pushSymbol(stringLength);
 }
 
+static void reportInvalidDependencies(SemanticContext& ctx, DependencyGraph& graph, Symbol* sym) {
+  if (!graph.hasDependencies(sym)) {
+    return;
+  }
+
+  const std::vector<Symbol*>& dependsOn = graph.getDependencies(sym);
+
+  Location loc;
+  symboltype stype = sym->stype();
+
+  switch (stype) {
+    case SYM_LocalVar:
+      loc = static_cast<LocalVarSymbol*>(sym)->getDecl()->location;
+      break;
+    case SYM_LocalFunc:
+      loc = static_cast<LocalFuncSymbol*>(sym)->getFunction().getDecl()->location;
+      break;
+    default:
+      break;
+  }
+
+  for (Symbol* dependentSym : dependsOn) {
+    if (dependentSym->getFlags() & SYMFLAG_MID_INIT) {
+      std::string_view view = ctx.getStrings().getview(dependentSym->getName());
+      ctx.getErrors().error(loc, "Accessing '%.*s' before its initialized", PRINTVIEW(view));
+      continue;
+    }
+    reportInvalidDependencies(ctx, graph, dependentSym);
+  }
+}
+
+static void checkForInvalidDependencies(SemanticContext& ctx) {
+  DependencyGraph& graph = ctx.getDependencyGraph();
+  std::unordered_map<Node*, Symbol*>& lookup = ctx.getSymbolLookup();
+  std::vector<LexicalDeclaration*>& allVars = ctx.getAllVariables();
+
+  if (allVars.empty()) {
+    return;
+  }
+
+  for (LexicalDeclaration* gvar : allVars) {
+    LocalVarSymbol* sym = static_cast<LocalVarSymbol*>(lookup[gvar]);
+    sym->addFlags(SYMFLAG_MID_INIT);
+  }
+
+  for (LexicalDeclaration* gvar : allVars) {
+    LocalVarSymbol* sym = static_cast<LocalVarSymbol*>(lookup[gvar]);
+
+    if (!graph.hasDependencies(sym)) {
+      sym->removeFlags(SYMFLAG_MID_INIT);
+      continue;
+    }
+
+    reportInvalidDependencies(ctx, graph, sym);
+    sym->removeFlags(SYMFLAG_MID_INIT);
+  }
+}
+
 SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
@@ -1755,6 +1819,8 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
   for (Statement* s : v->statements) {
     acceptStatement(ctx, s);
   }
+
+  checkForInvalidDependencies(ctx);
 
   std::vector<LocalFunction*>& mainCandidates = ctx.getMainFuncCandidates();
   if (mainCandidates.empty()) {
