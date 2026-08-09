@@ -258,6 +258,24 @@ static bool everyBranchHasReturn(Statement* stat) {
   }
 }
 
+static void putCurrentStatementsDependOn(SemanticContext& ctx, Symbol* referenced) {
+  DependencyGraph& graph = ctx.getDependencyGraph();
+  std::vector<Statement*>& stack = ctx.getStatementStack();
+  std::unordered_map<Node*, Symbol*>& symLookup = ctx.getSymbolLookup();
+
+  for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+    Statement* stat = *it;
+    astnodetype kind = stat->nodeKind();
+
+    if (kind != AST_LexicalDeclaration && kind != AST_FunctionDeclStatement) {
+      continue;
+    }
+
+    Symbol* statSym = symLookup[stat];
+    graph.addDependency(statSym, referenced);
+  }
+}
+
 static void acceptExpr(SemanticContext& ctx, Expr* v);
 
 static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
@@ -274,6 +292,8 @@ static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
     v->resultType = ConstTypes::UNKNOWN();
     return;
   }
+
+  putCurrentStatementsDependOn(ctx, referenced);
 
   // referenced->readUses++;
   v->resultType = referenced->getScriptType();
@@ -1364,6 +1384,9 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
   }
 
   Scope* scope = ctx.getScope();
+  if (scope->getType() == SCOPE_MAIN) {
+    ctx.getGlobalVariables().push_back(v);
+  }
 
   if (scope->findVariable(nameId)) {
     ctx.getErrors().error(v->location, "Duplicate variable definition");
