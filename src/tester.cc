@@ -417,8 +417,7 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   if (result->nodeKind() == AST_ScriptFileStatement) {
     SemanticContext ctx = SemanticContext(lookup, table, errors, bindings, allocator);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
-
-    SemanticFile* file = runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
+    runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
   }
 
   if (settings.printAst & PRINTAST_AFTER_TRANSFORM) {

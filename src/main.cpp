@@ -80,7 +80,7 @@ int32 main(int32 argc, cstring argv[]) {
     return EXIT_FAILURE;
   }
 
-  SemanticFile* semanticFile = runSemanticTransformer(ctx, sfs);
+  runSemanticTransformer(ctx, sfs);
 
   if (settings.printAst & PRINTAST_AFTER_TRANSFORM) {
     printf("\n\n ====== AST After semantic transformer ======\n\n");

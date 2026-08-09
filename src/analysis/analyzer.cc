@@ -1772,7 +1772,7 @@ static void checkForInvalidDependencies(SemanticContext& ctx) {
   }
 }
 
-SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
+void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
   ctx.setGlobalScope(scope);
@@ -1839,6 +1839,4 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
   reportUnused(ctx, scope);
   ctx.popScope();
   STAT_POP
-
-  return ctx.makeSemanticFile(v);
 }

@@ -1,7 +1,6 @@
 #ifndef QUICKSCRIPT_TRANSFORMER_H
 #define QUICKSCRIPT_TRANSFORMER_H
 #include "SemanticContext.h"
-#include "semantictree.h"
 
 class SemanticTransformer {
   SemanticContext& ctx;
