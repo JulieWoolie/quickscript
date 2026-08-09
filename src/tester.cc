@@ -153,6 +153,12 @@ void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
         continue;
       }
 
+      if (startsWith(data, readIdx, clen, "BREAKPOINT")) {
+        out.breakpoint = true;
+        skip = true;
+        break;
+      }
+
       if (startsWith(data, readIdx, clen, "MODE ")) {
         readIdx += 5;
 
@@ -282,6 +288,8 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors) {
 
 #define RUN_ERROR_CHECKS return checkErrors(&expectedErrors, &errors);
 
+static void breakpoint() {}
+
 bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& settings) {
   std::ifstream instream(filePath);
 
@@ -311,6 +319,10 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   } catch (std::runtime_error& err) {
     parseTestCase(tcase, tlist, table);
     stepFailed = true;
+  }
+
+  if (tcase.breakpoint) {
+    breakpoint();
   }
 
   if (stepFailed) {

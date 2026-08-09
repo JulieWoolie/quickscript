@@ -21,6 +21,7 @@ struct ExpectedError {
 
 struct TestCase {
   testmode mode = TESTMODE_RUN;
+  bool breakpoint = false;
   std::vector<ExpectedError> expectedErrors;
 };
 
