@@ -79,6 +79,8 @@ struct ProgramSettings {
   bool compileToBinary = true;
 
   ProgramArgs runArgs;
+
+  bool omitPassedTests = false;
 };
 
 #define RES_OK 0

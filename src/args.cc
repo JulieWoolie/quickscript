@@ -11,9 +11,11 @@ void showHelpMessage() {
   printf("    quickscript [OPTIONS] [COMMAND]\n");
   printf("\n");
   printf("OPTIONS\n");
-  printf("    --print-ast -p      Print the AST of parsed source files.\n");
-  printf("    --loglevel=<level>  Set the logger level. (One of: error, warn, info)\n");
-  printf("    --text-compile -tc  Compile to a text based IR instead of binary.\n");
+  printf("    --print-ast -p                Print the AST of parsed source files after semantic transformation.\n");
+  printf("    --print-ast=<when> -p=<when>  Set a flag to print the AST after a certain compilation step (One of: after-parse, after-analysis, after-transform.)\n");
+  printf("    --loglevel=<level>            Set the logger level. (One of: error, warn, info)\n");
+  printf("    --text-compile -tc            Compile to a text based IR instead of binary.\n");
+  printf("    --omit-ok-tests -oot          Do not log tests that passed.\n");
   printf("\n");
   printf("COMMANDS\n");
   printf("    help                                Display this help message.\n");
@@ -88,6 +90,14 @@ static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 
     }
     if (stringEquals("-tc", pair.name)) {
       out.compileToBinary = false;
+      return true;
+    }
+    if (stringEquals("--omit-ok-tests", pair.name)) {
+      out.omitPassedTests = true;
+      return true;
+    }
+    if (stringEquals("-oot", pair.name)) {
+      out.omitPassedTests = true;
       return true;
     }
 
