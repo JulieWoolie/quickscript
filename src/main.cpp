@@ -9,6 +9,7 @@
 #include "interpreter/nativeinterface.h"
 #include "errors.h"
 #include "tester.h"
+#include "analysis/transformer.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
@@ -57,19 +58,34 @@ int32 main(int32 argc, cstring argv[]) {
 
   ScriptFileStatement* sfs = p.parse();
 
+  if (settings.printAst & PRINTAST_AFTER_PARSE) {
+    printf("\n\n ====== AST After parser ======\n\n");
+    PrintingVisitor pv = PrintingVisitor(&table, fname.c_str());
+    pv.acceptScriptFileStatement(sfs);
+  }
+
   TypeTable lookup = TypeTable();
   Bindings bindings = createStandardBindings();
 
   SemanticContext ctx = SemanticContext(lookup, table, errors, bindings, pool);
   runSemanticAnalysis(sfs, ctx);
 
+  if (settings.printAst & PRINTAST_AFTER_ANALYSIS) {
+    printf("\n\n ====== AST After semantic analyser ======\n\n");
+    PrintingVisitor pv = PrintingVisitor(&table, fname.c_str());
+    pv.acceptScriptFileStatement(sfs);
+  }
+
   if (errors.getErrorCount() != 0) {
     return EXIT_FAILURE;
   }
 
-  if (settings.printAst) {
+  SemanticFile* semanticFile = runSemanticTransformer(ctx, sfs);
+
+  if (settings.printAst & PRINTAST_AFTER_TRANSFORM) {
+    printf("\n\n ====== AST After semantic transformer ======\n\n");
     PrintingVisitor pv = PrintingVisitor(&table, fname.c_str());
-    sfs->acceptVisit(&pv);
+    pv.acceptScriptFileStatement(sfs);
   }
 
   return EXIT_SUCCESS;
