@@ -74,4 +74,6 @@ add_executable(quickscript src/main.cpp
         src/analysis/transformer.h
         src/analysis/transformer.cc
         src/types/ScriptErroneousType.cc
-        src/types/ScriptErroneousType.h)
+        src/types/ScriptErroneousType.h
+        src/parse/JsonPrinter.cc
+        src/parse/JsonPrinter.h)
