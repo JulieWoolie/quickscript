@@ -52,6 +52,11 @@
 #define CMD_TESTS 4
 typedef uint8 programcommand;
 
+#define PRINTAST_NONE             0
+#define PRINTAST_AFTER_PARSE      (1 << 0)
+#define PRINTAST_AFTER_ANALYSIS   (1 << 1)
+#define PRINTAST_AFTER_TRANSFORM  (1 << 2)
+
 struct ProgramArgs {
   int8* cdata = nullptr;
   int32* lengths = nullptr;
@@ -59,7 +64,7 @@ struct ProgramArgs {
 };
 
 struct ProgramSettings {
-  bool printAst = false;
+  uint8 printAst = PRINTAST_NONE;
   loglevel loggerLevel = LOGL_INFO;
   programcommand command = CMD_HELP;
 

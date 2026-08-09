@@ -74,7 +74,7 @@ static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 
 
   if (pair.value.empty()) {
     if (stringEquals("--print-ast", pair.name)) {
-      out.printAst = true;
+      out.printAst |= PRINTAST_AFTER_TRANSFORM;
       return true;
     }
     if (stringEquals("-p", pair.name)) {
@@ -92,6 +92,21 @@ static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 
     }
 
     return false;
+  }
+
+  if (stringEquals("--print-ast", pair.name) || stringEquals("-p", pair.name)) {
+    if (stringEquals("after-transform", pair.value)) {
+      out.printAst |= PRINTAST_AFTER_TRANSFORM;
+      return true;
+    }
+    if (stringEquals("after-parse", pair.value)) {
+      out.printAst |= PRINTAST_AFTER_PARSE;
+      return true;
+    }
+    if (stringEquals("after-analysis", pair.value)) {
+      out.printAst |= PRINTAST_AFTER_ANALYSIS;
+      return true;
+    }
   }
 
   if (stringEquals("--loglevel", pair.name)) {
