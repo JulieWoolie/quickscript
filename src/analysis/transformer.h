@@ -1,0 +1,34 @@
+#ifndef QUICKSCRIPT_TRANSFORMER_H
+#define QUICKSCRIPT_TRANSFORMER_H
+#include "SemanticContext.h"
+#include "semantictree.h"
+
+class SemanticTransformer {
+  SemanticContext& ctx;
+  ScriptFileStatement* sfs;
+
+  Expr* optimizeExpr(Expr* expr) const;
+
+  Expr* optimizeStringConcat(StringLiteral* lhs, Expr* rhs) const;
+
+  Expr* optimizeStringRepeat(StringLiteral* lhs, Expr* rhs) const;
+
+  Expr* optimizeBinary(BinaryExpr* e) const;
+
+  Expr* optimizeUnary(UnaryExpr* u) const;
+
+  Expr* optimizeTernary(TernaryExpr* t) const;
+
+  Statement* optimizeStatement(Statement* stat, bool emptyBlocksAsNull);
+
+  void runOptimizer();
+
+  public:
+    SemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
+
+    SemanticFile* run();
+};
+
+SemanticFile* runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
+
+#endif //QUICKSCRIPT_TRANSFORMER_H
