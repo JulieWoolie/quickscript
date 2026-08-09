@@ -1,0 +1,28 @@
+# MODE validate
+
+# This should fail
+const int32 GLOBAL = f()
+
+# This shouldn't
+const int32 GLOBAL2 = y()
+
+# This should still fail despite GLOBAL3 not being accessed,
+# but because GLOBAL4 is being accessed.
+const int32 GLOBAL3 = z()
+const int32 GLOBAL4 = 0
+
+int32 f() {
+  # ERROR message="Use of global variable 'GLOBAL' before its initialized"
+  return GLOBAL
+}
+
+int32 y() {
+  return 0
+}
+
+int32 z() {
+  # ERROR message="Use of global variable 'GLOBAL4' before its initialized"
+  return GLOBAL4
+}
+
+void main() {}
