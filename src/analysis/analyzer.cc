@@ -385,7 +385,10 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
       Scope* global = ctx.getGlobalScope();
       NoFreeAllocator& alloc = ctx.getAllocator();
 
+      // Native type, mark as used so no warnings appear
       sps = alloc.make<PropertySymbol>(resType, v->property->value, propertyType);
+      sps->addFlags(SYMFLAG_USED);
+
       global->pushSymbol(sps);
     }
   }
@@ -1706,6 +1709,8 @@ static void addDefaultSymbols(SemanticContext& ctx, Scope* scope) {
   stringid lengthId = strings.allocate("length");
 
   PropertySymbol* stringLength = alloc.make<PropertySymbol>(ConstTypes::STRING(), lengthId, ConstTypes::UINT32());
+  stringLength->addFlags(SYMFLAG_BINDING);
+
   scope->pushSymbol(stringLength);
 }
 
@@ -1815,8 +1820,20 @@ SemanticFile* runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) 
     ctx.getErrors().warn(
       "No possible main(string[]) functions found. Script will have no entry point"
     );
-  } else if (mainCandidates.size() > 1) {
-    ctx.getErrors().warn("Multiple main functions found. First one will be used");
+  } else {
+    if (mainCandidates.size() > 1) {
+      ctx.getErrors().warn("Multiple main functions found. First one will be used");
+    }
+
+    LocalFunction* main = mainCandidates.at(0);
+    LocalFuncSymbol* mainSym = static_cast<LocalFuncSymbol*>(ctx.getSymbolLookup()[main->getDecl()]);
+
+    if (mainSym->getCalls() != 0) {
+      ctx.getErrors().warn("Main function called manually");
+    }
+
+    // Prevent "'main' not used" warnings
+    mainSym->onCalled();
   }
 
   reportUnused(ctx, scope);
