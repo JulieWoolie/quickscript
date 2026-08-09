@@ -175,8 +175,8 @@ NoFreeAllocator& SemanticContext::getAllocator() {
   return m_allocator;
 }
 
-std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolCache() {
-  return m_symbolCache;
+std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolLookup() {
+  return m_symbolLookup;
 }
 
 DependencyGraph& SemanticContext::getDependencyGraph() {

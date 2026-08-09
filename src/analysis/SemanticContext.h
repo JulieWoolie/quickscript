@@ -34,12 +34,13 @@ class SemanticContext {
   std::vector<LocalFunction*> m_mainCandidates;
 
   //
-  // Notes on this cache:
+  // Notes on what types of keys map to what types of values:
   //
   // Identifier* keys => Symbol the ID is referencing
+  // PropertyAccessExpr* keys => PropertySymbol* being referenced
   // Statement* keys => Symbol the statement is declaring
   //
-  std::unordered_map<Node*, Symbol*> m_symbolCache;
+  std::unordered_map<Node*, Symbol*> m_symbolLookup;
 
   DependencyGraph m_dependencyGraph;
 
@@ -101,7 +102,7 @@ class SemanticContext {
 
     NoFreeAllocator& getAllocator();
 
-    std::unordered_map<Node*, Symbol*>& getSymbolCache();
+    std::unordered_map<Node*, Symbol*>& getSymbolLookup();
 
     DependencyGraph& getDependencyGraph();
 };

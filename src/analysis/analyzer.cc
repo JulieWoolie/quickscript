@@ -21,7 +21,7 @@
 #define NOT_MAIN_TRAILING ctx.popWrongScopeReported();
 
 static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Identifier* id, ScriptType* expectedType) {
-  std::unordered_map<Node*, Symbol*>& cache = ctx.getSymbolCache();
+  std::unordered_map<Node*, Symbol*>& cache = ctx.getSymbolLookup();
   if (cache.contains(id)) {
     return cache[id];
   }
@@ -378,7 +378,7 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
   }
 
   v->resultType = sps->getScriptType();
-  ctx.getSymbolCache()[v->property] = sps;
+  ctx.getSymbolLookup()[v->property] = sps;
 }
 
 static void acceptIndexAccessExpr(SemanticContext& ctx, IndexAccessExpr* v) {
@@ -502,7 +502,7 @@ static void acceptObjectLiteral(SemanticContext& ctx, ObjectLiteral* v) {
       continue;
     }
 
-    ctx.getSymbolCache()[propExpr] = sym;
+    ctx.getSymbolLookup()[propExpr] = sym;
 
     ScriptType* propType = sym->getScriptType();
 
@@ -776,7 +776,7 @@ static void checkAssignability(SemanticContext& ctx, Expr* expr) {
       }
 
       if (objType->kind() == TK_STRUCT) {
-        PropertySymbol* pSym = static_cast<PropertySymbol*>(ctx.getSymbolCache()[prop->property]);
+        PropertySymbol* pSym = static_cast<PropertySymbol*>(ctx.getSymbolLookup()[prop->property]);
 
         if (!pSym) {
           return;
@@ -1055,7 +1055,7 @@ static void createStructType(SemanticContext& ctx, StructDecl* v) {
   LocalStructSymbol* symb = ctx.getAllocator().make<LocalStructSymbol>(v->name->value, type, v);
 
   scope->pushSymbol(symb);
-  ctx.getSymbolCache()[v] = symb;
+  ctx.getSymbolLookup()[v] = symb;
 }
 
 static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* decl) {
@@ -1187,7 +1187,7 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
   LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(*lf);
   scope->pushSymbol(sym);
 
-  ctx.getSymbolCache()[v] = sym;
+  ctx.getSymbolLookup()[v] = sym;
 
   if (isPossibleMainFunction(ctx, v)) {
     ctx.getMainFuncCandidates().push_back(lf);
@@ -1382,7 +1382,7 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
     lvs->setFlags(SYMFLAG_CONST);
   }
 
-  ctx.getSymbolCache()[v] = lvs;
+  ctx.getSymbolLookup()[v] = lvs;
 
   STAT_POP;
 }
@@ -1547,7 +1547,7 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
     scope->pushSymbol(lvs);
     scope->setStackSize(scope->getStackSize() + memSize);
 
-    ctx.getSymbolCache()[arg] = lvs;
+    ctx.getSymbolLookup()[arg] = lvs;
   }
 
   acceptBodyNoScope(ctx, v->functionBody);
