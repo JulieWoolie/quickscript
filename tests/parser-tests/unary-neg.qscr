@@ -1,0 +1,12 @@
+# MODE expr
+-i
+/*EXPECT-AST:
+{
+  "type": "UnaryExpr",
+  "op": "UOP_NEG",
+  "target": {
+    "type": "Identifier",
+    "value": "i"
+  }
+}
+*/
