@@ -9,6 +9,7 @@
 #include "allocator.h"
 #include "errors.h"
 #include "analysis/analyzer.h"
+#include "analysis/transformer.h"
 #include "parse/lexer.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
@@ -357,9 +358,11 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   if (result->nodeKind() == AST_ScriptFileStatement) {
     SemanticContext ctx = SemanticContext(lookup, table, errors, bindings, allocator);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
+
+    SemanticFile* file = runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
   }
 
-  if (settings.printAst) {
+  if (settings.printAst & PRINTAST_AFTER_TRANSFORM) {
     PrintingVisitor pv = PrintingVisitor(&table, fileName);
     result->acceptVisit(&pv);
   }
