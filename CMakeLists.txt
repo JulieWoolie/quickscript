@@ -32,8 +32,6 @@ add_executable(quickscript src/main.cpp
         src/interpreter/interpreter.h
         src/tester.h
         src/tester.cc
-        src/analysis/ast_optimizer.h
-        src/analysis/ast_optimizer.cc
         src/codegen/compiler.h
         src/codegen/compiler.cc
         src/codegen/type_conv.h
