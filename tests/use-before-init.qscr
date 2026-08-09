@@ -25,6 +25,15 @@ int32 z() {
   return GLOBAL4
 }
 
+# This is here to just catch the analyzer not being
+# able to catch recursive call dependencies
+int32 recur(int32 a) {
+ if (a == 10) {
+   return a
+ }
+ return recur(a * 2)
+}
+
 void main() {
   # ERROR message="Accessing 'z' before its initialized"
   uint32 z = z
