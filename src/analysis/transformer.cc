@@ -659,12 +659,11 @@ SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatem
 
 }
 
-SemanticFile* SemanticTransformer::run() {
+void SemanticTransformer::run() {
   runOptimizer();
-  return ctx.makeSemanticFile(sfs);
 }
 
-SemanticFile* runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs) {
+void runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs) {
   SemanticTransformer transformer = SemanticTransformer(ctx, sfs);
   return transformer.run();
 }

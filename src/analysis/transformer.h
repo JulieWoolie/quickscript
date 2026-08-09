@@ -26,9 +26,9 @@ class SemanticTransformer {
   public:
     SemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
 
-    SemanticFile* run();
+    void run();
 };
 
-SemanticFile* runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
+void runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
 
 #endif //QUICKSCRIPT_TRANSFORMER_H

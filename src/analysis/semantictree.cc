@@ -197,20 +197,6 @@ Scope* Scope::getParent() const {
   return m_parentScope;
 }
 
-SemanticFile::SemanticFile(Scope* globalScope, ScriptFileStatement* sfs) : m_globalScope(globalScope), m_scriptFile(sfs) {
-}
-
-Scope* SemanticFile::getGlobalScope() const {
-  return m_globalScope;
-}
-
-std::vector<LocalFunction*>& SemanticFile::getLocalFunctions() {
-  return m_localFunctions;
-}
-
-std::unordered_map<Identifier*, Symbol*>& SemanticFile::getLookupCache() {
-  return m_symLookupCache;
-}
 uint32 PropertySymbol::getReads() const {
   return m_reads;
 }

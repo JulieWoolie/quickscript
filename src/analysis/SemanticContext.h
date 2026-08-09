@@ -61,8 +61,6 @@ class SemanticContext {
       NoFreeAllocator& allocator
     );
 
-    SemanticFile* makeSemanticFile(ScriptFileStatement* sfs);
-
     void pushLocalFunction(LocalFunction* func);
 
     std::vector<LocalFunction*>& getLocalFunctions();
