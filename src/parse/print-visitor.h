@@ -57,7 +57,7 @@ struct PrintingVisitor: Visitor {
       int32 len = m_table->getlen(id);
       char ch[len + 1];
       m_table->getchars(id, ch, len + 1);
-      printf(ch);
+      printf("%s", ch);
     }
     void printloc(Location l) {
       printf("location=%i::%i:%i", l.index, l.line, l.column);
