@@ -1,0 +1,3 @@
+# MODE expr
+1
+/*EXPECT-AST: {"type":"IntLiteral","value":"1"}*/
