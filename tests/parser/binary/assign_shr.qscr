@@ -1,0 +1,16 @@
+# MODE expr
+a >>= b
+/*EXPECT-AST:
+{
+  "type": "BinaryExpr",
+  "op": "BOP_ASSIGN_SHR",
+  "lhs": {
+    "type": "Identifier",
+    "value": "a"
+  },
+  "rhs": {
+    "type": "Identifier",
+    "value": "b"
+  }
+}
+*/

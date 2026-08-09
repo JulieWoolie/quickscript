@@ -1,0 +1,3 @@
+# MODE expr
+1.0
+/*EXPECT-AST: {"type":"FloatLiteral","value":"1.000000"}*/
