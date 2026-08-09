@@ -14,6 +14,8 @@ struct StringRef {
   conststring data;
 
   StringRef(uint32 idx, int32 len, int8* data);
+
+  std::string_view view() const;
 };
 
 typedef StringRef* stringid;

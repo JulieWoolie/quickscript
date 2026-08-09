@@ -9,6 +9,9 @@ StringRef::StringRef(uint32 _idx, int32 _len, int8* _data)
 {
 
 }
+std::string_view StringRef::view() const {
+  return std::string_view(data, len);
+}
 
 StringTable::StringTable() {
   // Create the 'empty string' entry
