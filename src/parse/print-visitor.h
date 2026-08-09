@@ -263,7 +263,7 @@ struct PrintingVisitor: Visitor {
 
       dec();
       nli();
-      printf("]");
+      printf("]\n");
     }
     void acceptFunctionParam(FunctionParam *v) override {
       PRINTNODEBASE
