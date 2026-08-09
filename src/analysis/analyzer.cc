@@ -1080,6 +1080,7 @@ static void createStructType(SemanticContext& ctx, StructDecl* v) {
 
   scope->pushSymbol(symb);
   ctx.getSymbolLookup()[v] = symb;
+  ctx.getScopeLookup()[symb] = scope;
 }
 
 static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* decl) {
@@ -1105,6 +1106,7 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
 
     PropertySymbol* sym = alloc.make<PropertySymbol>(type, propDecl->name->value, typeProp->type);
     scope->pushSymbol(sym);
+    ctx.getScopeLookup()[sym] = scope;
   }
 }
 
@@ -1210,6 +1212,7 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
 
   LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(*lf);
   scope->pushSymbol(sym);
+  ctx.getScopeLookup()[sym] = scope;
 
   ctx.getSymbolLookup()[v] = sym;
 
@@ -1387,6 +1390,7 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
 
   LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(nameId, declType, memSize, varOff, v);
   scope->pushSymbol(lvs);
+  ctx.getScopeLookup()[lvs] = scope;
 
   if (v->isConstDeclaration) {
     lvs->setFlags(SYMFLAG_CONST);
@@ -1576,6 +1580,7 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
     scope->pushSymbol(lvs);
     scope->setStackSize(scope->getStackSize() + memSize);
 
+    ctx.getScopeLookup()[lvs] = scope;
     ctx.getSymbolLookup()[arg] = lvs;
   }
 

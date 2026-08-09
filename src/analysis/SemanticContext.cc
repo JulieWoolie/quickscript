@@ -195,6 +195,10 @@ std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolLookup() {
   return m_symbolLookup;
 }
 
+std::unordered_map<Symbol*, Scope*>& SemanticContext::getScopeLookup() {
+  return m_scopeLookup;
+}
+
 DependencyGraph& SemanticContext::getDependencyGraph() {
   return m_dependencyGraph;
 }

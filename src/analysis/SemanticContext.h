@@ -45,6 +45,7 @@ class SemanticContext {
   // Statement* keys => Symbol the statement is declaring
   //
   std::unordered_map<Node*, Symbol*> m_symbolLookup;
+  std::unordered_map<Symbol*, Scope*> m_scopeLookup;
 
   DependencyGraph m_dependencyGraph;
 
@@ -113,6 +114,8 @@ class SemanticContext {
     NoFreeAllocator& getAllocator();
 
     std::unordered_map<Node*, Symbol*>& getSymbolLookup();
+
+    std::unordered_map<Symbol*, Scope*>& getScopeLookup();
 
     DependencyGraph& getDependencyGraph();
 };
