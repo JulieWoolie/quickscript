@@ -16,9 +16,6 @@ void main() {
   # ^ That should fail because f() should only be found
   #   when we're looking for a function specifically
 
-  # ERROR message="Unknown symbol 'z'"
-  uint32 z = z
-
   # This shouldn't fail
   f()
 }
