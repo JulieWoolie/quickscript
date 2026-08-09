@@ -74,6 +74,10 @@ std::vector<LexicalDeclaration*>& SemanticContext::getGlobalVariables() {
   return m_globalVars;
 }
 
+std::vector<LexicalDeclaration*>& SemanticContext::getAllVariables() {
+  return m_allVars;
+}
+
 void SemanticContext::pushWrongScopeTypeReported(bool reported) {
   m_wrongScopeReports.push_back(reported);
 }

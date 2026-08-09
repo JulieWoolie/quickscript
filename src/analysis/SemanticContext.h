@@ -35,6 +35,7 @@ class SemanticContext {
   std::vector<LocalFunction*> m_localFunctions;
   std::vector<LocalFunction*> m_mainCandidates;
   std::vector<LexicalDeclaration*> m_globalVars;
+  std::vector<LexicalDeclaration*> m_allVars;
 
   //
   // Notes on what types of keys map to what types of values:
@@ -68,6 +69,8 @@ class SemanticContext {
     std::vector<LocalFunction*>& getMainFuncCandidates();
 
     std::vector<LexicalDeclaration*>& getGlobalVariables();
+
+    std::vector<LexicalDeclaration*>& getAllVariables();
 
     void pushWrongScopeTypeReported(bool reported);
 
