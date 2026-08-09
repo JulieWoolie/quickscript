@@ -23,6 +23,7 @@ struct TestCase {
   testmode mode = TESTMODE_RUN;
   bool breakpoint = false;
   std::vector<ExpectedError> expectedErrors;
+  std::string expectedAst;
 };
 
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table);

@@ -10,6 +10,7 @@
 #include "errors.h"
 #include "analysis/analyzer.h"
 #include "analysis/transformer.h"
+#include "parse/JsonPrinter.h"
 #include "parse/lexer.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
@@ -126,11 +127,52 @@ static int32 parseViewToInt(std::string_view sv) {
   return atoi(buf);
 }
 
+static void parseExpectedAst(TestCase& out, const stringid comment) {
+  uint32 readIdx = 0;
+
+  const uint32 len = comment->len;
+  conststring data = comment->data;
+
+  while (data[readIdx] == ' ') {
+    readIdx++;
+  }
+
+  conststring prefix = "EXPECT-AST:";
+
+  if (!startsWith(data, readIdx, len, prefix)) {
+    return;
+  }
+
+  readIdx += strlen(prefix);
+  std::string& jsonString = out.expectedAst;
+
+  bool inString = false;
+  while (readIdx < len) {
+    const char ch = data[readIdx++];
+
+    if (!inString && (ch == ' ' || ch == '\n' || ch == '\r')) {
+      continue;
+    }
+
+    jsonString.push_back(ch);
+
+    if (ch == '\"') {
+      inString = !inString;
+    }
+  }
+}
+
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
   const uint32 size = list.size();
 
   for (uint32 idx = 0; idx < size; idx++) {
     const Token* t = list.get(idx);
+
+    if (t->ttype == TT_BCOMMENT) {
+      parseExpectedAst(out, t->valueId);
+      continue;
+    }
+
     if (t->ttype != TT_LCOMMENT) {
       continue;
     }
@@ -230,7 +272,7 @@ static bool checkError(const ReportedError* rep, const ExpectedError& expect) {
   return false;
 }
 
-static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors) {
+static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors, Node* astNode) {
   const uint32 expected = tcase.expectedErrors.size();
   const uint32 actual = compilerErrors.getErrorCount();
 
@@ -251,11 +293,7 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors) {
     if (checkError(r, err)) {
       continue;
     }
-
-#ifdef PRINT_FULL_ERRORS
     compilerErrors.printError(*r);
-#endif
-
     comparisonsFailed = true;
   }
 
@@ -281,6 +319,27 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors) {
     }
 
     return false;
+  }
+
+  if (!tcase.expectedAst.empty()) {
+    if (!astNode) {
+      fprintf(
+        stderr,
+        "Expected an AST to compare to, but parsing failed before AST could be created"
+      );
+      return false;
+    }
+
+    JsonPrinter printer = JsonPrinter();
+    astNode->acceptVisit(&printer);
+
+    const std::string& jsonAst = printer.getResult();
+    const std::string& expectedAst = tcase.expectedAst;
+
+    if (jsonAst != expectedAst) {
+      fprintf(stderr, "Expected AST did not match, printing parsed AST:\n%s\n", jsonAst.c_str());
+      return false;
+    }
   }
 
   // All good size wise
@@ -327,7 +386,7 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   }
 
   if (stepFailed) {
-    return checkErrors(tcase, errors);
+    return checkErrors(tcase, errors, nullptr);
   }
 
   NoFreeAllocator allocator;
@@ -349,7 +408,7 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   }
 
   if (stepFailed) {
-    return checkErrors(tcase, errors);
+    return checkErrors(tcase, errors, result);
   }
 
   TypeTable lookup = TypeTable();
@@ -367,7 +426,7 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
     result->acceptVisit(&pv);
   }
 
-  return checkErrors(tcase, errors);
+  return checkErrors(tcase, errors, result);
 }
 
 void runTests(const ProgramSettings& settings) {
