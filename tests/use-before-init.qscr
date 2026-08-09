@@ -11,8 +11,8 @@ const int32 GLOBAL2 = y()
 const int32 GLOBAL3 = z()
 const int32 GLOBAL4 = 0
 
+# ERROR message="Accessing 'GLOBAL' before its initialized"
 int32 f() {
-  # ERROR message="Use of global variable 'GLOBAL' before its initialized"
   return GLOBAL
 }
 
@@ -20,9 +20,12 @@ int32 y() {
   return 0
 }
 
+# ERROR message="Accessing 'GLOBAL4' before its initialized"
 int32 z() {
-  # ERROR message="Use of global variable 'GLOBAL4' before its initialized"
   return GLOBAL4
 }
 
-void main() {}
+void main() {
+  # ERROR message="Accessing 'z' before its initialized"
+  uint32 z = z
+}
