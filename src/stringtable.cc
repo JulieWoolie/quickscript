@@ -4,14 +4,20 @@
 #include <cstring>
 #include <stdexcept>
 
-StringTable::StringTable() {
+StringRef::StringRef(uint32 _idx, int32 _len, int8* _data)
+  : index(_idx), len(_len), data(_data)
+{
 
+}
+
+StringTable::StringTable() {
   // Create the 'empty string' entry
   m_lengths = static_cast<StringEntry*>(malloc(sizeof(StringEntry) * 100));
   m_lenEntries = 1;
   m_lenCap = 100;
   m_lengths->len = 0;
   m_lengths->offset = 0;
+  m_lengths->ref = new StringRef(0, 0, nullptr);
 }
 
 StringTable::~StringTable() {
@@ -28,9 +34,25 @@ stringid StringTable::allocate(const conststring str) {
   return allocate(str, len);
 }
 
+static void updateRefs(const uint32 len, const StringEntry* entries, const char* buf) {
+  if (len < 2) {
+    return;
+  }
+  for (uint32 i = 1; i < len; i++) {
+    const StringEntry* entry = &entries[i];
+    StringRef* ref = entry->ref;
+
+    if (!ref) {
+      continue;
+    }
+
+    ref->data = buf + entry->offset;
+  }
+}
+
 stringid StringTable::allocate(const conststring str, const uint32 len) {
   if (len <= 0) {
-    return 0;
+    return m_lengths[0].ref;
   }
 
   char temp[len + 1];
@@ -61,6 +83,8 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
 
       m_data = ndata;
       m_dataCap = ncap;
+
+      updateRefs(m_lenEntries, m_lengths, m_data);
     }
 
     char* dst = m_data + m_dataLen;
@@ -81,7 +105,7 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
           entry++;
           continue;
         }
-        return i;
+        return entry->ref;
       }
     }
   }
@@ -99,14 +123,16 @@ stringid StringTable::allocate(const conststring str, const uint32 len) {
   }
 
   StringEntry* entry = m_lengths + m_lenEntries;
-  const stringid id = m_lenEntries;
+  const uint32 id = m_lenEntries;
+  StringRef* ref = new StringRef(id, len, m_data + off);
 
   entry->len = len;
   entry->offset = off;
+  entry->ref = ref;
 
   m_lenEntries++;
 
-  return id;
+  return ref;
 }
 
 stringid StringTable::allocate(const std::string& str) {
@@ -142,44 +168,36 @@ stringid StringTable::findId(const std::string& str) const {
       continue;
     }
 
-    return i;
+    return entry->ref;
   }
 
   return EMPTY_STRING;
 }
 
 std::string_view StringTable::getview(const stringid id) const {
-  if (id >= m_lenEntries) {
+  if (!id) {
     return {};
   }
-  if (id == 0) {
-    return "";
-  }
-
-  StringEntry entry = m_lengths[id];
-  return {m_data + entry.offset, entry.len};
+  return std::string_view(id->data, id->len);
 }
 
 int32 StringTable::getlen(const stringid id) const {
-  if (id >= m_lenEntries) {
-    return -1;
-  }
-  if (id == 0) {
+  if (!id) {
     return 0;
   }
-  return m_lengths[id].len;
+  return id->len;
 }
 
 int32 StringTable::getchars(const stringid id, char *out, const uint32 maxout) const {
-  if (id >= m_lenEntries || maxout == 0) {
-    return -1;
-  }
-  if (id == 0) {
+  if (!id || id->index == 0) {
     out[0] = '\0';
     return 0;
   }
+  if (id->index >= m_lenEntries || maxout == 0) {
+    return -1;
+  }
 
-  auto [offset, len] = m_lengths[id];
+  auto [offset, len, ref] = m_lengths[id->index];
   uint32 copied = 0;
 
   if (len < maxout) {
@@ -196,14 +214,14 @@ int32 StringTable::getchars(const stringid id, char *out, const uint32 maxout) c
 }
 
 int32 StringTable::copychars(stringid id, char* out, uint32 maxout) const {
-  if (id >= m_lenEntries || maxout == 0) {
-    return -1;
-  }
-  if (id == 0) {
+  if (!id || id->index) {
     return 0;
   }
+  if (!id || maxout == 0) {
+    return -1;
+  }
 
-  auto [offset, len] = m_lengths[id];
+  auto [offset, len, ref] = m_lengths[id->index];
   uint32 cpylen = std::min(maxout, len);
 
   memcpy(out, m_data + offset, cpylen);
@@ -212,11 +230,11 @@ int32 StringTable::copychars(stringid id, char* out, uint32 maxout) const {
 }
 
 std::string StringTable::getstring(stringid id) {
-  if (id == EMPTY_STRING || id >= m_lenEntries) {
+  if (!id || id->index == EMPTY_STRING || id->index >= m_lenEntries) {
     return "";
   }
 
-  auto [offset, len] = m_lengths[id];
+  auto [offset, len, ref] = m_lengths[id->index];
 
   char content[len];
   memcpy(content, m_data + offset, len);

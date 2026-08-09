@@ -7,16 +7,21 @@
 
 #define EMPTY_STRING 0
 
-typedef uint32 stringid;
+struct StringRef {
+  const uint32 index;
+  const uint32 len;
 
-struct qsString {
-  char* data = nullptr;
-  uint32 len = 0;
+  conststring data;
+
+  StringRef(uint32 idx, int32 len, int8* data);
 };
+
+typedef StringRef* stringid;
 
 struct StringEntry {
   uint64 offset = 0;
   uint32 len = 0;
+  StringRef* ref = nullptr;
 };
 
 class StringTable {
