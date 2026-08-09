@@ -34,7 +34,6 @@ struct Block;
 struct IfStatement;
 struct ForStatement;
 struct LexicalDeclaration;
-struct DoWhileStatement;
 struct WhileStatement;
 struct ControlFlowStatement;
 struct ReturnStatement;
@@ -64,26 +63,24 @@ struct AssertStatement;
 #define AST_BinaryExpr 13
 #define AST_UnaryExpr 14
 #define AST_TernaryExpr 15
+#define AST_ObjectLiteralProperty 16
+#define AST_ObjectLiteral 17
+#define AST_ArrayLiteral 18
 
-#define AST_Block 16
-#define AST_IfStatement 17
-#define AST_ForStatement 18
-#define AST_LexicalDeclaration 19
-#define AST_DoWhileStatement 20
-#define AST_WhileStatement 21
-#define AST_ControlFlowStatement 22
-#define AST_ReturnStatement 23
-#define AST_ScriptFileStatement 24
-#define AST_FunctionParam 25
-#define AST_FunctionDeclStatement 26
-#define AST_ExprStatement 27
-#define AST_StructPropertyDecl 28
-#define AST_StructDecl 29
-
-#define AST_ObjectLiteralProperty 30
-#define AST_ObjectLiteral 31
+#define AST_Block 19
+#define AST_IfStatement 20
+#define AST_ForStatement 21
+#define AST_LexicalDeclaration 22
+#define AST_WhileStatement 23
+#define AST_ControlFlowStatement 24
+#define AST_ReturnStatement 25
+#define AST_ScriptFileStatement 26
+#define AST_FunctionParam 27
+#define AST_FunctionDeclStatement 28
+#define AST_ExprStatement 29
+#define AST_StructPropertyDecl 30
+#define AST_StructDecl 31
 #define AST_AssertStatement 32
-#define AST_ArrayLiteral 33
 
 typedef uint8 astnodetype;
 
@@ -114,7 +111,6 @@ struct Visitor {
   virtual void acceptIfStatement(IfStatement* v) = 0;
   virtual void acceptForStatement(ForStatement* v) = 0;
   virtual void acceptLexicalDeclaration(LexicalDeclaration* v) = 0;
-  virtual void acceptDoWhileStatement(DoWhileStatement* v) = 0;
   virtual void acceptWhileStatement(WhileStatement* v) = 0;
   virtual void acceptControlFlowStatement(ControlFlowStatement* v) = 0;
   virtual void acceptReturnStatement(ReturnStatement* v) = 0;
@@ -370,16 +366,11 @@ AST_TYPE(LexicalDeclaration, Statement,
   bool isConstDeclaration = false;
 )
 
-AST_TYPE(DoWhileStatement, Statement,
-  Block* body = nullptr;
-  Expr* condition = nullptr;
-  Identifier* label = nullptr;
-)
-
 AST_TYPE(WhileStatement, Statement,
   Block* body = nullptr;
   Expr* condition = nullptr;
   Identifier* label = nullptr;
+  bool doWhile = false;
 )
 
 #define CFT_NIL 0

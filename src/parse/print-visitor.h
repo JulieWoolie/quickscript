@@ -221,18 +221,9 @@ struct PrintingVisitor: Visitor {
       OBJPROPO("value", v->value)
       OBJEND
     }
-    void acceptDoWhileStatement(DoWhileStatement *v) override {
-      PRINTNODEBASE
-      printf(")");
-      OBJBEGIN
-      OBJPROPO("label", v->label)
-      OBJPROP("condition", v->condition)
-      OBJPROP("body", v->body)
-      OBJEND
-    }
     void acceptWhileStatement(WhileStatement *v) override {
       PRINTNODEBASE
-      printf(")");
+      printf("looptype=%s)", v->doWhile ? "do_while" : "while");
       OBJBEGIN
       OBJPROPO("label", v->label)
       OBJPROP("condition", v->condition)

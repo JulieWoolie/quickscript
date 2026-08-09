@@ -59,7 +59,7 @@ class Parser {
 
     ForStatement* forStatement(Identifier* label);
 
-    DoWhileStatement* doWhileStatement(Identifier* label);
+    WhileStatement* doWhileStatement(Identifier* label);
 
     WhileStatement* whileStatement(Identifier* label);
 

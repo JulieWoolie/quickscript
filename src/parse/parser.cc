@@ -413,11 +413,12 @@ ForStatement * Parser::forStatement(Identifier* label) {
   return EMPLACE(f);
 }
 
-DoWhileStatement* Parser::doWhileStatement(Identifier* label) {
+WhileStatement* Parser::doWhileStatement(Identifier* label) {
   const Token* t = expect(TT_KEYW_DO);
 
-  DoWhileStatement dow;
+  WhileStatement dow;
   dow.location = t->start;
+  dow.doWhile = true;
   dow.label = label;
   dow.body = block();
 
@@ -433,6 +434,7 @@ WhileStatement* Parser::whileStatement(Identifier* label) {
   WhileStatement dow;
   dow.location = t->start;
   dow.label = label;
+  dow.doWhile = false;
   dow.condition = loopConditionExpr();
   dow.body = block();
 

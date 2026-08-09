@@ -251,8 +251,6 @@ static bool everyBranchHasReturn(Statement* stat) {
       return everyBranchHasReturn(static_cast<ForStatement*>(stat)->loopBody);
     case AST_WhileStatement:
       return everyBranchHasReturn(static_cast<WhileStatement*>(stat)->body);
-    case AST_DoWhileStatement:
-      return everyBranchHasReturn(static_cast<DoWhileStatement*>(stat)->body);
     default:
       return false;
   }
@@ -1309,7 +1307,6 @@ static bool isAllowedLoopOrIfBody(Statement* stat) {
   switch (stat->nodeKind()) {
     case AST_Block:
     case AST_ForStatement:
-    case AST_DoWhileStatement:
     case AST_WhileStatement:
     case AST_IfStatement:
     case AST_ReturnStatement:
@@ -1420,30 +1417,19 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
   STAT_POP;
 }
 
-static void acceptDoWhileStatement(SemanticContext& ctx, DoWhileStatement* v) {
-  NOT_MAIN("Do While Loop")
-
-  STAT_PUSH
-  Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
-
-  acceptBodyNoScope(ctx, v->body);
-  acceptExpr(ctx, v->condition);
-
-  reportUnused(ctx, scope);
-  ctx.popScope();
-
-  NOT_MAIN_TRAILING
-  STAT_POP
-}
-
 static void acceptWhileStatement(SemanticContext& ctx, WhileStatement* v) {
-  NOT_MAIN("While Loop")
+  NOT_MAIN(v->doWhile ? "Do While Loop" : "While Loop")
 
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
 
-  acceptExpr(ctx, v->condition);
-  acceptBodyNoScope(ctx, v->body);
+  if (v->doWhile) {
+    acceptBodyNoScope(ctx, v->body);
+    acceptExpr(ctx, v->condition);
+  } else {
+    acceptExpr(ctx, v->condition);
+    acceptBodyNoScope(ctx, v->body);
+  }
 
   reportUnused(ctx, scope);
   ctx.popScope();
@@ -1686,9 +1672,6 @@ static void acceptStatement(SemanticContext& ctx, Statement* stat) {
       break;
     case AST_LexicalDeclaration:
       acceptLexicalDeclaration(ctx, static_cast<LexicalDeclaration*>(stat));
-      break;
-    case AST_DoWhileStatement:
-      acceptDoWhileStatement(ctx, static_cast<DoWhileStatement*>(stat));
       break;
     case AST_WhileStatement:
       acceptWhileStatement(ctx, static_cast<WhileStatement*>(stat));
