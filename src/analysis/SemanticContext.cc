@@ -66,6 +66,10 @@ std::vector<LocalFunction*>& SemanticContext::getMainFuncCandidates() {
   return m_mainCandidates;
 }
 
+std::vector<LexicalDeclaration*>& SemanticContext::getGlobalVariables() {
+  return m_globalVars;
+}
+
 void SemanticContext::pushWrongScopeTypeReported(bool reported) {
   m_wrongScopeReports.push_back(reported);
 }
@@ -108,6 +112,10 @@ Statement* SemanticContext::getCurrentStatement() const {
     return nullptr;
   }
   return m_statementStack.back();
+}
+
+std::vector<Statement*>& SemanticContext::getStatementStack() {
+  return m_statementStack;
 }
 
 void SemanticContext::popStatement() {
