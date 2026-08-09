@@ -851,12 +851,12 @@ Expr* Parser::unaryExpr() {
     default:
       Expr* target = memberExpr(true);
 
-      if (!is(TT_INC) || is(TT_DEC)) {
+      if (!is(TT_INC) && !is(TT_DEC)) {
         return target;
       }
 
       tokentype tt = next()->ttype;
-      u.op = tt == TT_DEC ? UOP_POSTDEC : UOP_PREDEC;
+      u.op = tt == TT_DEC ? UOP_POSTDEC : UOP_POSTINC;
       u.target = target;
 
       return EMPLACE(u);
