@@ -37,6 +37,8 @@ class SemanticContext {
   std::vector<LexicalDeclaration*> m_globalVars;
   std::vector<LexicalDeclaration*> m_allVars;
 
+  std::vector<StructDecl*> m_declaredStructs;
+
   //
   // Notes on what types of keys map to what types of values:
   //
@@ -116,6 +118,8 @@ class SemanticContext {
     std::unordered_map<Symbol*, Scope*>& getScopeLookup();
 
     DependencyGraph& getDependencyGraph();
+
+    std::vector<StructDecl*>& getDeclaredStructs();
 };
 
 

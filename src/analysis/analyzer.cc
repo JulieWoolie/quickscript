@@ -1603,6 +1603,8 @@ static void acceptStructDecl(SemanticContext& ctx, StructDecl* v) {
     return;
   }
 
+  ctx.getDeclaredStructs().push_back(v);
+
   const uint32 propCount = v->properties.size();
   conststring typeName = v->type->getTypeName();
 
