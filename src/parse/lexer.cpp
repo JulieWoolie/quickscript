@@ -647,7 +647,7 @@ void Lexer::ensureReadBufWriteable(uint32 characters) {
   }
 
   uint32 ncap = readbufCap + 128;
-  int8* nbuf = static_cast<int8*>(malloc(sizeof(int8) * ncap));
+  int8* nbuf = static_cast<int8*>(realloc(readbuf, sizeof(int8) * ncap));
 
   if (!nbuf) {
     throw std::runtime_error("Failed to allocate bigger readbuf");
