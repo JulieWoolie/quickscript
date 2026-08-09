@@ -447,7 +447,9 @@ void runTests(const ProgramSettings& settings) {
       total++;
 
       if (success) {
-        fprintf(stdout, "[OK] Test '%ls' passed\n", path.c_str());
+        if (!settings.omitPassedTests) {
+          fprintf(stdout, "[OK] Test '%ls' passed\n", path.c_str());
+        }
         continue;
       }
 
