@@ -73,7 +73,10 @@ typedef uint8 symboltype;
 // Symbol is a variable that's in the middle of being initialised
 #define SYMFLAG_MID_INIT  (0x1 << 6)
 
-typedef uint8 symflags;
+// Symbol is a local variable that's a function argument
+#define SYMFLAG_FUNC_ARG  (0x1 << 7)
+
+typedef uint32 symflags;
 
 class LocalFunction;
 class Scope;

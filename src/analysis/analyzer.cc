@@ -1566,6 +1566,8 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
     const uint64 memOff = scope->getStackSize();
 
     LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, memOff, arg);
+    lvs->addFlags(SYMFLAG_FUNC_ARG);
+    
     scope->pushSymbol(lvs);
     scope->setStackSize(scope->getStackSize() + memSize);
 
