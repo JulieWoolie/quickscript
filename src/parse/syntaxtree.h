@@ -44,43 +44,50 @@ struct ExprStatement;
 struct StructPropertyDecl;
 struct StructDecl;
 struct AssertStatement;
+struct ObjectAllocExpr;
 
 #define AST_NIL 0
 
-#define AST_TypeNameExpr 1
-#define AST_ArrayTypeExpr 2
-#define AST_PrimitiveTypeExpr 3
+// Type expressions
+#define AST_TypeNameExpr            1
+#define AST_ArrayTypeExpr           2
+#define AST_PrimitiveTypeExpr       3
 
-#define AST_Identifier 4
-#define AST_CallExpr 5
-#define AST_PropertyAccessExpr 6
-#define AST_IndexAccessExpr 7
-#define AST_BooleanLiteral 8
-#define AST_CharLiteral 9
-#define AST_StringLiteral 10
-#define AST_IntLiteral 11
-#define AST_FloatLiteral 12
-#define AST_BinaryExpr 13
-#define AST_UnaryExpr 14
-#define AST_TernaryExpr 15
-#define AST_ObjectLiteralProperty 16
-#define AST_ObjectLiteral 17
-#define AST_ArrayLiteral 18
+// Expressions
+#define AST_Identifier              4
+#define AST_CallExpr                5
+#define AST_PropertyAccessExpr      6
+#define AST_IndexAccessExpr         7
+#define AST_BooleanLiteral          8
+#define AST_CharLiteral             9
+#define AST_StringLiteral           10
+#define AST_IntLiteral              11
+#define AST_FloatLiteral            12
+#define AST_BinaryExpr              13
+#define AST_UnaryExpr               14
+#define AST_TernaryExpr             15
+#define AST_ObjectLiteralProperty   16
+#define AST_ObjectLiteral           17
+#define AST_ArrayLiteral            18
 
-#define AST_Block 19
-#define AST_IfStatement 20
-#define AST_ForStatement 21
-#define AST_LexicalDeclaration 22
-#define AST_WhileStatement 23
-#define AST_ControlFlowStatement 24
-#define AST_ReturnStatement 25
-#define AST_ScriptFileStatement 26
-#define AST_FunctionParam 27
-#define AST_FunctionDeclStatement 28
-#define AST_ExprStatement 29
-#define AST_StructPropertyDecl 30
-#define AST_StructDecl 31
-#define AST_AssertStatement 32
+// Statements
+#define AST_Block                   19
+#define AST_IfStatement             20
+#define AST_ForStatement            21
+#define AST_LexicalDeclaration      22
+#define AST_WhileStatement          23
+#define AST_ControlFlowStatement    24
+#define AST_ReturnStatement         25
+#define AST_ScriptFileStatement     26
+#define AST_FunctionParam           27
+#define AST_FunctionDeclStatement   28
+#define AST_ExprStatement           29
+#define AST_StructPropertyDecl      30
+#define AST_StructDecl              31
+#define AST_AssertStatement         32
+
+// Compiler nodes
+#define AST_ObjectAllocExpr         33
 
 typedef uint8 astnodetype;
 
@@ -122,6 +129,8 @@ struct Visitor {
   virtual void acceptStructDecl(StructDecl* v) = 0;
 
   virtual void acceptAssertStatement(AssertStatement* v) = 0;
+
+  virtual void acceptObjectAllocExpr(ObjectAllocExpr* v) = 0;
 };
 
 // ================================
@@ -428,6 +437,18 @@ AST_TYPE(ExprStatement, Statement,
 AST_TYPE(AssertStatement, Statement,
   Expr* condition = nullptr;
   Expr* message = nullptr;
+)
+
+// =========================
+// ==== Generated Nodes ====
+// =========================
+//
+// Nodes generated and inserted into the AST
+// after semantic analysis by the semantic transformer
+//
+
+AST_EXPR_TYPE(ObjectAllocExpr, Expr,
+  ScriptType* type;
 )
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H

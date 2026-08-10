@@ -265,3 +265,10 @@ void JsonPrinter::acceptAssertStatement(AssertStatement* v) {
   }
   END_NODE
 }
+void JsonPrinter::acceptObjectAllocExpr(ObjectAllocExpr* v) {
+  START_NODE
+  if (v->type) {
+    PROP("type", v->type->getTypeName())
+  }
+  END_NODE
+}

@@ -378,6 +378,15 @@ struct PrintingVisitor: Visitor {
 
       printf("]");
     }
+
+    void acceptObjectAllocExpr(ObjectAllocExpr* v) override {
+      PRINTNODEBASE
+      if (v->type) {
+        printf(" type = %s)", v->type->getTypeName());
+      } else {
+        printf(")");
+      }
+    }
 };
 
 #endif //QUICKSCRIPT_PRINT_VISITOR_H
