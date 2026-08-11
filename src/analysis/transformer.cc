@@ -647,9 +647,114 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
   return stat;
 }
 
+Identifier* SemanticTransformer::makeId(std::string& string) {
+  stringid nameId = ctx.getStrings().allocate(string);
+  Identifier* id = ctx.getAllocator().make<Identifier>();
+  id->value = nameId;
+  return id;
+}
+
+Identifier* SemanticTransformer::makeId(stringid id) {
+  Identifier* idExpr = ctx.getAllocator().make<Identifier>();
+  idExpr->value = id;
+  return idExpr;
+}
+
 void SemanticTransformer::runOptimizer() {
   for (Statement* statement : sfs->statements) {
     optimizeStatement(statement, false);
+  }
+}
+
+void SemanticTransformer::createStructConstructors() {
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  StringTable& strings = ctx.getStrings();
+  std::vector<StructDecl*>& decls = ctx.getDeclaredStructs();
+  TypeTable& types = ctx.getTypes();
+  std::unordered_map<Node*, Symbol*>& lookup = ctx.getSymbolLookup();
+
+  constexpr std::string thisStr = "this";
+  stringid thisId = strings.allocate(thisStr);
+
+  Scope* global = ctx.getGlobalScope();
+
+  for (StructDecl* decl : decls) {
+    LocalStructSymbol* lss = static_cast<LocalStructSymbol*>(lookup[decl]);
+    Scope* scope = ctx.getScopeLookup()[lss];
+
+    ScriptStructType* structType = decl->type;
+
+    std::string ctorName = std::string(decl->name->value->view());
+    ctorName.append(".<constructor>");
+
+    Block* funcBlock = alloc.make<Block>();
+
+    FunctionDeclStatement* ctorDecl = alloc.make<FunctionDeclStatement>();
+    ctorDecl->name = makeId(ctorName);
+    ctorDecl->functionBody = funcBlock;
+    ctorDecl->signature = types.getSignature(structType, false, 0, nullptr);
+
+    LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl, scope);
+    LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(*lf);
+
+    ctx.pushLocalFunction(lf);
+    global->pushSymbol(lfs);
+
+    LexicalDeclaration* lexDecl = alloc.make<LexicalDeclaration>();
+    lexDecl->isConstDeclaration = true;
+    lexDecl->variableName = makeId(thisId);
+
+    ObjectAllocExpr* allocExpr = alloc.make<ObjectAllocExpr>();
+    allocExpr->resultType = decl->type;
+    lexDecl->value = allocExpr;
+
+    std::vector<Statement*>& stats = funcBlock->statements;
+    stats.push_back(lexDecl);
+
+    Scope* bodyScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
+    LocalVarSymbol* thisSym = alloc.make<LocalVarSymbol>(thisId, structType, POINTER_SIZE, 0, lexDecl);
+
+    bodyScope->pushSymbol(thisSym);
+    ctx.getSymbolLookup()[lexDecl] = thisSym;
+    ctx.getScopeLookup()[thisSym] = bodyScope;
+
+    for (StructPropertyDecl* prop : decl->properties) {
+      if (!prop->value) {
+        continue;
+      }
+
+      Expr* propValue = prop->value;
+
+      Identifier* thisExpr = makeId(thisId);
+      thisExpr->resultType = structType;
+
+      Identifier* propId = makeId(prop->name->value);
+      PropertySymbol* propSym = static_cast<PropertySymbol*>(ctx.getSymbolLookup()[prop]);
+      propId->resultType = propSym->getScriptType();
+
+      PropertyAccessExpr* access = alloc.make<PropertyAccessExpr>();
+      access->target = thisExpr;
+      access->property = propId;
+      access->resultType = propSym->getScriptType();
+
+      ctx.getSymbolLookup()[thisExpr] = thisSym;
+      ctx.getSymbolLookup()[propId] = propSym;
+
+      BinaryExpr* assignExpr = alloc.make<BinaryExpr>();
+      assignExpr->op = BOP_ASSIGN;
+      assignExpr->lhs = access;
+      assignExpr->rhs = propValue;
+      assignExpr->resultType = propSym->getScriptType();
+
+      ExprStatement* stat = alloc.make<ExprStatement>();
+      stat->expression = assignExpr;
+
+      stats.push_back(stat);
+
+      prop->value = nullptr;
+    }
+
+    sfs->statements.push_back(ctorDecl);
   }
 }
 
@@ -661,6 +766,7 @@ SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatem
 
 void SemanticTransformer::run() {
   runOptimizer();
+  createStructConstructors();
 }
 
 void runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs) {

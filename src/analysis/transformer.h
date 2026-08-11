@@ -20,7 +20,15 @@ class SemanticTransformer {
 
   Statement* optimizeStatement(Statement* stat, bool emptyBlocksAsNull);
 
+  Identifier* makeId(std::string& string);
+
+  Identifier* makeId(stringid id);
+
   void runOptimizer();
+
+  void createStructConstructors();
+
+  void createFileInitMethod();
 
   public:
     SemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
