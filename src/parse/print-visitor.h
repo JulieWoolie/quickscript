@@ -79,7 +79,7 @@ struct PrintingVisitor: Visitor {
       PRINTNODEBASE
       printf(")");
       OBJBEGIN
-      OBJPROP("component-type", v->componentType)
+      OBJPROPO("component-type", v->componentType)
       OBJEND
     }
     void acceptPrimitiveTypeExpr(PrimitiveTypeExpr *v) override {
@@ -216,7 +216,7 @@ struct PrintingVisitor: Visitor {
 
       printf(")");
       OBJBEGIN
-      OBJPROP("type", v->typeExpr)
+      OBJPROPO("type", v->typeExpr)
       OBJPROP("variable-name", v->variableName)
       OBJPROPO("value", v->value)
       OBJEND
@@ -269,7 +269,7 @@ struct PrintingVisitor: Visitor {
       PRINTNODEBASE
       printf(")");
       OBJBEGIN
-      OBJPROP("type", v->paramType)
+      OBJPROPO("type", v->paramType)
       OBJPROP("name", v->name)
       OBJEND
     }
@@ -278,7 +278,7 @@ struct PrintingVisitor: Visitor {
       printf(")");
       OBJBEGIN
       OBJPROP("name", v->name)
-      OBJPROP("return-type", v->returnType)
+      OBJPROPO("return-type", v->returnType)
       OBJPROPARR("arguments", v->arguments)
       OBJPROP("body", v->functionBody);
       OBJEND
@@ -305,7 +305,7 @@ struct PrintingVisitor: Visitor {
       PRINTNODEBASE
       printf(")");
       OBJBEGIN
-      OBJPROP("type", v->propertyType)
+      OBJPROPO("type", v->propertyType)
       OBJPROP("name", v->name)
       OBJPROPO("value", v->value)
       OBJEND
@@ -381,8 +381,8 @@ struct PrintingVisitor: Visitor {
 
     void acceptObjectAllocExpr(ObjectAllocExpr* v) override {
       PRINTNODEBASE
-      if (v->type) {
-        printf(" type = %s)", v->type->getTypeName());
+      if (v->resultType) {
+        printf(" type = %s)", v->resultType->getTypeName());
       } else {
         printf(")");
       }
