@@ -52,9 +52,14 @@ FunctionSignature* FunctionSignature::create(
   const uint64 totalSpace = arrMemSize + signatureMemSize;
 
   FunctionSignature* sign = static_cast<FunctionSignature*>(malloc(totalSpace));
-  ScriptType** arrStart = reinterpret_cast<ScriptType**>(sign + 1);
+  ScriptType** arrStart;
 
-  memcpy(arrStart, pTypes, arrMemSize);
+  if (pCount != 0) {
+    arrStart = reinterpret_cast<ScriptType**>(sign + 1);
+    memcpy(arrStart, pTypes, arrMemSize);
+  } else {
+    arrStart = nullptr;
+  }
 
   return new (sign) FunctionSignature(retType, varargs, pCount, arrStart);
 }
