@@ -447,8 +447,6 @@ AST_TYPE(AssertStatement, Statement,
 // after semantic analysis by the semantic transformer
 //
 
-AST_EXPR_TYPE(ObjectAllocExpr, Expr,
-  ScriptType* type;
-)
+AST_EXPR_TYPE(ObjectAllocExpr, Expr,)
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H
