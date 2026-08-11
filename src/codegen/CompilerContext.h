@@ -2,6 +2,7 @@
 #define QUICKSCRIPT_COMPILERCONTEXT_H
 
 #include "../stringtable.h"
+#include "../analysis/SemanticContext.h"
 #include "../types/types.h"
 #include "../interpreter/opcodes.h"
 #include "../parse/syntaxtree.h"
@@ -14,26 +15,6 @@ typedef int8 registeridopt;
 
 typedef uint64 StringPoolAddress;
 
-struct StackSymbol {
-  stringid name = EMPTY_STRING;
-  uint64 stackOffset = 0;
-  uint64 stackSize = 0;
-};
-
-class StackScope {
-  std::vector<StackSymbol> m_symbols;
-  uint32 m_level = 0;
-  uint64 m_currentSize = 0;
-
-  public:
-    explicit StackScope(uint32 level);
-
-    uint32 getLevel() const;
-
-    StackSymbol* pushSymbol(stringid name, uint64 size);
-
-    StackSymbol* findSymbol(stringid name);
-};
 
 class BytecodeWriter {
   uint8* m_buf = nullptr;
@@ -81,10 +62,10 @@ class ConstStringPoolWriter {
 
   std::unordered_map<stringid, uint64> m_idToOffset;
 
-  StringTable* m_table;
+  StringTable& m_table;
 
   public:
-    explicit ConstStringPoolWriter(StringTable* table);
+    explicit ConstStringPoolWriter(StringTable& table);
 
     StringPoolAddress emplace(stringid id);
 
@@ -109,8 +90,6 @@ struct CompiledFunction {
 class CompilerContext {
   std::vector<ScriptType*> m_expectedTypes;
 
-  std::vector<StackScope> m_scopes;
-
   std::unordered_map<ScriptStructType*, uint32> m_structConstructors;
 
   std::vector<CompiledFunction> m_compiledFuncs;
@@ -120,13 +99,12 @@ class CompilerContext {
   ConstStringPoolWriter m_stringPool;
   BytecodeWriter m_writer;
 
-  StringTable* m_strings;
-  TypeTable* m_types;
+  SemanticContext& m_semantics;
 
   uint64* m_registersInUse;
 
   public:
-    CompilerContext(StringTable* strings, TypeTable* types, uint64* registryBitset);
+    CompilerContext(SemanticContext& ctx, uint64* registryBitset);
 
     void enqueueFunction(FunctionDeclStatement* stat);
     FunctionDeclStatement* pollQueuedFunction();
@@ -139,12 +117,6 @@ class CompilerContext {
 
     uint32 pushCompiledFunction(stringid name, uint32 start, FunctionSignature* sign);
 
-    StackScope* getScope();
-    StackScope* pushScope();
-    void popScope();
-
-    std::pair<StackScope*, StackSymbol*> findSymbol(stringid);
-
     registeridopt acquireRegister() const;
     bool registerInUse(registerid reg) const;
     void useRegister(registerid reg) const;
@@ -152,8 +124,8 @@ class CompilerContext {
 
     BytecodeWriter& getWriter();
     ConstStringPoolWriter& getStringPool();
-    StringTable* getStrings();
-    TypeTable* getTypes();
+
+    SemanticContext& getSemantics() const;
 };
 
 

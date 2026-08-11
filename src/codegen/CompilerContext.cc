@@ -1,32 +1,8 @@
 #include "CompilerContext.h"
 
-#include <cstring>
 #include <stdexcept>
 
 #define RUNTIME_CHECKS
-
-StackScope::StackScope(uint32 level) {
-  m_level = level;
-}
-uint32 StackScope::getLevel() const {
-  return m_level;
-}
-
-StackSymbol* StackScope::pushSymbol(stringid name, uint64 size) {
-  m_symbols.emplace_back(name, m_currentSize, size);
-  m_currentSize += size;
-  return &m_symbols.back();
-}
-
-StackSymbol* StackScope::findSymbol(stringid name) {
-  for (StackSymbol& sym : m_symbols) {
-    if (sym.name != name) {
-      continue;
-    }
-    return &sym;
-  }
-  return nullptr;
-}
 
 #define APPEND_METHOD(name, bytes, type) \
   void BytecodeWriter::name(type v) {\
@@ -111,8 +87,8 @@ uint32 BytecodeWriter::getLength() const {
   return m_len;
 }
 
-ConstStringPoolWriter::ConstStringPoolWriter(StringTable* table) {
-  m_table = table;
+ConstStringPoolWriter::ConstStringPoolWriter(StringTable& table): m_table(table) {
+
 }
 
 StringPoolAddress ConstStringPoolWriter::emplace(stringid id) {
@@ -120,7 +96,7 @@ StringPoolAddress ConstStringPoolWriter::emplace(stringid id) {
     return m_idToOffset[id];
   }
 
-  int32 len = m_table->getlen(id);
+  int32 len = m_table.getlen(id);
   uint64 requiredcap = len + sizeof(uint32) + m_len;
 
   if (requiredcap > m_cap) {
@@ -139,7 +115,7 @@ StringPoolAddress ConstStringPoolWriter::emplace(stringid id) {
   writeptr += sizeof(uint32);
 
   char* charptr = reinterpret_cast<char*>(writeptr);
-  m_table->copychars(id, charptr, len);
+  m_table.copychars(id, charptr, len);
 
   uint64 off = m_len;
   m_len += sizeof(uint32) + len;
@@ -156,12 +132,10 @@ uint8* ConstStringPoolWriter::getData() const {
   return m_data;
 }
 
-CompilerContext::CompilerContext(StringTable* strings, TypeTable* types, uint64* registryBitset)
-  : m_stringPool(strings)
+CompilerContext::CompilerContext(SemanticContext& ctx, uint64* registryBitset)
+  : m_stringPool(ctx.getStrings()), m_semantics(ctx), m_registersInUse(registryBitset)
 {
-  m_strings = strings;
-  m_types = types;
-  m_registersInUse = registryBitset;
+
 }
 
 void CompilerContext::enqueueFunction(FunctionDeclStatement* stat) {
@@ -222,31 +196,6 @@ uint32 CompilerContext::pushCompiledFunction(stringid name, uint32 start, Functi
   return idx;
 }
 
-StackScope* CompilerContext::getScope() {
-  return &m_scopes.back();
-}
-
-StackScope* CompilerContext::pushScope() {
-  StackScope scope = StackScope(m_scopes.size());
-  m_scopes.push_back(scope);
-  return &m_scopes.back();
-}
-
-void CompilerContext::popScope() {
-  m_scopes.pop_back();
-}
-
-std::pair<StackScope*, StackSymbol*> CompilerContext::findSymbol(stringid id) {
-  for (StackScope& scope : m_scopes) {
-    StackSymbol* sym = scope.findSymbol(id);
-    if (!sym) {
-      continue;
-    }
-    return {&scope, sym};
-  }
-  return {nullptr, nullptr};
-}
-
 registeridopt CompilerContext::acquireRegister() const {
   uint64 used = *m_registersInUse;
 
@@ -292,10 +241,6 @@ ConstStringPoolWriter& CompilerContext::getStringPool() {
   return m_stringPool;
 }
 
-StringTable* CompilerContext::getStrings() {
-  return m_strings;
-}
-
-TypeTable* CompilerContext::getTypes() {
-  return m_types;
+SemanticContext& CompilerContext::getSemantics() const {
+  return m_semantics;
 }

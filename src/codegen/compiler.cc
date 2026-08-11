@@ -175,7 +175,7 @@ static void compilePropertyAccess(
     // arrays and strings which is always at offset 0x0
     propertyOffset = 0;
   } else {
-    std::string_view view = ctx.getStrings()->getview(prop->property->value);
+    std::string_view view = ctx.getSemantics().getStrings().getview(prop->property->value);
     ScriptStructType* structType = static_cast<ScriptStructType*>(type);
 
     propertyOffset = 0;
@@ -210,7 +210,7 @@ static void compilePropertyAccess(
 }
 
 static void compileIdentifier(
-  const Identifier* id,
+  Identifier* id,
   const registeridopt out,
   AddrOutput* addr,
   CompilerContext& ctx
@@ -237,8 +237,10 @@ static void compileIdentifier(
     writer.endInstr();
   }
 
-  const auto [scope, sym] = ctx.findSymbol(id->value);
-  const StackScope* current = ctx.getScope();
+  SemanticContext& semantics = ctx.getSemantics();
+
+  Symbol* sym = semantics.getSymbolLookup()[id];
+  Scope* scope = semantics.getScopeLookup()[sym];
 
   // Variable declared in current scope
   if (scope == current) {
@@ -659,7 +661,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       const registerid propertyReg = ctx.acquireRegister();
 
       for (const ObjectLiteralProperty* prop : lit->properties) {
-        const std::string_view propName = ctx.getStrings()->getview(prop->propertyName->value);
+        const std::string_view propName = prop->propertyName->value->view();
         const ScriptType* ptype = nullptr;
 
         uint32 off = 0;
@@ -1006,20 +1008,19 @@ static void compileBlock(const Block* block, CompilerContext& ctx, const uint64 
   blockEnd(ctx.getWriter(), size);
 }
 
-static void compileLexDecl(const LexicalDeclaration* lex, CompilerContext& ctx) {
+static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
   ScriptType* stype = lex->typeExpr->referencedType;
-
-  StackScope* scope = ctx.getScope();
-  const StackSymbol* sym = scope->pushSymbol(lex->variableName->value, stype->stackSizeBytes());
 
   BytecodeWriter& writer = ctx.getWriter();
 
   const registerid valueReg = ctx.acquireRegister();
   compileRValue(stype, lex->value, ctx, valueReg);
 
+  LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(ctx.getSemantics().getSymbolLookup()[lex]);
+
   BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_RSWRITE)
   writer.appendU8(valueReg);
-  writer.appendU64(sym->stackOffset);
+  writer.appendU64(lvs->getStackOffset());
 
   ctx.freeRegister(valueReg);
 }
@@ -1117,8 +1118,6 @@ static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
   const uint32 propCount = decl->properties.size();
   constexpr uint64 stackSize = POINTER_SIZE;
 
-  ctx.pushScope();
-
   const uint32 start = blockBegin(writer, stackSize, nullptr);
 
   const registerid selfReg = ctx.acquireRegister();
@@ -1144,7 +1143,6 @@ static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
     off += ptype->type->stackSizeBytes();
   }
 
-  ctx.popScope();
   ctx.freeRegister(selfReg);
   ctx.freeRegister(propReg);
 
@@ -1154,42 +1152,40 @@ static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
   funcName.append(stype->getTypeName());
   funcName.append(".<init>");
 
-  const stringid id = ctx.getStrings()->allocate(funcName);
+  const stringid id = ctx.getSemantics().getStrings().allocate(funcName);
 
   ScriptType* ctorParams[1];
   ctorParams[0] = stype;
 
   FunctionSignature* sign = FunctionSignature::create(ConstTypes::VOID(), false, 1, ctorParams);
-  ctx.getTypes()->emplaceType(sign);
+  ctx.getSemantics().getTypes().emplaceType(sign);
 
   const uint32 funcIdx = ctx.pushCompiledFunction(id, start, sign);
 
   ctx.pushStructConstructor(stype, funcIdx);
 }
 
-BytecodeFile compile(ScriptFileStatement* sfs, StringTable* table, TypeTable* types) {
+BytecodeFile compile(ScriptFileStatement* sfs, SemanticContext& ctx) {
   uint64 registerBitSet = 0;
-  CompilerContext ctx = CompilerContext(table, types, &registerBitSet);
+  CompilerContext cctx = CompilerContext(ctx, &registerBitSet);
 
   constexpr uint64 initcap = LENGTH_INSTRUCTION * 1024;
-  ctx.getWriter().reserveSpace(initcap);
-
-  ctx.pushScope();
+  cctx.getWriter().reserveSpace(initcap);
 
   for (Statement* stat : sfs->statements) {
     if (stat->nodeKind() != AST_StructDecl) {
       continue;
     }
-    compileStructDecl(static_cast<StructDecl*>(stat), ctx);
+    compileStructDecl(static_cast<StructDecl*>(stat), cctx);
   }
 
   ctx.popScope();
 
   BytecodeFile file;
-  file.instructionBuf = ctx.getWriter().getBuffer();
-  file.instructionsSize = ctx.getWriter().getLength();
-  file.constStringPool = ctx.getStringPool().getData();
-  file.stringPoolSize = ctx.getStringPool().getLength();
+  file.instructionBuf = cctx.getWriter().getBuffer();
+  file.instructionsSize = cctx.getWriter().getLength();
+  file.constStringPool = cctx.getStringPool().getData();
+  file.stringPoolSize = cctx.getStringPool().getLength();
 
   return file;
 }
