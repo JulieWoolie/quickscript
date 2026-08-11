@@ -1107,6 +1107,7 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
 
     PropertySymbol* sym = alloc.make<PropertySymbol>(type, propDecl->name->value, typeProp->type);
     scope->pushSymbol(sym);
+    ctx.getSymbolLookup()[propDecl] = sym;
     ctx.getScopeLookup()[sym] = scope;
   }
 }
@@ -1178,17 +1179,8 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
     varargs |= varargsParam;
   }
 
-  std::string funcSignStr;
-  FunctionSignature::composeName(funcSignStr, returnType, paramCount, params);
-
   TypeTable& types = ctx.getTypes();
-  FunctionSignature* ftype = static_cast<FunctionSignature*>(types.lookupByName(funcSignStr));
-
-  if (!ftype) {
-    ftype = FunctionSignature::create(returnType, varargs, paramCount, params);
-    types.emplaceType(ftype);
-  }
-
+  FunctionSignature* ftype = types.getSignature(returnType, varargs, paramCount, params);
   v->signature = ftype;
 
   Scope* scope = ctx.getScope();
@@ -1567,7 +1559,7 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
 
     LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, memOff, arg);
     lvs->addFlags(SYMFLAG_FUNC_ARG);
-    
+
     scope->pushSymbol(lvs);
     scope->setStackSize(scope->getStackSize() + memSize);
 
