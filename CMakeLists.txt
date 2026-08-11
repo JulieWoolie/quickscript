@@ -32,8 +32,8 @@ add_executable(quickscript src/main.cpp
         src/interpreter/interpreter.h
         src/tester.h
         src/tester.cc
-        src/codegen/compiler.h
-        src/codegen/compiler.cc
+#        src/codegen/compiler.h
+#        src/codegen/compiler.cc
         src/codegen/type_conv.h
         src/codegen/type_conv.cc
         src/interpreter/ir_file.h
