@@ -102,6 +102,25 @@ ScriptType* TypeTable::lookupByName(const std::string& name) const {
   }
   return m_nameLookup.at(name);
 }
+FunctionSignature* TypeTable::getSignature(
+  ScriptType* returnType,
+  bool variadic,
+  uint32 pCount,
+  ScriptType** paramTypes
+) {
+  std::string string = "";
+  FunctionSignature::composeName(string, returnType, pCount, paramTypes);
+
+  FunctionSignature* result = static_cast<FunctionSignature*>(lookupByName(string));
+  if (result) {
+    return result;
+  }
+
+  result = FunctionSignature::create(returnType, variadic, pCount, paramTypes);
+  emplaceType(result);
+  
+  return result;
+}
 
 typeindex TypeTable::emplaceType(ScriptType* type) {
   conststring name = type->getTypeName();

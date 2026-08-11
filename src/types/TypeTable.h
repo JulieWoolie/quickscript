@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "FunctionSignature.h"
 #include "ScriptType.h"
 
 #define TI_VOID 0
@@ -37,6 +38,8 @@ class TypeTable {
     ScriptType* lookupByIndex(typeindex index) const;
 
     ScriptType* lookupByName(const std::string& name) const;
+
+    FunctionSignature* getSignature(ScriptType* returnType, bool variadic, uint32 pCount, ScriptType** paramTypes);
 
     typeindex emplaceType(ScriptType* type);
 };
