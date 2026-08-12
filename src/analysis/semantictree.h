@@ -189,6 +189,8 @@ class LocalFunction {
   FunctionSignature* m_signature;
   Scope* const m_bodyScope;
 
+  bool m_nested = false;
+
   public:
     LocalFunction(stringid name, FunctionDeclStatement* decl, Scope* scope);
 
@@ -199,6 +201,10 @@ class LocalFunction {
     Scope* getScope() const;
 
     FunctionSignature* getSignature() const;
+
+    bool isNested() const;
+
+    void setNested(bool b);
 };
 
 class Scope {

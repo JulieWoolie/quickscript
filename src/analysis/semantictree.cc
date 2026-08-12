@@ -125,6 +125,14 @@ FunctionSignature* LocalFunction::getSignature() const {
   return m_signature;
 }
 
+bool LocalFunction::isNested() const {
+  return m_nested;
+}
+
+void LocalFunction::setNested(bool b) {
+  m_nested = b;
+}
+
 Scope::Scope(scopetype type, Scope* parent)
   : m_type(type), m_parentScope(parent), m_stackSize(0) {
 }
