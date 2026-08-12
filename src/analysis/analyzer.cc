@@ -1135,7 +1135,7 @@ static bool isPossibleMainFunction(SemanticContext& ctx, FunctionDeclStatement* 
   return componentType == ConstTypes::STRING();
 }
 
-static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) {
+static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, bool nested = false) {
   resolveTypeExpr(ctx, v->returnType);
 
   const uint32 paramCount = v->arguments.size();
@@ -1189,6 +1189,8 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v) 
   NoFreeAllocator& alloc = ctx.getAllocator();
 
   LocalFunction* lf = alloc.make<LocalFunction>(v->name->value, v, scope);
+  lf->setNested(nested);
+
   ctx.pushLocalFunction(lf);
 
   LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(*lf);
@@ -1527,7 +1529,7 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
 
   Scope* parentScope = ctx.getScope();
   if (parentScope->getType() != SCOPE_MAIN) {
-    createFuncSignature(ctx, v);
+    createFuncSignature(ctx, v, true);
   }
 
   Scope* scope = ctx.pushScope(SCOPE_FUNCTION);
