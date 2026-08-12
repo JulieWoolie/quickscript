@@ -101,19 +101,7 @@ static ScriptType* getArrayType(const SemanticContext& ctx, ScriptType* componen
   if (!componentType) {
     return nullptr;
   }
-
-  std::string compName = componentType->getTypeName();
-  compName.append("[]");
-
-  ScriptType* found = ctx.getTypes().lookupByName(compName);
-  if (found) {
-    return found;
-  }
-
-  found = new ScriptArrayType(componentType);
-  ctx.getTypes().emplaceType(found);
-
-  return found;
+  return ctx.getTypes().getArrayType(componentType);
 }
 
 static primitivekind parsedPrimitiveToTypeKind(parsedprimitivetype ppt) {

@@ -102,6 +102,7 @@ ScriptType* TypeTable::lookupByName(const std::string& name) const {
   }
   return m_nameLookup.at(name);
 }
+
 FunctionSignature* TypeTable::getSignature(
   ScriptType* returnType,
   bool variadic,
@@ -120,6 +121,21 @@ FunctionSignature* TypeTable::getSignature(
   emplaceType(result);
   
   return result;
+}
+
+ScriptType* TypeTable::getArrayType(ScriptType* componentType) {
+  std::string compName = componentType->getTypeName();
+  compName.append("[]");
+
+  ScriptType* found = lookupByName(compName);
+  if (found) {
+    return found;
+  }
+
+  found = new ScriptArrayType(componentType);
+  emplaceType(found);
+
+  return found;
 }
 
 typeindex TypeTable::emplaceType(ScriptType* type) {
