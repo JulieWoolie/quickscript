@@ -758,6 +758,116 @@ void SemanticTransformer::createStructConstructors() {
   }
 }
 
+FunctionSignature* createMainSignature(TypeTable& table) {
+  ScriptType* argsType = table.getArrayType(ConstTypes::STRING());
+  return table.getSignature(ConstTypes::INT32(), false, 1, &argsType);
+}
+
+void SemanticTransformer::createFileInitMethod() {
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  StringTable& strings = ctx.getStrings();
+  TypeTable& types = ctx.getTypes();
+  std::unordered_map<Node*, Symbol*>& lookup = ctx.getSymbolLookup();
+
+  Scope* global = ctx.getGlobalScope();
+  stringid finitName = strings.allocate("<finit>");
+
+  FunctionDeclStatement* fdecl = alloc.make<FunctionDeclStatement>();
+  fdecl->name = makeId(finitName);
+
+  std::string argsName = "args";
+  FunctionParam* param = alloc.make<FunctionParam>();
+  param->name = makeId(argsName);
+  param->varargs = false;
+
+  Block* body = alloc.make<Block>();
+
+  fdecl->functionBody = body;
+  fdecl->arguments.push_back(param);
+  fdecl->signature = createMainSignature(types);
+
+  LocalVarSymbol* argsSym = alloc.make<LocalVarSymbol>(param->name->value, fdecl->signature->getArgumentType(0), POINTER_SIZE, 0, param);
+  argsSym->addFlags(SYMFLAG_FUNC_ARG);
+  lookup[param] = argsSym;
+
+  Scope* funcScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
+  funcScope->pushSymbol(argsSym);
+
+  LocalFunction* lf = alloc.make<LocalFunction>(finitName, fdecl, global);
+  LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(*lf);
+
+  ctx.pushLocalFunction(lf);
+  global->pushSymbol(lfs);
+  lookup[fdecl] = lfs;
+  ctx.getScopeLookup()[lfs] = global;
+
+  sfs->statements.push_back(fdecl);
+
+  std::vector<LexicalDeclaration*>& globalVars = ctx.getGlobalVariables();
+  for (LexicalDeclaration* gvar : globalVars) {
+    if (!gvar->value) {
+      continue;
+    }
+
+    Identifier* varId = makeId(gvar->variableName->value);
+
+    BinaryExpr* assignExpr = alloc.make<BinaryExpr>();
+    assignExpr->lhs = varId;
+    assignExpr->rhs = gvar->value;
+    assignExpr->op = BOP_ASSIGN;
+
+    ExprStatement* exprStat = alloc.make<ExprStatement>();
+    exprStat->expression = assignExpr;
+
+    body->statements.push_back(exprStat);
+    lookup[varId] = lookup[gvar];
+    gvar->value = nullptr;
+  }
+
+  std::vector<LocalFunction*>& mains = ctx.getMainFuncCandidates();
+  LocalFunction* main;
+  if (mains.empty()) {
+    main = nullptr;
+  } else {
+    main = mains.at(0);
+  }
+
+  if (main) {
+    FunctionSignature* sign = main->getSignature();
+
+    Identifier* callId = makeId(main->getName());
+    CallExpr* call = alloc.make<CallExpr>();
+    call->target = callId;
+
+    if (sign->getArgumentsLength() > 0 && sign->getArgumentType(0) == fdecl->signature->getArgumentType(0)) {
+      Identifier* argsId = makeId(argsName);
+      lookup[argsId] = argsSym;
+      call->arguments.push_back(argsId);
+    }
+
+    if (sign->getReturnType() == ConstTypes::INT32()) {
+      ReturnStatement* ret = alloc.make<ReturnStatement>();
+      ret->value = call;
+      body->statements.push_back(ret);
+      return;
+    }
+
+    ExprStatement* exprStat = alloc.make<ExprStatement>();
+    exprStat->expression = call;
+    body->statements.push_back(exprStat);
+  }
+
+  ReturnStatement* ret = alloc.make<ReturnStatement>();
+  IntLiteral* il = alloc.make<IntLiteral>();
+  il->value = 0;
+  il->smallestFittingType = PPT_INT32;
+  il->resultType = ConstTypes::INT32();
+
+  ret->value = il;
+
+  body->statements.push_back(ret);
+}
+
 SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatement* _sfs)
   : ctx(_ctx), sfs(_sfs)
 {
@@ -767,6 +877,7 @@ SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatem
 void SemanticTransformer::run() {
   runOptimizer();
   createStructConstructors();
+  createFileInitMethod();
 }
 
 void runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs) {
