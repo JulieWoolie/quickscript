@@ -191,7 +191,7 @@ struct PrintingVisitor: Visitor {
       OBJBEGIN
       OBJPROP("condition", v->condition)
       OBJPROP("body", v->body)
-      OBJPROPO("else", v->body)
+      OBJPROPO("else", v->elseBody)
       OBJEND
     }
     void acceptForStatement(ForStatement *v) override {
