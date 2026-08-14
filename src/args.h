@@ -3,48 +3,6 @@
 
 #include "errors.h"
 
-//
-// == CLI Usage ==
-// quickscript <flags> <command> <command args or flags>
-//
-// == Flag arguments ==
-//
-// --print-ast or -p:
-//     Prints a representation of the Abstract Syntax Tree,
-//     Only applies when loading source files, and is
-//     printed after analysis is completed.
-//
-// --loglevel=<level> (One of: info, warn, error)
-//     Sets the logging level of the program, setting it to,
-//     for example error (with --loglevel=error) will cause
-//     all warning messages (For things like unused variables)
-//     to be silenced.
-//
-// --text-compile or -tc:
-//     If the flag is set for the compile command, then the
-//     compiled IR is transformed into a text based form
-//     before being printed to a file.
-//
-// == Program commands ==
-//
-// help
-//     Prints the usage text along with some other info, if possible.
-//
-// run <input file> <program arguments>
-//     Load a file (May be IR or source code) and execute it
-//     In the case of source files, it is compiled, first,
-//     obviously
-//
-// compile <input file> <output file> <flags>
-//     Loads a source file and compiles to quickscript IR
-//     and then writes the IR contents to the output file
-//
-// test <directory> <flags>
-//     Treats each source file or IR file in the specified
-//     directory as a unit test for the compiler to run and
-//     executes it.
-//
-
 #define CMD_NIL 0
 #define CMD_HELP 1
 #define CMD_RUN 2
