@@ -3,8 +3,6 @@
 
 #include <vector>
 
-#include "../allocator.h"
-#include "../errors.h"
 #include "../stringtable.h"
 #include "../interpreter/nativeinterface.h"
 #include "../parse/syntaxtree.h"
