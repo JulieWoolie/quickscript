@@ -45,6 +45,7 @@ struct StructPropertyDecl;
 struct StructDecl;
 struct AssertStatement;
 struct ObjectAllocExpr;
+struct GetStackPointer;
 
 #define AST_NIL 0
 
@@ -88,6 +89,7 @@ struct ObjectAllocExpr;
 
 // Compiler nodes
 #define AST_ObjectAllocExpr         33
+#define AST_GetStackPointer         34
 
 typedef uint8 astnodetype;
 
@@ -131,6 +133,7 @@ struct Visitor {
   virtual void acceptAssertStatement(AssertStatement* v) = 0;
 
   virtual void acceptObjectAllocExpr(ObjectAllocExpr* v) = 0;
+  virtual void acceptGetStackPointer(GetStackPointer* v) = 0;
 };
 
 // ================================
@@ -347,7 +350,7 @@ AST_EXPR_TYPE(TernaryExpr, Expr,
 // ========================
 
 struct Statement: Node {
-
+  Statement* parentStatement = nullptr;
 };
 
 AST_TYPE(Block, Statement,
@@ -448,5 +451,7 @@ AST_TYPE(AssertStatement, Statement,
 //
 
 AST_EXPR_TYPE(ObjectAllocExpr, Expr,)
+
+AST_EXPR_TYPE(GetStackPointer, Expr, )
 
 #endif //QUICKSCRIPT_SYNTAXTREE_H

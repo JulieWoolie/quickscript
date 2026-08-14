@@ -134,7 +134,11 @@ ScriptFileStatement * Parser::parse() {
     sfs.statements.push_back(s);
   }
 
-  return EMPLACE(sfs);
+  ScriptFileStatement* res = EMPLACE(sfs);
+  for (Statement* stat : res->statements) {
+    stat->parentStatement = res;
+  } 
+  return res;
 }
 
 uint8 Parser::isLexOrFuncDecl() {
@@ -303,7 +307,12 @@ FunctionDeclStatement * Parser::funcDecl() {
 
   decl.functionBody = block();
 
-  return EMPLACE(decl);
+  FunctionDeclStatement* res = EMPLACE(decl);
+  res->functionBody->parentStatement = res;
+  for (FunctionParam* arg : res->arguments) {
+    arg->parentStatement = res;
+  }
+  return res;
 }
 
 Block* Parser::block() {
@@ -319,7 +328,12 @@ Block* Parser::block() {
 
   expect(TT_RCURL);
 
-  return EMPLACE(b);
+  Block* res = EMPLACE(b);
+  for (Statement* stat : res->statements) {
+    stat->parentStatement = res;
+  }
+
+  return res;
 }
 
 ControlFlowStatement * Parser::controlFlow() {
@@ -366,7 +380,13 @@ IfStatement* Parser::ifStatement() {
     s.elseBody = statement();
   }
 
-  return EMPLACE(s);
+  IfStatement* emplaced = EMPLACE(s);
+  emplaced->body->parentStatement = emplaced;
+  if (emplaced->elseBody) {
+    emplaced->elseBody->parentStatement = emplaced;
+  }
+
+  return emplaced;
 }
 
 Statement* Parser::labelledStatement() {
@@ -414,7 +434,11 @@ ForStatement * Parser::forStatement(Identifier* label) {
 
   f.loopBody = block();
 
-  return EMPLACE(f);
+  ForStatement* emplaced = EMPLACE(f);
+  emplaced->loopBody->parentStatement = emplaced;
+  emplaced->first->parentStatement = emplaced;
+
+  return emplaced;
 }
 
 WhileStatement* Parser::doWhileStatement(Identifier* label) {
@@ -429,7 +453,10 @@ WhileStatement* Parser::doWhileStatement(Identifier* label) {
   expect(TT_KEYW_WHILE);
   dow.condition = loopConditionExpr();
 
-  return EMPLACE(dow);
+  WhileStatement* emplaced = EMPLACE(dow);
+  emplaced->body->parentStatement = emplaced;
+
+  return emplaced;
 }
 
 WhileStatement* Parser::whileStatement(Identifier* label) {
@@ -442,7 +469,10 @@ WhileStatement* Parser::whileStatement(Identifier* label) {
   dow.condition = loopConditionExpr();
   dow.body = block();
 
-  return EMPLACE(dow);
+  WhileStatement* emplaced = EMPLACE(dow);
+  emplaced->body->parentStatement = emplaced;
+
+  return emplaced;
 }
 
 LexicalDeclaration * Parser::lexDecl() {
@@ -510,6 +540,7 @@ StructDecl* Parser::structDecl() {
   StructDecl* result = EMPLACE(decl);
   for (StructPropertyDecl* prop : result->properties) {
     prop->structDeclStatement = result;
+    prop->parentStatement = result;
   }
   return result;
 }
