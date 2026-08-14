@@ -29,6 +29,8 @@ class SemanticTransformer {
   void createStructConstructors();
 
   void createFileInitMethod();
+  
+  void flattenNestedFunctions();
 
   public:
     SemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);

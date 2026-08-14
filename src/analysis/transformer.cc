@@ -314,7 +314,7 @@ Expr* SemanticTransformer::optimizeBinary(BinaryExpr* e) const {
         fr->value = std::pow(l, r);
         break;
       default:
-        return nullptr;
+        return e;
     }
 
     fr->location = e->location;
@@ -693,6 +693,8 @@ void SemanticTransformer::createStructConstructors() {
     ctorDecl->name = makeId(ctorName);
     ctorDecl->functionBody = funcBlock;
     ctorDecl->signature = types.getSignature(structType, false, 0, nullptr);
+    funcBlock->parentStatement = ctorDecl;
+    ctorDecl->parentStatement = sfs;
 
     LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl, scope);
     LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(*lf);
@@ -710,6 +712,7 @@ void SemanticTransformer::createStructConstructors() {
 
     std::vector<Statement*>& stats = funcBlock->statements;
     stats.push_back(lexDecl);
+    lexDecl->parentStatement = funcBlock;
 
     Scope* bodyScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
     LocalVarSymbol* thisSym = alloc.make<LocalVarSymbol>(thisId, structType, POINTER_SIZE, 0, lexDecl);
@@ -750,6 +753,7 @@ void SemanticTransformer::createStructConstructors() {
       stat->expression = assignExpr;
 
       stats.push_back(stat);
+      stat->parentStatement = funcBlock;
 
       prop->value = nullptr;
     }
@@ -774,13 +778,16 @@ void SemanticTransformer::createFileInitMethod() {
 
   FunctionDeclStatement* fdecl = alloc.make<FunctionDeclStatement>();
   fdecl->name = makeId(finitName);
+  fdecl->parentStatement = sfs;
 
   std::string argsName = "args";
   FunctionParam* param = alloc.make<FunctionParam>();
   param->name = makeId(argsName);
   param->varargs = false;
+  param->parentStatement = fdecl;
 
   Block* body = alloc.make<Block>();
+  body->parentStatement = fdecl;
 
   fdecl->functionBody = body;
   fdecl->arguments.push_back(param);
@@ -818,6 +825,7 @@ void SemanticTransformer::createFileInitMethod() {
 
     ExprStatement* exprStat = alloc.make<ExprStatement>();
     exprStat->expression = assignExpr;
+    exprStat->parentStatement = body;
 
     body->statements.push_back(exprStat);
     lookup[varId] = lookup[gvar];
@@ -848,12 +856,14 @@ void SemanticTransformer::createFileInitMethod() {
     if (sign->getReturnType() == ConstTypes::INT32()) {
       ReturnStatement* ret = alloc.make<ReturnStatement>();
       ret->value = call;
+      ret->parentStatement = body;
       body->statements.push_back(ret);
       return;
     }
 
     ExprStatement* exprStat = alloc.make<ExprStatement>();
     exprStat->expression = call;
+    exprStat->parentStatement = body;
     body->statements.push_back(exprStat);
   }
 
@@ -864,8 +874,86 @@ void SemanticTransformer::createFileInitMethod() {
   il->resultType = ConstTypes::INT32();
 
   ret->value = il;
+  ret->parentStatement = body;
 
   body->statements.push_back(ret);
+}
+
+static stringid getNestedFunctionName(const LocalFunction* lf, SemanticContext& ctx) {
+  const stringid funcName = lf->getName();
+
+  std::string name = "";
+  name.append(funcName->data, funcName->len);
+
+  const Scope* scope = lf->getScope();
+  while (scope) {
+    scope = scope->getParent();
+
+    if (scope->getType() != SCOPE_FUNCTION) {
+      continue;
+    }
+
+    const FunctionDeclStatement* decl = nullptr;
+    for (const LocalFunction* func: ctx.getLocalFunctions()) {
+      if (func->getScope() != scope) {
+        continue;
+      }
+      decl = func->getDecl();
+      break;
+    }
+
+    if (!decl) {
+      // ????
+      continue;
+    }
+
+    stringid parentName = decl->name->value;
+    name.insert(0, 1, '#');
+    name.insert(0, parentName->data, parentName->len);
+  }
+
+  name.insert(0, 1, '%');
+
+  return ctx.getStrings().allocate(name);
+}
+
+void SemanticTransformer::flattenNestedFunctions() {
+  std::vector<LocalFunction*>& functions = ctx.getLocalFunctions();
+
+  for (auto it = functions.rbegin(); it != functions.rend(); ++it) {
+    LocalFunction* lf = *it;
+    if (!lf->isNested()) {
+      continue;
+    }
+
+    // TODO:
+    //   1. Add a parameter to the function "#closure: Stack*" that points to the
+    //      stack frame of the nested function
+    //   2. Replace every access of a variable from the nesting function with
+    //      an access to the closure.
+    //   3. Replace the function declaration with a LexDecl statement creating
+    //      the closure with the current stack frame's pointer as its value.
+    //   3. In calls to the function, provide the closure.
+    //
+
+    stringid newName = getNestedFunctionName(lf, ctx);
+
+    FunctionDeclStatement* fdecl = lf->getDecl();
+    fdecl->name->value = newName;
+    lf->setNested(false);
+
+    Block* parent = static_cast<Block*>(fdecl->parentStatement);
+    std::vector<Statement*>& stats = parent->statements;
+    for (auto statIt = stats.begin(); statIt != stats.end(); ++statIt) {
+      if (*statIt == fdecl) {
+        stats.erase(statIt);
+        break;
+      }
+    }
+
+    sfs->statements.push_back(fdecl);
+    fdecl->parentStatement = sfs;
+  }
 }
 
 SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatement* _sfs)
@@ -878,6 +966,7 @@ void SemanticTransformer::run() {
   runOptimizer();
   createStructConstructors();
   createFileInitMethod();
+  flattenNestedFunctions();
 }
 
 void runSemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs) {
