@@ -107,10 +107,10 @@ function stackOperations() {
   currentCategory = "4.3.2 Stack Memory OP Codes"
   opCode("STACKALLOC", [uint64("bytes")])
   opCode("STACKFREE", [uint64("bytes")])
-  byteSizedOpCode("RSREAD", [reg("out"), uint64("offset")])
-  byteSizedOpCode("RSWRITE", [reg("val"), uint64("offset")])
-  byteSizedOpCode("ASREAD", [reg("out"), uint64("offset")])
-  byteSizedOpCode("ASWRITE", [reg("val"), uint64("offset")])
+  byteSizedOpCode("SREAD", [reg("out"), uint64("offset")])
+  byteSizedOpCode("SWRITE", [reg("val"), uint64("offset")])
+  byteSizedOpCode("GREAD", [reg("out"), uint64("offset")])
+  byteSizedOpCode("GWRITE", [reg("val"), uint64("offset")])
 
   byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")])
 }
