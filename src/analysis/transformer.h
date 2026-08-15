@@ -20,17 +20,42 @@ class SemanticTransformer {
 
   Statement* optimizeStatement(Statement* stat, bool emptyBlocksAsNull);
 
-  Identifier* makeId(std::string& string);
+  Identifier* makeId(const std::string& string) const;
 
-  Identifier* makeId(stringid id);
+  Identifier* makeId(conststring string) const;
 
+  Identifier* makeId(stringid id) const;
+
+  //
+  // 1. Drop useless statements
+  // 2. Inline as many expressions and function
+  //    calls and constant accesses as possible
+  //
   void runOptimizer();
 
+  //
+  // Create default constructors for each struct
+  // type.
+  //
   void createStructConstructors();
 
+  //
+  // Create a function that sets the value of
+  // every global variable and calls the
+  // script's main method.
+  //
   void createFileInitMethod();
-  
+
+  //
+  // Move every nested function to global space
+  // and handle scope and symbol changes.
+  //
   void flattenNestedFunctions();
+
+  //
+  // Flatten scopes
+  //
+  void processScopes();
 
   public:
     SemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);
