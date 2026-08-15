@@ -550,6 +550,10 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
         ++it;
       }
 
+      if (stats.size() == 1) {
+        return stats[0];
+      }
+
       if (emptyBlocksAsNull && stats.empty()) {
         return nullptr;
       }
@@ -559,20 +563,25 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       IfStatement* ifStatement = static_cast<IfStatement*>(stat);
       Expr* cond = ifStatement->condition = optimizeExpr(ifStatement->condition);
 
+      ifStatement->body = optimizeStatement(ifStatement->body, true);
+      if (ifStatement->elseBody) {
+        ifStatement->elseBody = optimizeStatement(ifStatement->elseBody, true);
+      }
+
       if (!isBooleanAssignableLiteral(cond)) {
         return ifStatement;
       }
 
       bool condResult = literalToBoolean(cond);
       if (condResult) {
-        return optimizeStatement(ifStatement->body, true);
+        return ifStatement->body;
       }
 
       if (!ifStatement->elseBody) {
         return nullptr;
       }
 
-      return optimizeStatement(ifStatement->elseBody, true);
+      return ifStatement->elseBody;
     }
     case AST_ForStatement: {
       ForStatement* forStat = static_cast<ForStatement*>(stat);
