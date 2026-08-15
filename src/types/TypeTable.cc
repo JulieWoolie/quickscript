@@ -63,7 +63,7 @@ TypeTable::TypeTable() {
   m_nameLookup["float32"] = ConstTypes::FLOAT32();
   m_nameLookup["float64"] = ConstTypes::FLOAT64();
   m_nameLookup["string"] = ConstTypes::STRING();
-  m_nameLookup["closure"] = ConstTypes::CLOSURE();
+  m_nameLookup["#closure"] = ConstTypes::CLOSURE();
 }
 
 TypeTable::~TypeTable() {

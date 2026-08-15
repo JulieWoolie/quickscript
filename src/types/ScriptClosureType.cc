@@ -7,5 +7,5 @@ ScriptClosureType::ScriptClosureType()
 }
 
 conststring ScriptClosureType::getTypeName() const {
-  return "closure";
+  return "#closure";
 }
