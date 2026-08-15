@@ -227,6 +227,8 @@ class Scope {
 
     void pushSymbol(const Symbol* before, Symbol* sym);
 
+    void removeSymbol(Symbol* sym);
+
     Symbol* findVariable(stringid name) const;
 
     Symbol* findSymbol(stringid name, symboltype st) const;

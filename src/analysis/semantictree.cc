@@ -169,6 +169,16 @@ void Scope::pushSymbol(const Symbol* before, Symbol* sym) {
   }
 }
 
+void Scope::removeSymbol(Symbol* sym) {
+  for (auto it = m_symbols.begin(); it != m_symbols.end(); ++it) {
+    if (*it != sym) {
+      continue;
+    }
+    m_symbols.erase(it);
+    break;
+  }
+}
+
 Symbol* Scope::findVariable(const stringid name) const {
   for (Symbol* sym : m_symbols) {
     if (sym->getName() != name) {
