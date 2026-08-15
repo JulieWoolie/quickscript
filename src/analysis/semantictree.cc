@@ -79,6 +79,10 @@ uint64 LocalVarSymbol::getStackOffset() const {
   return m_offset;
 }
 
+void LocalVarSymbol::setStackOffset(uint64 off) {
+  m_offset = off;
+}
+
 std::vector<Location>& LocalVarSymbol::getReads() {
   return m_reads;
 }

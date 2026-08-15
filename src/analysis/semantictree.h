@@ -122,7 +122,8 @@ class LocalFuncSymbol: public Symbol {
 
 class LocalVarSymbol: public Symbol {
   const uint64 m_size;
-  const uint64 m_offset;
+
+  uint64 m_offset;
 
   std::vector<Location> m_reads;
   std::vector<Location> m_writes;
@@ -136,6 +137,8 @@ class LocalVarSymbol: public Symbol {
 
     uint64 getStackSize() const;
     uint64 getStackOffset() const;
+
+    void setStackOffset(uint64 off);
 
     std::vector<Location>& getReads();
     std::vector<Location>& getWrites();
