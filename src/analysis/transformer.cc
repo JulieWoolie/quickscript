@@ -667,6 +667,51 @@ Identifier* SemanticTransformer::makeId(const stringid id) const {
   return idExpr;
 }
 
+bool isZeroValue(Expr* expr) {
+  switch (expr->nodeKind()) {
+    case AST_FloatLiteral:
+      return static_cast<FloatLiteral*>(expr)->value == 0.0;
+    case AST_IntLiteral:
+      return static_cast<IntLiteral*>(expr)->value == 0;
+    case AST_BooleanLiteral:
+      return !static_cast<BooleanLiteral*>(expr)->value;
+    case AST_StringLiteral:
+      return static_cast<StringLiteral*>(expr)->value->len == 0;
+    case AST_ArrayLiteral:
+      return static_cast<ArrayLiteral*>(expr)->values.empty();
+    case AST_ObjectLiteral:
+      return static_cast<ObjectLiteral*>(expr)->properties.empty();
+    default:
+      return false;
+  }
+}
+
+void SemanticTransformer::removeZeroValues() {
+  std::vector<LexicalDeclaration*>& decls = ctx.getAllVariables();
+  for (LexicalDeclaration* decl : decls) {
+    if (!decl->value) {
+      continue;
+    }
+    if (!isZeroValue(decl->value)) {
+      continue;
+    }
+
+    decl->value = nullptr;
+  }
+
+  for (StructDecl* decl : ctx.getDeclaredStructs()) {
+    for (StructPropertyDecl* prop : decl->properties) {
+      if (!prop->value) {
+        continue;
+      }
+      if (!isZeroValue(prop->value)) {
+        continue;
+      }
+      prop->value = nullptr;
+    }
+  }
+}
+
 void SemanticTransformer::runOptimizer() {
   for (Statement* statement : sfs->statements) {
     optimizeStatement(statement, false);
@@ -1067,6 +1112,7 @@ SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatem
 
 void SemanticTransformer::run() {
   runOptimizer();
+  removeZeroValues();
   createStructConstructors();
   createFileInitMethod();
   flattenNestedFunctions();

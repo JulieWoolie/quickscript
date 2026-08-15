@@ -26,6 +26,8 @@ class SemanticTransformer {
 
   Identifier* makeId(stringid id) const;
 
+  void removeZeroValues();
+
   //
   // 1. Drop useless statements
   // 2. Inline as many expressions and function
