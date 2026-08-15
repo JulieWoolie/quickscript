@@ -16,6 +16,7 @@ void showHelpMessage() {
   printf("    --loglevel=<level>            Set the logger level. (One of: error, warn, info)\n");
   printf("    --text-compile -tc            Compile to a text based IR instead of binary.\n");
   printf("    --omit-ok-tests -oot          Do not log tests that passed.\n");
+  printf("    --ignore-asserts -ia          Do not compile or execute assert statements.\n");
   printf("\n");
   printf("COMMANDS\n");
   printf("    help                                Display this help message.\n");
@@ -92,12 +93,22 @@ static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 
       out.compileToBinary = false;
       return true;
     }
+
     if (stringEquals("--omit-ok-tests", pair.name)) {
       out.omitPassedTests = true;
       return true;
     }
     if (stringEquals("-oot", pair.name)) {
       out.omitPassedTests = true;
+      return true;
+    }
+
+    if (stringEquals("--ignore-asserts", pair.name)) {
+      out.ignoreAsserts = true;
+      return true;
+    }
+    if (stringEquals("-ia", pair.name)) {
+      out.ignoreAsserts = true;
       return true;
     }
 

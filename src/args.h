@@ -39,6 +39,7 @@ struct ProgramSettings {
   ProgramArgs runArgs;
 
   bool omitPassedTests = false;
+  bool ignoreAsserts = true;
 };
 
 #define RES_OK 0
