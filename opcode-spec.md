@@ -64,7 +64,7 @@
 | `SETARGTYPE`   | `0x0034` | 6       | `index: uint32, typeindex: uint32`                   |
 | `INVOKE`       | `0x0035` | 12      | `func: register, out: register`                      |
 | `LFUNCLOOKUP`  | `0x0036` | 9       | `index: uint32, out: register`                       |
-| `NFUNCLOOKUP`  | `0x0037` | -2      | `typeindex: uint32, funcName: uint64, index: uint32` |
+| `NFUNCLOOKUP`  | `0x0037` | 1       | `typeindex: uint32, funcName: uint64, out: register` |
 | `I8TU8`        | `0x0038` | 12      | `in: register, out: register`                        |
 | `I8TI16`       | `0x0039` | 12      | `in: register, out: register`                        |
 | `I8TU16`       | `0x003A` | 12      | `in: register, out: register`                        |

@@ -132,7 +132,7 @@ function functionCallOperations() {
   opCode("SETARGTYPE", [uint32("index"), uint32("typeindex")])
   opCode("INVOKE", [reg("func"), reg("out")])
   opCode("LFUNCLOOKUP", [uint32("index"), reg("out")])
-  opCode("NFUNCLOOKUP", [uint32("typeindex"), uint64("funcName"), uint32("index")])
+  opCode("NFUNCLOOKUP", [uint32("typeindex"), uint64("funcName"), reg("out")])
 }
 
 function conversionOperations() {
