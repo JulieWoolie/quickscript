@@ -64,6 +64,10 @@ void BytecodeWriter::writeInstructionCounter(const uint64 offset) const {
   *reinterpret_cast<uint32*>(m_buf + offset) = m_instrCount;
 }
 
+void BytecodeWriter::writeInstructionCounter(uint64 offset, uint32 instrCount) const {
+  *reinterpret_cast<uint32*>(m_buf + offset) = instrCount;
+}
+
 void BytecodeWriter::writeU32(uint64 offset, uint32 val) {
 #ifdef RUNTIME_CHECKS
   if (offset > m_cap) {

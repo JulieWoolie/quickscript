@@ -44,6 +44,8 @@ class BytecodeWriter {
 
     void writeInstructionCounter(uint64 offset) const;
 
+    void writeInstructionCounter(uint64 offset, uint32 instrCount) const;
+
     void writeU32(uint64 offset, uint32 val);
 
     uint32 getInstructionCounter() const;
