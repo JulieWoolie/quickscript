@@ -75,10 +75,10 @@
 #define OP_WRITEIDX64      0x0033
 
 // 4.3.4 Function Call Instructions
-#define OP_PUSHARG         0x0034
-#define OP_SETRV           0x0035
-#define OP_INVOKE          0x0036
-#define OP_FUNCLOOKUP      0x0037
+#define OP_SETARGTYPE      0x0034
+#define OP_INVOKE          0x0035
+#define OP_LFUNCLOOKUP     0x0036
+#define OP_NFUNCLOOKUP     0x0037
 
 // 4.3.5 Conversion Instructions
 #define OP_I8TU8           0x0038

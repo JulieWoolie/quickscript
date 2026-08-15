@@ -129,10 +129,10 @@ function heapOperations() {
 function functionCallOperations() {
   currentCategory = "4.3.4 Function Call Instructions"
 
-  opCode("PUSHARG", [reg("val")])
-  opCode("SETRV", [reg("val")])
+  opCode("SETARGTYPE", [uint32("index"), uint32("typeindex")])
   opCode("INVOKE", [reg("func"), reg("out")])
-  opCode("FUNCLOOKUP", [reg("out"), uint32("index")])
+  opCode("LFUNCLOOKUP", [uint32("index"), reg("out")])
+  opCode("NFUNCLOOKUP", [uint32("typeindex"), uint64("funcName"), uint32("index")])
 }
 
 function conversionOperations() {
