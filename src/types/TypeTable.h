@@ -21,6 +21,7 @@
 #define TI_FLOAT64 11
 #define TI_STRING 12
 #define TI_CLOSURE 13
+#define LAST_RESERVED_TYPE_INDEX TI_CLOSURE
 typedef uint64 typeindex;
 
 class TypeTable {
@@ -45,6 +46,10 @@ class TypeTable {
     ScriptType* getArrayType(ScriptType* componentType);
 
     typeindex emplaceType(ScriptType* type);
+
+    int64 findIndex(const ScriptType* type) const;
+
+    uint64 size() const;
 };
 
 

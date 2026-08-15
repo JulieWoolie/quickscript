@@ -154,3 +154,16 @@ typeindex TypeTable::emplaceType(ScriptType* type) {
   return idx;
 }
 
+int64 TypeTable::findIndex(const ScriptType* type) const {
+  for (uint32 i = 0; i < m_indexLookupLen; i++) {
+    if (m_indexLookup[i] == type) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+uint64 TypeTable::size() const {
+  return m_indexLookupLen;
+}
+
