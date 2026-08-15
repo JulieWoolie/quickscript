@@ -863,7 +863,7 @@ void SemanticTransformer::createFileInitMethod() {
   funcScope->pushSymbol(argsSym);
 
   LocalFunction* lf = alloc.make<LocalFunction>(finitName, fdecl, global);
-  LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(*lf);
+  LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
 
   ctx.pushLocalFunction(lf);
   global->pushSymbol(lfs);
