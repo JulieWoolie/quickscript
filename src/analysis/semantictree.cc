@@ -149,6 +149,26 @@ void Scope::pushSymbol(Symbol* sym) {
   m_symbols.push_back(sym);
 }
 
+void Scope::pushSymbol(const Symbol* before, Symbol* sym) {
+  if (!before || m_symbols.empty()) {
+    m_symbols.push_back(sym);
+    return;
+  }
+  if (before == m_symbols.front()) {
+    m_symbols.insert(m_symbols.cbegin(), sym);
+    return;
+  }
+
+  for (auto it = m_symbols.begin(); it != m_symbols.end(); ++it) {
+    if (*it != before) {
+      continue;
+    }
+
+    m_symbols.insert(it, sym);
+    break;
+  }
+}
+
 Symbol* Scope::findVariable(const stringid name) const {
   for (Symbol* sym : m_symbols) {
     if (sym->getName() != name) {

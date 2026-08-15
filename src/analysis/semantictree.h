@@ -225,6 +225,8 @@ class Scope {
 
     void pushSymbol(Symbol* sym);
 
+    void pushSymbol(const Symbol* before, Symbol* sym);
+
     Symbol* findVariable(stringid name) const;
 
     Symbol* findSymbol(stringid name, symboltype st) const;
