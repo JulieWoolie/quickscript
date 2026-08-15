@@ -1368,9 +1368,8 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
 
   NoFreeAllocator& alloc = ctx.getAllocator();
   const uint64 memSize = declType->stackSizeBytes();
-  const uint64 varOff = scope->getStackSize();
 
-  LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(nameId, declType, memSize, varOff, v);
+  LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(nameId, declType, memSize, 0, v);
   scope->pushSymbol(lvs);
   ctx.getScopeLookup()[lvs] = scope;
 
@@ -1545,13 +1544,11 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
     FunctionParam* arg = v->arguments[i];
 
     const uint64 memSize = signType->stackSizeBytes();
-    const uint64 memOff = scope->getStackSize();
 
-    LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, memOff, arg);
+    LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, 0, arg);
     lvs->addFlags(SYMFLAG_FUNC_ARG);
 
     scope->pushSymbol(lvs);
-    scope->setStackSize(scope->getStackSize() + memSize);
 
     ctx.getScopeLookup()[lvs] = scope;
     ctx.getSymbolLookup()[arg] = lvs;
