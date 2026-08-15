@@ -1100,8 +1100,206 @@ void SemanticTransformer::flattenNestedFunctions() {
   }
 }
 
+static void processGlobalVarScopes(SemanticContext& ctx) {
+  Scope* gscope = ctx.getGlobalScope();
+  const std::vector<LexicalDeclaration*>& globals = ctx.getGlobalVariables();
+  uint64 off = 0;
+
+  for (LexicalDeclaration* decl : globals) {
+    LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(ctx.getSymbolLookup()[decl]);
+    lvs->setStackOffset(off);
+    off += lvs->getStackSize();
+  }
+
+  gscope->setStackSize(off);
+}
+
+struct ScopeProcessContext {
+  SemanticContext& semantics;
+  Scope* scope;
+  uint64 callArgsSpace = 0;
+  uint64 extraSpace = 0;
+  uint64 variableSpace = 0;
+  uint64 offsetStart = 0;
+};
+
+#define LOOKUP_LOCALVAR(c, v) static_cast<LocalVarSymbol*>(c[v])
+#define CASTED_VAR(name, type, value) type* name = static_cast<type*>(value);
+#define AST_SWITCH(node) switch (node->nodeKind())
+#define AST_CASE(type, vname, v, body) case AST_##type: {type* vname = static_cast<type*>(v); body}
+
+static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollbackBlock = true) {
+  const uint64 start = ctx.offsetStart;
+  const uint64 startSize = ctx.variableSpace;
+
+  switch (node->nodeKind()) {
+    case AST_CallExpr: {
+      CASTED_VAR(c, CallExpr, node)
+      uint64 callArgsSize = 0;
+
+      callArgsSize += c->resultType->stackSizeBytes();
+      for (Expr* arg : c->arguments) {
+        processScope(arg, ctx);
+        callArgsSize += arg->resultType->stackSizeBytes();
+      }
+
+      if (callArgsSize > ctx.callArgsSpace) {
+        ctx.callArgsSpace = callArgsSize;
+      }
+      return;
+    }
+    case AST_PropertyAccessExpr: {
+      CASTED_VAR(p, PropertyAccessExpr, node)
+      processScope(p->target, ctx);
+      return;
+    }
+    case AST_IndexAccessExpr: {
+      CASTED_VAR(i, IndexAccessExpr, node)
+      processScope(i->target, ctx);
+      return;
+    }
+    case AST_BinaryExpr: {
+      CASTED_VAR(b, BinaryExpr, node)
+      processScope(b->lhs, ctx);
+      processScope(b->rhs, ctx);
+      return;
+    }
+    case AST_UnaryExpr: {
+      CASTED_VAR(u, UnaryExpr, node)
+      processScope(u->target, ctx);
+      return;
+    }
+    case AST_TernaryExpr: {
+      CASTED_VAR(t, TernaryExpr, node)
+      processScope(t->condition, ctx);
+      processScope(t->left, ctx);
+      processScope(t->right, ctx);
+      return;
+    }
+    case AST_ObjectLiteral: {
+      CASTED_VAR(l, ObjectLiteral, node)
+      for (ObjectLiteralProperty* property : l->properties) {
+        processScope(property->value, ctx);
+      }
+      return;
+    }
+    case AST_ArrayLiteral: {
+      CASTED_VAR(a, ArrayLiteral, node)
+      for (Expr* v : a->values) {
+        processScope(v, ctx);
+      }
+      return;
+    }
+
+    case AST_Block: {
+      CASTED_VAR(b, Block, node)
+
+      for (Statement* statement : b->statements) {
+        processScope(statement, ctx);
+      }
+
+      if (rollbackBlock) {
+        break;
+      } else {
+        return;
+      }
+    }
+    case AST_IfStatement: {
+      CASTED_VAR(i, IfStatement, node)
+      processScope(i->condition, ctx);
+      processScope(i->body, ctx, false);
+      if (i->elseBody) {
+        processScope(i->elseBody, ctx, false);
+      }
+      break;
+    }
+    case AST_ForStatement: {
+      CASTED_VAR(f, ForStatement, node)
+      processScope(f->first, ctx);
+      processScope(f->loopBody, ctx, false);
+      break;
+    }
+    case AST_WhileStatement: {
+      CASTED_VAR(w, WhileStatement, node)
+      if (w->doWhile) {
+        processScope(w->body, ctx, false);
+        processScope(w->condition, ctx);
+      } else {
+        processScope(w->condition, ctx);
+        processScope(w->body, ctx, false);
+      }
+      break;
+    }
+    case AST_ReturnStatement: {
+      CASTED_VAR(r, ReturnStatement, node)
+      if (!r->value) {
+        return;
+      }
+      processScope(r->value, ctx);
+      return;
+    }
+    case AST_LexicalDeclaration:
+    case AST_FunctionParam: {
+      LocalVarSymbol* lvs = LOOKUP_LOCALVAR(ctx.semantics.getSymbolLookup(), node);
+      lvs->setStackOffset(start);
+      ctx.variableSpace += lvs->getStackSize();
+      ctx.offsetStart += lvs->getStackSize();
+      return;
+    }
+    case AST_AssertStatement: {
+      CASTED_VAR(a, AssertStatement, node)
+      processScope(a->condition, ctx);
+      processScope(a->message, ctx);
+      return;
+    }
+
+    default:
+      return;
+  }
+
+  const uint64 newSize = ctx.variableSpace;
+  const uint64 dif = newSize - startSize;
+
+  if (dif > ctx.extraSpace) {
+    ctx.extraSpace = dif;
+  }
+
+  ctx.offsetStart = start;
+  ctx.variableSpace = startSize;
+}
+
+static void processFunctionScopes(SemanticContext& ctx, const LocalFunction* lf) {
+  Scope* scope = lf->getScope();
+  FunctionDeclStatement* decl = lf->getDecl();
+  Block* body = decl->functionBody;
+
+  ScopeProcessContext procContext = {
+    .semantics = ctx,
+    .scope = scope,
+    .callArgsSpace = 0,
+    .extraSpace = 0,
+    .variableSpace = 0,
+    .offsetStart = 0
+  };
+
+  for (FunctionParam* arg : decl->arguments) {
+    processScope(arg, procContext);
+  }
+  processScope(body, procContext, false);
+
+  const uint64 scopeSize
+      = procContext.variableSpace
+      + procContext.extraSpace
+      + procContext.callArgsSpace;
+
+  scope->setStackSize(scopeSize);
+}
+
 void SemanticTransformer::processScopes() {
-  
+  processGlobalVarScopes(ctx);
+  for (LocalFunction* lf : ctx.getLocalFunctions()) {
+    processFunctionScopes(ctx, lf);
+  }
 }
 
 SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatement* _sfs)
