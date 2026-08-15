@@ -3,7 +3,6 @@
 
 #include "../stringtable.h"
 #include "../analysis/SemanticContext.h"
-#include "../types/types.h"
 #include "../interpreter/opcodes.h"
 #include "../parse/syntaxtree.h"
 
