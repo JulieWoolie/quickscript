@@ -211,6 +211,24 @@ static void compilePropertyAccess(
   }
 }
 
+static void compileFuncLookup(CompilerContext& ctx, LocalFuncSymbol* lfs, const registerid out) {
+  BytecodeWriter& writer = ctx.getWriter();
+  writer.startInstr(OP_LFUNCLOOKUP);
+
+  const int32 fIdx = ctx.findFunctionIndex(lfs);
+
+  if (fIdx == -1) {
+    uint64 addr = writer.getAddress();
+    ctx.pushIncompleteCall(lfs, addr);
+    writer.appendU32(0);
+  } else {
+    writer.appendU32(fIdx);
+  }
+
+  writer.appendU8(out);
+  writer.endInstr();
+}
+
 static void compileIdentifier(
   Identifier* id,
   const registeridopt out,
@@ -225,22 +243,7 @@ static void compileIdentifier(
 
   if (sym->stype() == SYM_LocalFunc) {
     LocalFuncSymbol* lfs = static_cast<LocalFuncSymbol*>(sym);
-
-    writer.startInstr(OP_LFUNCLOOKUP);
-
-    const int32 fIdx = ctx.findFunctionIndex(lfs);
-
-    if (fIdx == -1) {
-      uint64 addr = writer.getAddress();
-      ctx.pushIncompleteCall(lfs, addr);
-      writer.appendU32(0);
-    } else {
-      writer.appendU32(fIdx);
-    }
-
-    writer.appendU8(out);
-    writer.endInstr();
-
+    compileFuncLookup(ctx, lfs, out);
     return;
   }
 
@@ -487,6 +490,43 @@ static void compileBinaryExpr(
 
 static void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid out);
 
+static void compileCallExpr(const CallExpr* call, const registerid out, CompilerContext& ctx) {
+  Scope* scope = ctx.getCurrentScope();
+  BytecodeWriter& writer = ctx.getWriter();
+
+  uint64 offsetStart = scope->getStackSize();
+  for (const Expr* arg : call->arguments) {
+    offsetStart -= arg->resultType->stackSizeBytes();
+  }
+
+  registerid funcReg = ctx.acquireRegister();
+  compileExpr(call->target, funcReg, nullptr, ctx);
+
+  for (Expr* arg : call->arguments) {
+    ScriptType* argType = arg->resultType;
+
+    compileRValue(argType, arg, ctx, out);
+    uint64 size = argType->stackSizeBytes();
+
+    BYTEWIDTH_OPCODE(size, writer, OP_SWRITE)
+    writer.appendU8(out);
+    writer.appendU64(offsetStart);
+    writer.endInstr();
+
+    offsetStart += size;
+  }
+
+  if (call->resultType == ConstTypes::VOID()) {
+    writer.startInstr(OP_INVOKEV);
+  } else {
+    BYTEWIDTH_OPCODE(call->resultType->stackSizeBytes(), writer, OP_INVOKE)
+  }
+
+  writer.appendU8(funcReg);
+  writer.appendU8(out);
+  writer.endInstr();
+}
+
 static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, CompilerContext& ctx) {
   const astnodetype kind = expr->nodeKind();
   BytecodeWriter& writer = ctx.getWriter();
@@ -507,6 +547,37 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
     //  - X BinaryExpr
     //  - X UnaryExpr
     //  - X TernaryExpr
+    //  - X ObjectAllocExpr
+    //  - X GetStackPointer
+
+    case AST_CallExpr:
+      compileCallExpr(static_cast<CallExpr*>(expr), out, ctx);
+      return;
+
+    case AST_GetStackPointer:
+      writer.startInstr(OP_GETSTACKPTR);
+      writer.appendU8(out);
+      writer.endInstr();
+      return;
+
+    case AST_ObjectAllocExpr: {
+      ObjectAllocExpr* allocExpr = static_cast<ObjectAllocExpr*>(expr);
+      ScriptStructType* forType = static_cast<ScriptStructType*>(allocExpr->resultType);
+
+      const uint32 propCount = forType->getPropertyCount();
+      uint64 memSize = 0;
+
+      for (uint32 i = 0; i < propCount; i++) {
+        memSize += forType->getProperty(i)->type->stackSizeBytes();
+      }
+
+      writer.startInstr(OP_HEAPALLOC);
+      writer.appendU8(out);
+      writer.appendU64(memSize);
+      writer.endInstr();
+
+      return;
+    }
 
     case AST_BinaryExpr: {
       compileBinaryExpr(static_cast<BinaryExpr*>(expr), out, ctx);
@@ -877,36 +948,18 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
   }
 }
 
-static void compileFuncCall(CompilerContext& ctx, const uint32 funcIdx, const registerid out) {
-  BytecodeWriter& writer = ctx.getWriter();
-
-  writer.startInstr(OP_FUNCLOOKUP);
-  writer.appendU8(out);
-  writer.appendU32(funcIdx);
-  writer.endInstr();
-
-  writer.startInstr(OP_INVOKE);
-  writer.appendU8(out);
-  writer.appendU8(out);
-  writer.endInstr();
-}
 
 static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, const registerid out) {
+  SemanticContext& semantics = ctx.getSemantics();
   BytecodeWriter& writer = ctx.getWriter();
 
-  const uint32 funcTableIndex = ctx.getStructConstructorIndex(type);
-  const uint64 heapSize = type->getHeapSize();
+  LocalFuncSymbol* lfc = semantics.getConstructors()[type];
+  compileFuncLookup(ctx, lfc, out);
 
-  writer.startInstr(OP_HEAPALLOC);
+  writer.startInstr(OP_INVOKE64);
   writer.appendU8(out);
-  writer.appendU64(heapSize);
-  writer.endInstr();
-
-  writer.startInstr(OP_PUSHARG);
   writer.appendU8(out);
   writer.endInstr();
-
-  compileFuncCall(ctx, funcTableIndex, out);
 }
 
 static void compileValueInitialiser(ScriptType* type, CompilerContext& ctx, const registerid out) {
@@ -916,6 +969,7 @@ static void compileValueInitialiser(ScriptType* type, CompilerContext& ctx, cons
     case TK_PRIMITIVE:
     case TK_STRING:
     case TK_ARRAY:
+    case TK_CLOSURE:
       BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_LOADCONST)
       writer.appendU8(out);
       writer.appendU64(0);
@@ -931,49 +985,12 @@ static void compileValueInitialiser(ScriptType* type, CompilerContext& ctx, cons
   }
 }
 
-static uint64 measureBlock(const Block* block) {
-  uint64 bsize = 0;
-  for (Statement* stat : block->statements) {
-    if (stat->nodeKind() != AST_LexicalDeclaration) {
-      continue;
-    }
-    bsize += static_cast<LexicalDeclaration*>(stat)->typeExpr->referencedType->stackSizeBytes();
-  }
-  return bsize;
-}
-
-static uint32 blockBegin(BytecodeWriter& writer, uint64 bytes, uint64* addrOut) {
-  const uint32 instr = writer.getInstructionCounter();
-
-  writer.startInstr(OP_STACKALLOC);
-
-  if (addrOut) {
-    *addrOut = writer.getAddress();
-  }
-
-  writer.appendU64(bytes);
-  writer.endInstr();
-
-  return instr;
-}
-
-static void blockEnd(BytecodeWriter& writer, uint64 bytes) {
-  writer.startInstr(OP_STACKFREE);
-  writer.appendU64(bytes);
-  writer.endInstr();
-
-  writer.startInstr(OP_RET);
-  writer.endInstr();
-}
-
 static void compileStatement(Statement* stat, CompilerContext& ctx);
 
-static void compileBlock(const Block* block, CompilerContext& ctx, const uint64 size = 0) {
-  blockBegin(ctx.getWriter(), size, nullptr);
+static void compileBlock(const Block* block, CompilerContext& ctx) {
   for (Statement* statement : block->statements) {
     compileStatement(statement, ctx);
   }
-  blockEnd(ctx.getWriter(), size);
 }
 
 static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
@@ -1024,43 +1041,185 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
   }
 }
 
-static void compileFuncDecl(const FunctionDeclStatement* stat, CompilerContext& ctx) {
-  uint64 stackSize = 0;
-  for (FunctionParam* p : stat->arguments) {
-    stackSize += p->paramType->referencedType->stackSizeBytes();
+static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) {
+  FunctionDeclStatement* stat = lf->getDecl();
+  LocalFuncSymbol* lfs = static_cast<LocalFuncSymbol*>(ctx.getSemantics().getSymbolLookup()[stat]);
+
+  Scope* scope = lf->getScope();
+  ctx.setCurrentScope(scope);
+
+  BytecodeWriter& writer = ctx.getWriter();
+  const uint32 start = writer.getInstructionCounter();
+
+  for (Statement* statement : stat->functionBody->statements) {
+    compileStatement(statement, ctx);
   }
-  stackSize += measureBlock(stat->functionBody);
 
-  uint32 start = blockBegin(ctx.getWriter(), stackSize, nullptr);
+  writer.startInstr(OP_RET);
+  writer.endInstr();
 
-
-
-  blockEnd(ctx.getWriter(), stackSize);
+  ctx.pushCompiledFunction(lfs, start);
 }
 
-void compileStatement(Statement* stat, CompilerContext& ctx) {
-  const astnodetype kind = stat->nodeKind();
+static void writeControlFlowAddresses(
+  CompilerContext& ctx,
+  const stringid label,
+  const uint32 endInstr,
+  const uint32 continueInstr
+) {
+  std::vector<ControlFlowCall>& cfCalls = ctx.getControlFlowCalls();
+  const BytecodeWriter& writer = ctx.getWriter();
+
+  for (auto it = cfCalls.begin(); it != cfCalls.end(); ) {
+    ControlFlowCall& call = *it;
+
+    if (call.label && call.label != label) {
+      continue;
+    }
+
+    if (call.type == CFT_BREAK) {
+      writer.writeInstructionCounter(call.writeAddress, endInstr);
+    } else {
+      writer.writeInstructionCounter(call.writeAddress, continueInstr);
+    }
+  }
+}
+
+static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
   BytecodeWriter& writer = ctx.getWriter();
 
+  compileLexDecl(loop->first, ctx);
+
+  const registerid conditionReg = ctx.acquireRegister();
+  const registerid thirdReg = ctx.acquireRegister();
+
+  const uint64 conditionInstr = writer.getInstructionCounter();
+
+  compileExpr(loop->second, conditionReg, nullptr, ctx);
+
+  writer.startInstr(OP_JMPI0);
+  const uint64 endWriteAddr = writer.getAddress();
+  writer.appendU32(0);
+  writer.appendU8(conditionReg);
+  writer.endInstr();
+
+  compileStatement(loop->loopBody, ctx);
+  compileExpr(loop->third, thirdReg, nullptr, ctx);
+
+  const uint64 endInstr = writer.getInstructionCounter();
+  writer.writeInstructionCounter(endWriteAddr, endInstr);
+
+  const stringid label = loop->label ? loop->label->value : nullptr;
+  writeControlFlowAddresses(ctx, label, endInstr, conditionInstr);
+
+  ctx.freeRegister(thirdReg);
+  ctx.freeRegister(conditionReg);
+}
+
+static void compileWhileLoop(WhileStatement* loop, CompilerContext& ctx) {
+  registerid conditionRegister = ctx.acquireRegister();
+  uint64 endWriteAddr = 0;
+  BytecodeWriter& writer = ctx.getWriter();
+
+  const bool doWhile = loop->doWhile;
+
+  if (!doWhile) {
+    compileExpr(loop->condition, conditionRegister, nullptr, ctx);
+
+    writer.startInstr(OP_JMPI0);
+    endWriteAddr = writer.getAddress();
+    writer.appendU32(0);
+    writer.appendU8(conditionRegister);
+    writer.endInstr();
+  }
+
+  const uint32 startInstr = writer.getInstructionCounter();
+
+  compileStatement(loop->body, ctx);
+
+  const uint32 endInstr = writer.getInstructionCounter();
+
+  stringid label = loop->label ? loop->label->value : nullptr;
+  writeControlFlowAddresses(ctx, label, endInstr, startInstr);
+
+  if (doWhile) {
+    compileExpr(loop->condition, conditionRegister, nullptr, ctx);
+
+    writer.startInstr(OP_JMPN0);
+    writer.appendU32(startInstr);
+    writer.appendU8(conditionRegister);
+    writer.endInstr();
+  } else {
+    writer.writeInstructionCounter(endWriteAddr, endInstr);
+  }
+
+  ctx.freeRegister(conditionRegister);
+}
+
+static void compileControlFlow(ControlFlowStatement* cft, CompilerContext& ctx) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  writer.startInstr(OP_JMP);
+  const uint64 addr = writer.getAddress();
+  writer.appendU32(0);
+  writer.endInstr();
+
+  std::vector<ControlFlowCall>& cfCalls = ctx.getControlFlowCalls();
+  cfCalls.emplace_back(cft->type, nullptr, addr);
+}
+
+static void compileReturn(ReturnStatement* ret, CompilerContext& ctx) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  if (ret->value) {
+    registerid reg = ctx.acquireRegister();
+    ScriptType* returnType = ret->value->resultType;
+
+    compileRValue(returnType, ret->value, ctx, reg);
+
+    BYTEWIDTH_OPCODE(returnType->stackSizeBytes(), writer, OP_SWRITE)
+    writer.appendU8(reg);
+    writer.appendU64(0);
+    writer.endInstr();
+
+    ctx.freeRegister(reg);
+  }
+
+  writer.startInstr(OP_RET);
+  writer.endInstr();
+}
+
+static void compileStatement(Statement* stat, CompilerContext& ctx) {
+  const astnodetype kind = stat->nodeKind();
+
   switch (kind) {
-    case AST_LexicalDeclaration:
-      compileLexDecl(static_cast<LexicalDeclaration*>(stat), ctx);
-      return;
-    case AST_FunctionDeclStatement:
-      ctx.enqueueFunction(static_cast<FunctionDeclStatement*>(stat));
+    case AST_Block:
+      compileBlock(static_cast<Block*>(stat), ctx);
       return;
     case AST_IfStatement:
       compileIfStatement(static_cast<IfStatement*>(stat), ctx);
       return;
-
-    case AST_Block: {
-      const Block* b = static_cast<Block*>(stat);
-      const uint64 size = measureBlock(b);
-
-      compileBlock(b, ctx, size);
+    case AST_ForStatement:
+      compileForLoop(static_cast<ForStatement*>(stat), ctx);
+      return;
+    case AST_LexicalDeclaration:
+      compileLexDecl(static_cast<LexicalDeclaration*>(stat), ctx);
+      return;
+    case AST_WhileStatement:
+      compileWhileLoop(static_cast<WhileStatement*>(stat), ctx);
+      return;
+    case AST_ControlFlowStatement:
+      compileControlFlow(static_cast<ControlFlowStatement*>(stat), ctx);
+      return;
+    case AST_ReturnStatement:
+      compileReturn(static_cast<ReturnStatement*>(stat), ctx);
+      return;
+    case AST_ExprStatement: {
+      const registerid resultRegister = ctx.acquireRegister();
+      compileExpr(static_cast<ExprStatement*>(stat)->expression, resultRegister, nullptr, ctx);
+      ctx.freeRegister(resultRegister);
       return;
     }
-
     default:
       return;
   }
@@ -1072,82 +1231,23 @@ void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid
     return;
   }
 
-  if (type->kind() == TK_STRUCT) {
+  if (type->kind() == TK_STRUCT && val->nodeKind() == AST_ObjectLiteral) {
     compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
   }
 
   compileExpr(val, out, nullptr, ctx);
 }
 
-static void compileStructDecl(const StructDecl* decl, CompilerContext& ctx) {
-  ScriptStructType* stype = decl->type;
-  BytecodeWriter& writer = ctx.getWriter();
-
-  const uint32 propCount = decl->properties.size();
-  constexpr uint64 stackSize = POINTER_SIZE;
-
-  const uint32 start = blockBegin(writer, stackSize, nullptr);
-
-  const registerid selfReg = ctx.acquireRegister();
-  const registerid propReg = ctx.acquireRegister();
-
-  writer.startInstr(OP_RSREAD64);
-  writer.appendU8(selfReg);
-  writer.appendU64(0);
-  writer.endInstr();
-
-  uint32 off = 0;
-  for (uint32 i = 0; i < propCount; i++) {
-    const StructPropertyDecl* propDecl = decl->properties.at(i);
-    const StructProperty* ptype = stype->getProperty(i);
-
-    compileRValue(ptype->type, propDecl->value, ctx, propReg);
-
-    BYTEWIDTH_OPCODE(ptype->type->stackSizeBytes(), writer, OP_WRITEOBJ)
-    writer.appendU8(selfReg);
-    writer.appendU8(propReg);
-    writer.appendU32(off);
-
-    off += ptype->type->stackSizeBytes();
-  }
-
-  ctx.freeRegister(selfReg);
-  ctx.freeRegister(propReg);
-
-  blockEnd(writer, stackSize);
-
-  std::string funcName;
-  funcName.append(stype->getTypeName());
-  funcName.append(".<init>");
-
-  const stringid id = ctx.getSemantics().getStrings().allocate(funcName);
-
-  ScriptType* ctorParams[1];
-  ctorParams[0] = stype;
-
-  FunctionSignature* sign = FunctionSignature::create(ConstTypes::VOID(), false, 1, ctorParams);
-  ctx.getSemantics().getTypes().emplaceType(sign);
-
-  const uint32 funcIdx = ctx.pushCompiledFunction(id, start, sign);
-
-  ctx.pushStructConstructor(stype, funcIdx);
-}
-
-BytecodeFile compile(ScriptFileStatement* sfs, SemanticContext& ctx) {
+BytecodeFile compile(SemanticContext& ctx) {
   uint64 registerBitSet = 0;
   CompilerContext cctx = CompilerContext(ctx, &registerBitSet);
 
   constexpr uint64 initcap = LENGTH_INSTRUCTION * 1024;
   cctx.getWriter().reserveSpace(initcap);
 
-  for (Statement* stat : sfs->statements) {
-    if (stat->nodeKind() != AST_StructDecl) {
-      continue;
-    }
-    compileStructDecl(static_cast<StructDecl*>(stat), cctx);
+  for (LocalFunction* lf : ctx.getLocalFunctions()) {
+    compileLocalFunction(lf, cctx);
   }
-
-  ctx.popScope();
 
   BytecodeFile file;
   file.instructionBuf = cctx.getWriter().getBuffer();

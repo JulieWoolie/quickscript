@@ -13,10 +13,7 @@ typedef uint8 FunctionEntryType;
 struct FunctionTableEntry {
   uint64 nameOffset = 0;
   uint32 signatureIndex = 0;
-  FunctionEntryType type;
-
   uint64 startingInstruction = 0;
-  void* funcAddr = nullptr;
 };
 
 struct BytecodeFile {
