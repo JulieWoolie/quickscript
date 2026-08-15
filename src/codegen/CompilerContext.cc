@@ -252,3 +252,7 @@ void CompilerContext::setCurrentScope(Scope* scope) {
 std::vector<ControlFlowCall>& CompilerContext::getControlFlowCalls() {
   return m_controlFlowCalls;
 }
+
+std::vector<CompiledFunction>& CompilerContext::getCompiledFunctions() {
+  return m_compiledFuncs;
+}

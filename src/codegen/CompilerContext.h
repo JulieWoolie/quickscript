@@ -136,6 +136,8 @@ class CompilerContext {
     void setCurrentScope(Scope* scope);
 
     std::vector<ControlFlowCall>& getControlFlowCalls();
+
+    std::vector<CompiledFunction>& getCompiledFunctions();
 };
 
 

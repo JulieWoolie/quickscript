@@ -1238,6 +1238,51 @@ void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid
   compileExpr(val, out, nullptr, ctx);
 }
 
+static void createTypeTable(BytecodeFile& out, TypeTable& types) {
+  uint64 size = types.size() - (LAST_RESERVED_TYPE_INDEX + 1);
+
+  if (size == 0) {
+    out.typeTable = nullptr;
+    out.typeTableSize = 0;
+    return;
+  }
+
+  TypeTableEntry* entries = static_cast<TypeTableEntry*>(malloc(size * sizeof(TypeTableEntry)));
+  for (uint32 i = 0; i < size; i++) {
+    typeindex typeIdx = i + LAST_RESERVED_TYPE_INDEX + 1;
+    ScriptType* type = types.lookupByIndex(typeIdx);
+
+    entries[i] = {
+      .type = type,
+      .index = typeIdx
+    };
+  }
+
+  out.typeTableSize = size;
+  out.typeTable = entries;
+}
+
+static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
+  std::vector<CompiledFunction>& compiledFuncs = ctx.getCompiledFunctions();
+  const TypeTable& types = ctx.getSemantics().getTypes();
+
+  FunctionTableEntry* table = static_cast<FunctionTableEntry*>(malloc(sizeof(FunctionTableEntry) * compiledFuncs.size()));
+
+  for (uint32 i = 0; i < compiledFuncs.size(); i++) {
+    CompiledFunction& cfunc = compiledFuncs[i];
+    const uint64 tIndex = types.findIndex(cfunc.functionSymbol->getFunction()->getSignature());
+
+    table[i] = {
+      .nameOffset = cfunc.poolId,
+      .signatureIndex = tIndex,
+      .startingInstruction = cfunc.bodyStart
+    };
+  }
+
+  out.funcTable = table;
+  out.funcTableEntries = compiledFuncs.size();
+}
+
 BytecodeFile compile(SemanticContext& ctx) {
   uint64 registerBitSet = 0;
   CompilerContext cctx = CompilerContext(ctx, &registerBitSet);
@@ -1254,6 +1299,9 @@ BytecodeFile compile(SemanticContext& ctx) {
   file.instructionsSize = cctx.getWriter().getLength();
   file.constStringPool = cctx.getStringPool().getData();
   file.stringPoolSize = cctx.getStringPool().getLength();
+
+  createTypeTable(file, ctx.getTypes());
+  createFunctionTable(file, cctx);
 
   return file;
 }
