@@ -48,6 +48,7 @@ class SemanticContext {
   //
   std::unordered_map<Node*, Symbol*> m_symbolLookup;
   std::unordered_map<Symbol*, Scope*> m_scopeLookup;
+  std::unordered_map<Node*, Scope*> m_astScopeLookup;
 
   DependencyGraph m_dependencyGraph;
 
@@ -116,6 +117,8 @@ class SemanticContext {
     std::unordered_map<Node*, Symbol*>& getSymbolLookup();
 
     std::unordered_map<Symbol*, Scope*>& getScopeLookup();
+
+    std::unordered_map<Node*, Scope*>& getAstScopeLookup();
 
     DependencyGraph& getDependencyGraph();
 
