@@ -244,3 +244,11 @@ ConstStringPoolWriter& CompilerContext::getStringPool() {
 SemanticContext& CompilerContext::getSemantics() const {
   return m_semantics;
 }
+
+Scope* CompilerContext::getCurrentScope() const {
+  return m_currentScope;
+}
+
+void CompilerContext::setCurrentScope(Scope* scope) {
+  m_currentScope = scope;
+}

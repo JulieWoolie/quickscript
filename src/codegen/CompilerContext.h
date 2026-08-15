@@ -103,6 +103,8 @@ class CompilerContext {
 
   uint64* m_registersInUse;
 
+  Scope* m_currentScope = nullptr;
+
   public:
     CompilerContext(SemanticContext& ctx, uint64* registryBitset);
 
@@ -126,6 +128,10 @@ class CompilerContext {
     ConstStringPoolWriter& getStringPool();
 
     SemanticContext& getSemantics() const;
+
+    Scope* getCurrentScope() const;
+
+    void setCurrentScope(Scope* scope);
 };
 
 
