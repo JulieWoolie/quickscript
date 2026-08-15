@@ -64,8 +64,8 @@
     break;
 
 #define OUTP_NIL    0
-#define OUTP_ASTACK 1
-#define OUTP_RSTACK 2
+#define OUTP_GLOBAL 1
+#define OUTP_STACK  2
 #define OUTP_PROP   3
 #define OUTP_IDX    4
 
@@ -100,15 +100,17 @@ static void compileWriteOperation(
       writer.appendU32(addrout->memoffset);
       writer.endInstr();
       break;
-    case OUTP_RSTACK:
-      BYTEWIDTH_OPCODE(stackSize, writer, OP_RSWRITE)
+    case OUTP_STACK:
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_SWRITE)
       writer.appendU8(valueRegister);
       writer.appendU64(addrout->stackoffset);
+      writer.endInstr();
       break;
-    case OUTP_ASTACK:
-      BYTEWIDTH_OPCODE(stackSize, writer, OP_ASWRITE)
+    case OUTP_GLOBAL:
+      BYTEWIDTH_OPCODE(stackSize, writer, OP_GWRITE)
       writer.appendU8(valueRegister);
       writer.appendU64(addrout->stackoffset);
+      writer.endInstr();
       break;
     default:
       break;
@@ -216,88 +218,55 @@ static void compileIdentifier(
   CompilerContext& ctx
 ) {
   BytecodeWriter& writer = ctx.getWriter();
-
-  if (id->resultType->kind() == TK_FUNC) {
-    FunctionSignature* sign = static_cast<FunctionSignature*>(id->resultType);
-    const stringid name = id->value;
-
-    const int32 funcIdx = ctx.findFunctionIndex(name, sign);
-
-    writer.startInstr(OP_FUNCLOOKUP);
-    writer.appendU8(out);
-
-    if (funcIdx == -1) {
-      const uint64 idxAddr = writer.getAddress();
-      writer.appendU32(0);
-      ctx.pushIncompleteCall(name, sign, idxAddr);
-    } else {
-      writer.appendU32(funcIdx);
-    }
-
-    writer.endInstr();
-  }
-
   SemanticContext& semantics = ctx.getSemantics();
 
   Symbol* sym = semantics.getSymbolLookup()[id];
   Scope* scope = semantics.getScopeLookup()[sym];
 
-  // Variable declared in current scope
-  if (scope == current) {
-    if (out != NO_REGISTER) {
-      BYTEWIDTH_OPCODE(sym->stackSize, writer, OP_RSREAD)
-      writer.appendU8(out);
-      writer.appendU64(sym->stackOffset);
+  if (sym->stype() == SYM_LocalFunc) {
+    LocalFuncSymbol* lfs = static_cast<LocalFuncSymbol*>(sym);
+
+    writer.startInstr(OP_LFUNCLOOKUP);
+
+    int32 fIdx = ctx.findFunctionIndex(
+      lfs->getName(),
+      static_cast<FunctionSignature*>(lfs->getScriptType())
+    );
+
+    if (fIdx == -1) {
+      uint64 addr = writer.getAddress();
+      ctx.pushIncompleteCall(lfs, addr);
+      writer.appendU32(0);
+    } else {
+      writer.appendU32(fIdx);
     }
 
-    if (addr) {
-      addr->outptype = OUTP_RSTACK;
-      addr->stackoffset = sym->stackOffset;
-    }
+    writer.appendU8(out);
+    writer.endInstr();
 
     return;
   }
 
-  // TODO: Figure out how to read from upper levels of scopes
-  //
-  //   So I think the way this needs to be done (reading from upper scopes) depends on
-  //   which variable or constant is being referenced. If we're referencing a global
-  //   variable declared in the main scope of the script, then we use ASREAD (Absolute
-  //   stack read) which takes in a memory offset relative to the start of the script's
-  //   main scope, or to read RSREAD with a negative number if not.
-  //
-  //   The thing is, a calling function can't reference anything from a caller's stack
-  //   with this methodology because the function doesn't know anything in the above
-  //   scope exists unless this is a function declared within a function, in which
-  //   case... damn, that might cause issues.
-  //
-  //   Nested functions will expect the stack to be offset from where it was declared,
-  //   but it can be declared near the top of the encasing function but be called at
-  //   the end, so the stack can be different. Basically, the negative pointer needs
-  //   to read NOT from the current scope but from a saved stack address... I think?
-  //
-  //   A nested function could also be called from within a loop, in which case,
-  //   the stack will again be different because of fucking course it will be, loop's
-  //   cause stack alloc calls and stack free calls meaning the stack pointer will
-  //   change
-  //
-  //   This is s confusing
-  //
+  if (sym->stype() == SYM_LocalVar) {
+    LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(sym);
+    bool isMain = scope->getType() == SCOPE_MAIN;
 
-  // Main scope, aka, a global variable
-  if (scope->getLevel() == 0) {
     if (out != NO_REGISTER) {
-      BYTEWIDTH_OPCODE(sym->stackSize, writer, OP_ASREAD)
+      if (isMain) {
+        BYTEWIDTH_OPCODE(lvs->getStackSize(), writer, OP_GREAD)
+      } else {
+        BYTEWIDTH_OPCODE(lvs->getStackSize(), writer, OP_SREAD)
+      }
+
       writer.appendU8(out);
-      writer.appendU64(sym->stackOffset);
+      writer.appendU64(lvs->getStackOffset());
+      writer.endInstr();
     }
 
     if (addr) {
-      addr->outptype = OUTP_RSTACK;
-      addr->stackoffset = sym->stackOffset;
+      addr->outptype = isMain ? OUTP_GLOBAL : OUTP_STACK;
+      addr->memoffset = lvs->getStackOffset();
     }
-
-    return;
   }
 }
 
@@ -1018,7 +987,7 @@ static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
 
   LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(ctx.getSemantics().getSymbolLookup()[lex]);
 
-  BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_RSWRITE)
+  BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_SWRITE)
   writer.appendU8(valueReg);
   writer.appendU64(lvs->getStackOffset());
 
