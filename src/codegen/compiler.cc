@@ -228,10 +228,7 @@ static void compileIdentifier(
 
     writer.startInstr(OP_LFUNCLOOKUP);
 
-    int32 fIdx = ctx.findFunctionIndex(
-      lfs->getName(),
-      static_cast<FunctionSignature*>(lfs->getScriptType())
-    );
+    const int32 fIdx = ctx.findFunctionIndex(lfs);
 
     if (fIdx == -1) {
       uint64 addr = writer.getAddress();
@@ -903,6 +900,7 @@ static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, 
   writer.startInstr(OP_HEAPALLOC);
   writer.appendU8(out);
   writer.appendU64(heapSize);
+  writer.endInstr();
 
   writer.startInstr(OP_PUSHARG);
   writer.appendU8(out);
@@ -921,6 +919,7 @@ static void compileValueInitialiser(ScriptType* type, CompilerContext& ctx, cons
       BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_LOADCONST)
       writer.appendU8(out);
       writer.appendU64(0);
+      writer.endInstr();
       break;
 
     case TK_STRUCT:
