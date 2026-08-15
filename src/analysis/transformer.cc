@@ -1297,6 +1297,11 @@ static void processFunctionScopes(SemanticContext& ctx, const LocalFunction* lf)
     .offsetStart = 0
   };
 
+  if (lf->getSignature()->getReturnType() != ConstTypes::VOID()) {
+    procContext.variableSpace += lf->getSignature()->getReturnType()->stackSizeBytes();
+    procContext.offsetStart = procContext.variableSpace;
+  }
+
   for (FunctionParam* arg : decl->arguments) {
     processScope(arg, procContext);
   }
