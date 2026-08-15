@@ -749,7 +749,7 @@ void SemanticTransformer::createStructConstructors() {
     ctorDecl->parentStatement = sfs;
 
     LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl, scope);
-    LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(*lf);
+    LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
 
     ctx.pushLocalFunction(lf);
     global->pushSymbol(lfs);

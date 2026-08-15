@@ -30,13 +30,13 @@ ScriptType* Symbol::getScriptType() const {
   return m_type;
 }
 
-LocalFuncSymbol::LocalFuncSymbol(LocalFunction& func)
-  : Symbol(func.getName(), func.getSignature()), m_function(func), m_calls(0)
+LocalFuncSymbol::LocalFuncSymbol(LocalFunction* func)
+  : Symbol(func->getName(), func->getSignature()), m_function(func), m_calls(0)
 {
 
 }
 
-LocalFunction& LocalFuncSymbol::getFunction() const {
+LocalFunction* LocalFuncSymbol::getFunction() const {
   return m_function;
 }
 

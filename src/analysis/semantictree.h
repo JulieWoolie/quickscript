@@ -105,13 +105,13 @@ class Symbol {
 };
 
 class LocalFuncSymbol: public Symbol {
-  LocalFunction& m_function;
+  LocalFunction* m_function;
   uint32 m_calls;
 
   public:
-    explicit LocalFuncSymbol(LocalFunction& func);
+    explicit LocalFuncSymbol(LocalFunction* func);
 
-    LocalFunction& getFunction() const;
+    LocalFunction* getFunction() const;
 
     uint32 getCalls() const;
 

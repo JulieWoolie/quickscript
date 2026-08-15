@@ -1193,7 +1193,7 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, 
 
   ctx.pushLocalFunction(lf);
 
-  LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(*lf);
+  LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(lf);
   scope->pushSymbol(sym);
   ctx.getScopeLookup()[sym] = scope;
 
@@ -1716,7 +1716,7 @@ static void reportInvalidDependencies(SemanticContext& ctx, DependencyGraph& gra
       loc = static_cast<LocalVarSymbol*>(sym)->getDecl()->location;
       break;
     case SYM_LocalFunc:
-      loc = static_cast<LocalFuncSymbol*>(sym)->getFunction().getDecl()->location;
+      loc = static_cast<LocalFuncSymbol*>(sym)->getFunction()->getDecl()->location;
       break;
     default:
       break;
