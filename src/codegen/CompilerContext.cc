@@ -163,14 +163,6 @@ int32 CompilerContext::findFunctionIndex(LocalFuncSymbol* sym) const {
   return -1;
 }
 
-uint32 CompilerContext::getStructConstructorIndex(ScriptStructType* type) {
-  return m_structConstructors[type];
-}
-
-void CompilerContext::pushStructConstructor(ScriptStructType* type, uint32 idx) {
-  m_structConstructors[type] = idx;
-}
-
 void CompilerContext::pushIncompleteCall(LocalFuncSymbol* lfs, uint64 off) {
   m_incompleteCalls.emplace_back(lfs, off);
 }
@@ -251,4 +243,8 @@ Scope* CompilerContext::getCurrentScope() const {
 
 void CompilerContext::setCurrentScope(Scope* scope) {
   m_currentScope = scope;
+}
+
+std::vector<ControlFlowCall>& CompilerContext::getControlFlowCalls() {
+  return m_controlFlowCalls;
 }

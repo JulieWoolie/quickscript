@@ -85,14 +85,20 @@ struct CompiledFunction {
   uint32 bodyStart = 0;
 };
 
+struct ControlFlowCall {
+  controlflowtype type = CFT_NIL;
+  stringid label = nullptr;
+  uint64 writeAddress = 0;
+};
+
 class CompilerContext {
   std::vector<ScriptType*> m_expectedTypes;
-
-  std::unordered_map<ScriptStructType*, uint32> m_structConstructors;
 
   std::vector<CompiledFunction> m_compiledFuncs;
   std::vector<IncompleteFunctonCall> m_incompleteCalls;
   std::vector<FunctionDeclStatement*> m_funcQueue;
+
+  std::vector<ControlFlowCall> m_controlFlowCalls;
 
   ConstStringPoolWriter m_stringPool;
   BytecodeWriter m_writer;
@@ -109,9 +115,6 @@ class CompilerContext {
     void enqueueFunction(FunctionDeclStatement* stat);
     FunctionDeclStatement* pollQueuedFunction();
     int32 findFunctionIndex(LocalFuncSymbol* sym) const;
-
-    uint32 getStructConstructorIndex(ScriptStructType* type);
-    void pushStructConstructor(ScriptStructType* type, uint32 idx);
 
     void pushIncompleteCall(LocalFuncSymbol* lfs, uint64 writeoffset);
 
@@ -130,6 +133,8 @@ class CompilerContext {
     Scope* getCurrentScope() const;
 
     void setCurrentScope(Scope* scope);
+
+    std::vector<ControlFlowCall>& getControlFlowCalls();
 };
 
 
