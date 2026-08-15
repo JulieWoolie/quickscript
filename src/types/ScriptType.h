@@ -13,6 +13,7 @@
 #define TK_ARRAY      4
 #define TK_FUNC       5
 #define TK_VOID       6
+#define TK_CLOSURE    7
 typedef uint8 typekind;
 
 // Type flags

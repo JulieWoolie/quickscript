@@ -22,6 +22,8 @@ static ScriptStringType TC_STRING = ScriptStringType();
 
 static ScriptErroneousType TC_ERROR = ScriptErroneousType();
 
+static ScriptClosureType TC_CLOSURE = ScriptClosureType();
+
 CONST_TYPE_GETTER(PrimitiveScriptType, TC_BOOL, BOOL)
 
 CONST_TYPE_GETTER(PrimitiveScriptType, TC_INT8, INT8)
@@ -41,6 +43,8 @@ CONST_TYPE_GETTER(VoidScriptType, TC_VOID, VOID)
 CONST_TYPE_GETTER(ScriptStringType, TC_STRING, STRING)
 
 CONST_TYPE_GETTER(ScriptErroneousType, TC_ERROR, UNKNOWN)
+
+CONST_TYPE_GETTER(ScriptClosureType, TC_CLOSURE, CLOSURE)
 
 PrimitiveScriptType* ConstTypes::getPrimitiveType(primitivekind kind) {
   switch (kind) {
