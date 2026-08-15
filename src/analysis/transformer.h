@@ -57,7 +57,7 @@ class SemanticTransformer {
   //
   // Flatten scopes
   //
-  void processScopes();
+  void processScopes() const;
 
   public:
     SemanticTransformer(SemanticContext& ctx, ScriptFileStatement* sfs);

@@ -1244,6 +1244,21 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
       lvs->setStackOffset(start);
       ctx.variableSpace += lvs->getStackSize();
       ctx.offsetStart += lvs->getStackSize();
+
+      bool inCurrenScope = false;
+      for (Symbol* symbol : ctx.scope->getSymbols()) {
+        if (symbol != lvs) {
+          continue;
+        }
+        inCurrenScope = true;
+        break;
+      }
+
+      if (!inCurrenScope) {
+        Scope* containing = ctx.semantics.getScopeLookup()[lvs];
+        containing->removeSymbol(lvs);
+        ctx.scope->pushSymbol(lvs);
+      }
       return;
     }
     case AST_AssertStatement: {
@@ -1295,9 +1310,9 @@ static void processFunctionScopes(SemanticContext& ctx, const LocalFunction* lf)
   scope->setStackSize(scopeSize);
 }
 
-void SemanticTransformer::processScopes() {
+void SemanticTransformer::processScopes() const {
   processGlobalVarScopes(ctx);
-  for (LocalFunction* lf : ctx.getLocalFunctions()) {
+  for (const LocalFunction* lf : ctx.getLocalFunctions()) {
     processFunctionScopes(ctx, lf);
   }
 }
