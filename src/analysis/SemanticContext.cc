@@ -195,6 +195,10 @@ std::unordered_map<Node*, Scope*>& SemanticContext::getAstScopeLookup() {
   return m_astScopeLookup;
 }
 
+std::unordered_map<ScriptStructType*, LocalFuncSymbol*>& SemanticContext::getConstructors() {
+  return m_structConstructors;
+}
+
 DependencyGraph& SemanticContext::getDependencyGraph() {
   return m_dependencyGraph;
 }

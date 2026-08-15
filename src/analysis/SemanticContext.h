@@ -38,6 +38,7 @@ class SemanticContext {
   std::vector<LexicalDeclaration*> m_allVars;
 
   std::vector<StructDecl*> m_declaredStructs;
+  std::unordered_map<ScriptStructType*, LocalFuncSymbol*> m_structConstructors;
 
   //
   // Notes on what types of keys map to what types of values:
@@ -119,6 +120,8 @@ class SemanticContext {
     std::unordered_map<Symbol*, Scope*>& getScopeLookup();
 
     std::unordered_map<Node*, Scope*>& getAstScopeLookup();
+
+    std::unordered_map<ScriptStructType*, LocalFuncSymbol*>& getConstructors();
 
     DependencyGraph& getDependencyGraph();
 

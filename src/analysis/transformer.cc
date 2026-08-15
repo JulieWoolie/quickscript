@@ -773,6 +773,9 @@ void SemanticTransformer::createStructConstructors() {
     ctx.getSymbolLookup()[lexDecl] = thisSym;
     ctx.getScopeLookup()[thisSym] = bodyScope;
 
+    sfs->statements.push_back(ctorDecl);
+    ctx.getConstructors()[structType] = lfs;
+
     for (StructPropertyDecl* prop : decl->properties) {
       if (!prop->value) {
         continue;
@@ -809,8 +812,6 @@ void SemanticTransformer::createStructConstructors() {
 
       prop->value = nullptr;
     }
-
-    sfs->statements.push_back(ctorDecl);
   }
 }
 
