@@ -20,6 +20,7 @@
 #define TI_FLOAT32 10
 #define TI_FLOAT64 11
 #define TI_STRING 12
+#define TI_CLOSURE 13
 typedef uint64 typeindex;
 
 class TypeTable {

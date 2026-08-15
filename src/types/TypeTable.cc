@@ -47,7 +47,8 @@ TypeTable::TypeTable() {
   m_indexLookup[TI_FLOAT32] = ConstTypes::FLOAT32();
   m_indexLookup[TI_FLOAT64] = ConstTypes::FLOAT64();
   m_indexLookup[TI_STRING] = ConstTypes::STRING();
-  m_indexLookupLen = TI_STRING + 1;
+  m_indexLookup[TI_CLOSURE] = ConstTypes::CLOSURE();
+  m_indexLookupLen = TI_CLOSURE + 1;
 
   m_nameLookup["void"] = ConstTypes::VOID();
   m_nameLookup["bool"] = ConstTypes::BOOL();
@@ -62,6 +63,7 @@ TypeTable::TypeTable() {
   m_nameLookup["float32"] = ConstTypes::FLOAT32();
   m_nameLookup["float64"] = ConstTypes::FLOAT64();
   m_nameLookup["string"] = ConstTypes::STRING();
+  m_nameLookup["closure"] = ConstTypes::CLOSURE();
 }
 
 TypeTable::~TypeTable() {
