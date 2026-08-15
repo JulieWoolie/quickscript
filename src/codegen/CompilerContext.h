@@ -75,15 +75,14 @@ class ConstStringPoolWriter {
 };
 
 struct IncompleteFunctonCall {
-  LocalFuncSymbol* lfs = nullptr;
+  LocalFuncSymbol* functionSymbol = nullptr;
   uint64 writeOffset = 0;
 };
 
 struct CompiledFunction {
-  stringid name = EMPTY_STRING;
+  LocalFuncSymbol* functionSymbol = nullptr;
   StringPoolAddress poolId = 0;
   uint32 bodyStart = 0;
-  FunctionSignature* signature;
 };
 
 class CompilerContext {
@@ -109,14 +108,14 @@ class CompilerContext {
 
     void enqueueFunction(FunctionDeclStatement* stat);
     FunctionDeclStatement* pollQueuedFunction();
-    int32 findFunctionIndex(stringid name, FunctionSignature* sign);
+    int32 findFunctionIndex(LocalFuncSymbol* sym) const;
 
     uint32 getStructConstructorIndex(ScriptStructType* type);
     void pushStructConstructor(ScriptStructType* type, uint32 idx);
 
     void pushIncompleteCall(LocalFuncSymbol* lfs, uint64 writeoffset);
 
-    uint32 pushCompiledFunction(stringid name, uint32 start, FunctionSignature* sign);
+    uint32 pushCompiledFunction(LocalFuncSymbol* lfs, uint32 start);
 
     registeridopt acquireRegister() const;
     bool registerInUse(registerid reg) const;

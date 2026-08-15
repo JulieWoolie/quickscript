@@ -152,10 +152,10 @@ FunctionDeclStatement* CompilerContext::pollQueuedFunction() {
   return first;
 }
 
-int32 CompilerContext::findFunctionIndex(stringid name, FunctionSignature* sign) {
+int32 CompilerContext::findFunctionIndex(LocalFuncSymbol* sym) const {
   for (int32 i = 0; i < m_compiledFuncs.size(); i++) {
-    CompiledFunction& func = m_compiledFuncs[i];
-    if (func.name != name || func.signature != sign) {
+    const CompiledFunction& func = m_compiledFuncs[i];
+    if (func.functionSymbol != sym) {
       continue;
     }
     return i;
@@ -175,16 +175,16 @@ void CompilerContext::pushIncompleteCall(LocalFuncSymbol* lfs, uint64 off) {
   m_incompleteCalls.emplace_back(lfs, off);
 }
 
-uint32 CompilerContext::pushCompiledFunction(stringid name, uint32 start, FunctionSignature* sign) {
+uint32 CompilerContext::pushCompiledFunction(LocalFuncSymbol* lfs, uint32 start) {
   uint32 idx = m_compiledFuncs.size();
-  StringPoolAddress off = m_stringPool.emplace(name);
+  StringPoolAddress off = m_stringPool.emplace(lfs->getName());
 
-  CompiledFunction& comp = m_compiledFuncs.emplace_back(name, off, start, sign);
+  CompiledFunction& comp = m_compiledFuncs.emplace_back(lfs, off, start);
 
   for (auto it = m_incompleteCalls.begin(); it != m_incompleteCalls.end(); ) {
     IncompleteFunctonCall& icall = *it;
 
-    if (comp.name != icall.name || comp.signature != sign) {
+    if (icall.functionSymbol != comp.functionSymbol) {
       ++it;
       continue;
     }
