@@ -1276,6 +1276,7 @@ static void acceptBlock(SemanticContext& ctx, Block* v) {
   STAT_PUSH
 
   Scope* scope = ctx.pushScope(SCOPE_BLOCK);
+  ctx.getAstScopeLookup()[v] = scope;
 
   for (Statement* statement : v->statements) {
     acceptStatement(ctx, statement);
@@ -1332,6 +1333,7 @@ static void acceptForStatement(SemanticContext& ctx, ForStatement* v) {
 
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
+  ctx.getAstScopeLookup()[v] = scope;
 
   acceptStatement(ctx, v->first);
   acceptExpr(ctx, v->second);
@@ -1406,6 +1408,7 @@ static void acceptWhileStatement(SemanticContext& ctx, WhileStatement* v) {
 
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_LOOP, v->label ? v->label->value : EMPTY_STRING);
+  ctx.getAstScopeLookup()[v] = scope;
 
   if (v->doWhile) {
     acceptBodyNoScope(ctx, v->body);
@@ -1533,6 +1536,7 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
 
   Scope* scope = ctx.pushScope(SCOPE_FUNCTION);
   scope->setExpectedReturnType(v->returnType->referencedType);
+  ctx.getAstScopeLookup()[v] = scope;
 
   FunctionSignature* sign = v->signature;
   const uint32 args = v->arguments.size();
@@ -1759,6 +1763,7 @@ void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
   ctx.setGlobalScope(scope);
+  ctx.getAstScopeLookup()[v] = scope;
 
   addDefaultSymbols(ctx, scope);
 
