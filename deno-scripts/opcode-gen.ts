@@ -36,6 +36,8 @@ const opcodes: Instruction[] = []
 export function generateOpCodes(): OpCodeGenResult {
   generalOperations()
   stackOperations()
+  globalStackOperations()
+  closureOperations()
   heapOperations()
   functionCallOperations()
   conversionOperations()
@@ -83,7 +85,7 @@ export function generateOpCodes(): OpCodeGenResult {
 }
 
 function generalOperations() {
-  currentCategory = "4.3.1 General Purpose OP Codes"
+  currentCategory = "2.4.1 General Purpose OP Codes"
 
   opCode("NOP", [], [])
 
@@ -104,19 +106,33 @@ function generalOperations() {
 }
 
 function stackOperations() {
-  currentCategory = "4.3.2 Stack Memory OP Codes"
+  currentCategory = "2.4.2 Stack Memory OP Codes"
   opCode("STACKALLOC", [uint64("bytes")])
   opCode("STACKFREE", [uint64("bytes")])
   byteSizedOpCode("SREAD", [reg("out"), uint64("offset")])
   byteSizedOpCode("SWRITE", [reg("val"), uint64("offset")])
-  byteSizedOpCode("GREAD", [reg("out"), uint64("offset")])
-  byteSizedOpCode("GWRITE", [reg("val"), uint64("offset")])
 
   byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")])
 }
 
+function globalStackOperations() {
+  currentCategory = "2.4.3 Global Memory OP Codes"
+
+  byteSizedOpCode("GREAD", [reg("out"), uint64("offset")])
+  byteSizedOpCode("GWRITE", [reg("val"), uint64("offset")])
+  byteSizedOpCode("GSTORECONST", [uint32("offset"), sd("value")])
+}
+
+function closureOperations() {
+  currentCategory = "2.4.4 Closure OP Codes"
+
+  opCode("GETSTACKPTR", [reg("out")])
+  byteSizedOpCode("CREAD", [reg("closure"), uint64("off"), reg("out")])
+  byteSizedOpCode("CWRITE", [reg("closure"), uint64("off"), reg("val")])
+}
+
 function heapOperations() {
-  currentCategory = "4.3.3 Heap Memory OP Codes"
+  currentCategory = "2.4.5 Heap Memory OP Codes"
 
   opCode("HEAPALLOC", [reg("out"), uint64("bytes")])
   opCode("HEAPFREE", [reg("addr"), uint64("bytes")])
@@ -127,7 +143,7 @@ function heapOperations() {
 }
 
 function functionCallOperations() {
-  currentCategory = "4.3.4 Function Call Instructions"
+  currentCategory = "2.4.6 Function Call Instructions"
 
   opCode("SETARGTYPE", [uint32("index"), uint32("typeindex")])
   opCode("INVOKE", [reg("func"), reg("out")])
@@ -136,7 +152,7 @@ function functionCallOperations() {
 }
 
 function conversionOperations() {
-  currentCategory = "4.3.5 Conversion Instructions"
+  currentCategory = "2.4.7 Conversion Instructions"
 
   for (const f of NUMBER_TYPES) {
     for (const t of NUMBER_TYPES) {
@@ -161,7 +177,7 @@ function conversionOperations() {
 }
 
 function unaryOperations() {
-  currentCategory = "4.3.6 Unary Operations"
+  currentCategory = "2.4.8 Unary Operations"
 
   opCode("BNEGATE", UNARY_ARGS)
   opCode("LNEGATE", UNARY_ARGS)
@@ -176,7 +192,7 @@ function unaryOperations() {
 }
 
 function integerBinaryOperations() {
-  currentCategory = "4.3.7.1 Integer-only Binary Operations"
+  currentCategory = "2.4.9.1 Integer-only Binary Operations"
 
   const operations = [
     {code: "LSHIFT", operator: "<<"},
@@ -191,7 +207,7 @@ function integerBinaryOperations() {
 }
 
 function booleanBinaryOperations() {
-  currentCategory = "4.3.7.2 Boolean-only Binary Operations"
+  currentCategory = "2.4.9.2 Boolean-only Binary Operations"
 
   opCode("BAND", BINARY_ARGS)
   opCode("BOR", BINARY_ARGS)
@@ -202,7 +218,7 @@ function booleanBinaryOperations() {
 }
 
 function mathOperations() {
-  currentCategory = "4.3.7.3 General Number Binary Operations"
+  currentCategory = "2.4.9.3 General Number Binary Operations"
 
   for (const mathOp of MATH_OPERATIONS) {
     for (const type of NUMBER_TYPES) {
@@ -220,7 +236,7 @@ function mathOperations() {
 }
 
 function comparisonOperators() {
-  currentCategory = "4.3.7.4 Comparison Operations"
+  currentCategory = "2.4.9.4 Comparison Operations"
 
   const equalityOperators = [
     {name: "EQ", operator: "=="},
@@ -252,7 +268,7 @@ function comparisonOperators() {
 }
 
 function stringArrayOperations() {
-  currentCategory = "4.3.7.5 String/Array Operations"
+  currentCategory = "2.4.9.5 String/Array Operations"
 
   opCode("STRCONCAT", BINARY_ARGS)
   byteSizedOpCode("STRREP", BINARY_ARGS)
