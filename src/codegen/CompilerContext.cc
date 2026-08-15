@@ -171,8 +171,8 @@ void CompilerContext::pushStructConstructor(ScriptStructType* type, uint32 idx) 
   m_structConstructors[type] = idx;
 }
 
-void CompilerContext::pushIncompleteCall(stringid name, FunctionSignature* sign, uint64 off) {
-  m_incompleteCalls.emplace_back(name, sign, off);
+void CompilerContext::pushIncompleteCall(LocalFuncSymbol* lfs, uint64 off) {
+  m_incompleteCalls.emplace_back(lfs, off);
 }
 
 uint32 CompilerContext::pushCompiledFunction(stringid name, uint32 start, FunctionSignature* sign) {

@@ -75,8 +75,7 @@ class ConstStringPoolWriter {
 };
 
 struct IncompleteFunctonCall {
-  stringid name = EMPTY_STRING;
-  FunctionSignature* signature = nullptr;
+  LocalFuncSymbol* lfs = nullptr;
   uint64 writeOffset = 0;
 };
 
@@ -115,7 +114,7 @@ class CompilerContext {
     uint32 getStructConstructorIndex(ScriptStructType* type);
     void pushStructConstructor(ScriptStructType* type, uint32 idx);
 
-    void pushIncompleteCall(stringid name, FunctionSignature* sign, uint64 writeoffset);
+    void pushIncompleteCall(LocalFuncSymbol* lfs, uint64 writeoffset);
 
     uint32 pushCompiledFunction(stringid name, uint32 start, FunctionSignature* sign);
 
