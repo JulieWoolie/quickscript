@@ -65,10 +65,14 @@ class ConstStringPoolWriter {
 
   StringTable& m_table;
 
+  StringPoolAddress emplaceData(conststring data, uint32 len);
+
   public:
     explicit ConstStringPoolWriter(StringTable& table);
 
     StringPoolAddress emplace(stringid id);
+
+    StringPoolAddress emplaceString(conststring data, uint32 len);
 
     uint64 getLength() const;
 

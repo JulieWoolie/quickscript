@@ -95,37 +95,75 @@ ConstStringPoolWriter::ConstStringPoolWriter(StringTable& table): m_table(table)
 
 }
 
-StringPoolAddress ConstStringPoolWriter::emplace(stringid id) {
-  if (m_idToOffset.contains(id)) {
-    return m_idToOffset[id];
-  }
+StringPoolAddress ConstStringPoolWriter::emplaceData(const conststring data, const uint32 len) {
+  const uint64 requiredCap = len + sizeof(uint32) + m_len;
 
-  int32 len = m_table.getlen(id);
-  uint64 requiredcap = len + sizeof(uint32) + m_len;
-
-  if (requiredcap > m_cap) {
-    uint8* ndata = static_cast<uint8*>(malloc(requiredcap));
+  if (requiredCap > m_cap) {
+    uint8* ndata = static_cast<uint8*>(realloc(m_data, requiredCap));
     if (!ndata) {
       throw std::runtime_error("Failed to resize string const pool buffer");
     }
 
     m_data = ndata;
-    m_cap = requiredcap;
+    m_cap = requiredCap;
   }
 
-  uint8* writeptr = m_data + m_len;
+  uint8* writePointer = m_data + m_len;
 
-  *reinterpret_cast<uint32*>(writeptr) = len;
-  writeptr += sizeof(uint32);
+  *reinterpret_cast<uint32*>(writePointer) = len;
+  writePointer += sizeof(uint32);
 
-  char* charptr = reinterpret_cast<char*>(writeptr);
-  m_table.copychars(id, charptr, len);
+  char* charPointer = reinterpret_cast<char*>(writePointer);
+  memcpy(charPointer, data, len);
 
-  uint64 off = m_len;
+  const uint64 off = m_len;
   m_len += sizeof(uint32) + len;
+
+  return off;
+}
+
+StringPoolAddress ConstStringPoolWriter::emplace(stringid id) {
+  if (m_idToOffset.contains(id)) {
+    return m_idToOffset[id];
+  }
+
+  StringPoolAddress off = emplaceString(id->data, id->len);
   m_idToOffset.emplace(id, off);
 
   return off;
+}
+
+StringPoolAddress ConstStringPoolWriter::emplaceString(const conststring data, const uint32 len) {
+  uint64 off = 0;
+
+  while (off < m_len) {
+    uint32 foundLen = *reinterpret_cast<uint32*>(m_data + off);
+
+    if (foundLen != len) {
+      off += foundLen + sizeof(uint32);
+      continue;
+    }
+
+    conststring emplaced = reinterpret_cast<conststring>(m_data + off + sizeof(uint32));
+    bool failed = false;
+
+    for (uint32 i = 0; i < len; i++) {
+      if (data[i] == emplaced[i]) {
+        continue;
+      }
+      failed = true;
+      break;
+    }
+
+    if (failed) {
+      off += foundLen + sizeof(uint32);
+      continue;
+    }
+
+    return off;
+  }
+
+  return emplaceData(data, len);
 }
 
 uint64 ConstStringPoolWriter::getLength() const {
