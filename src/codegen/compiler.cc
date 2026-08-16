@@ -856,6 +856,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       writer.startInstr(OP_LOADCONSTSTR);
       writer.appendU8(out);
       writer.appendU64(off);
+      writer.endInstr();
 
       return;
     }
