@@ -77,7 +77,7 @@ static conststring getRegistryName(uint8 r) {
 
 void printInstructionToString(uint8* buf, FILE* out) {
   const opcode code = *reinterpret_cast<opcode*>(buf);
-  fprintf(out, "%-10s", opcode_name(code));
+  fprintf(out, "%-13s", opcode_name(code));
   
   switch (code) {
     case OP_NOP:

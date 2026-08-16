@@ -21,6 +21,14 @@ function generateRegistryStringNameFunc(): string {
   return out
 }
 
+function getLongestName(codes: Instruction[]) {
+  let longestName = 0
+  for (const code of codes) {
+    longestName = Math.max(code.opcode.length, longestName)
+  }
+  return longestName
+}
+
 export async function generatePrinterFunction(res: OpCodeGenResult) {
   let out = `#ifndef OPCODE_PRINTER_H
 #define OPCODE_PRINTER_H
@@ -45,7 +53,7 @@ static conststring getRegistryName(uint8 r) {${generateRegistryStringNameFunc()}
 
 void printInstructionToString(uint8* buf, FILE* out) {
   const opcode code = *reinterpret_cast<opcode*>(buf);
-  fprintf(out, "%-10s", opcode_name(code));
+  fprintf(out, "%-${getLongestName(res.codes)}s", opcode_name(code));
   
   switch (code) {`
 
