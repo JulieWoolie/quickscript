@@ -24,6 +24,8 @@
 #define LAST_RESERVED_TYPE_INDEX TI_CLOSURE
 typedef uint64 typeindex;
 
+conststring nativeTypeIndexName(typeindex idx);
+
 class TypeTable {
   ScriptType** m_indexLookup = nullptr;
   uint64 m_indexLookupLen = 0;

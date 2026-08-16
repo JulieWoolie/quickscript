@@ -7,6 +7,25 @@
 #include "ScriptArrayType.h"
 #include "ScriptStructType.h"
 
+conststring nativeTypeIndexName(const typeindex idx) {
+  switch (idx) {
+    case TI_VOID: return "VOID";
+    case TI_BOOL: return "BOOL";
+    case TI_INT8: return "INT8";
+    case TI_UINT8: return "UINT8";
+    case TI_INT16: return "INT16";
+    case TI_UINT16: return "UINT16";
+    case TI_INT32: return "INT32";
+    case TI_UINT32: return "UINT32";
+    case TI_INT64: return "INT64";
+    case TI_UINT64: return "UINT64";
+    case TI_FLOAT32: return "FLOAT32";
+    case TI_FLOAT64: return "FLOAT64";
+    case TI_STRING: return "STRING";
+    case TI_CLOSURE: return "CLOSURE";
+    default: return "";
+  }
+}
 void TypeTable::ensureIndexLookupHasSpace(const uint32 desiredSize) {
   const uint64 desiredCap = static_cast<uint64>(desiredSize) * sizeof(ScriptType**);
 
