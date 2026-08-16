@@ -676,7 +676,7 @@ Identifier* SemanticTransformer::makeId(const stringid id) const {
   return idExpr;
 }
 
-bool isZeroValue(Expr* expr) {
+static bool isZeroValue(Expr* expr) {
   switch (expr->nodeKind()) {
     case AST_FloatLiteral:
       return static_cast<FloatLiteral*>(expr)->value == 0.0;
@@ -727,6 +727,48 @@ void SemanticTransformer::runOptimizer() {
   }
 }
 
+void SemanticTransformer::createPropertyAssignStatements(StructDecl* decl, LocalVarSymbol* thisSym, Block* funcBlock) const {
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  stringid thisId = thisSym->getName();
+
+  for (StructPropertyDecl* prop : decl->properties) {
+    if (!prop->value) {
+      continue;
+    }
+
+    Expr* propValue = prop->value;
+
+    Identifier* thisExpr = makeId(thisId);
+    thisExpr->resultType = decl->type;
+
+    Identifier* propId = makeId(prop->name->value);
+    PropertySymbol* propSym = static_cast<PropertySymbol*>(ctx.getSymbolLookup()[prop]);
+    propId->resultType = propSym->getScriptType();
+
+    PropertyAccessExpr* access = alloc.make<PropertyAccessExpr>();
+    access->target = thisExpr;
+    access->property = propId;
+    access->resultType = propSym->getScriptType();
+
+    ctx.getSymbolLookup()[thisExpr] = thisSym;
+    ctx.getSymbolLookup()[propId] = propSym;
+
+    BinaryExpr* assignExpr = alloc.make<BinaryExpr>();
+    assignExpr->op = BOP_ASSIGN;
+    assignExpr->lhs = access;
+    assignExpr->rhs = propValue;
+    assignExpr->resultType = propSym->getScriptType();
+
+    ExprStatement* stat = alloc.make<ExprStatement>();
+    stat->expression = assignExpr;
+
+    funcBlock->statements.push_back(stat);
+    stat->parentStatement = funcBlock;
+
+    prop->value = nullptr;
+  }
+}
+
 void SemanticTransformer::createStructConstructors() {
   NoFreeAllocator& alloc = ctx.getAllocator();
   StringTable& strings = ctx.getStrings();
@@ -740,9 +782,6 @@ void SemanticTransformer::createStructConstructors() {
   Scope* global = ctx.getGlobalScope();
 
   for (StructDecl* decl : decls) {
-    LocalStructSymbol* lss = static_cast<LocalStructSymbol*>(lookup[decl]);
-    Scope* scope = ctx.getScopeLookup()[lss];
-
     ScriptStructType* structType = decl->type;
 
     std::string ctorName = std::string(decl->name->value->view());
@@ -757,70 +796,63 @@ void SemanticTransformer::createStructConstructors() {
     funcBlock->parentStatement = ctorDecl;
     ctorDecl->parentStatement = sfs;
 
-    LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl, scope);
+    Scope* bodyScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
+
+    LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl, bodyScope);
     LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
 
     ctx.pushLocalFunction(lf);
     global->pushSymbol(lfs);
-
-    LexicalDeclaration* lexDecl = alloc.make<LexicalDeclaration>();
-    lexDecl->isConstDeclaration = true;
-    lexDecl->variableName = makeId(thisId);
+    lookup[ctorDecl] = lfs;
+    ctx.getAstScopeLookup()[ctorDecl] = bodyScope;
+    ctx.getScopeLookup()[lfs] = bodyScope;
 
     ObjectAllocExpr* allocExpr = alloc.make<ObjectAllocExpr>();
     allocExpr->resultType = decl->type;
-    lexDecl->value = allocExpr;
 
     std::vector<Statement*>& stats = funcBlock->statements;
-    stats.push_back(lexDecl);
-    lexDecl->parentStatement = funcBlock;
 
-    Scope* bodyScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
-    LocalVarSymbol* thisSym = alloc.make<LocalVarSymbol>(thisId, structType, POINTER_SIZE, 0, lexDecl);
-
-    bodyScope->pushSymbol(thisSym);
-    ctx.getSymbolLookup()[lexDecl] = thisSym;
-    ctx.getScopeLookup()[thisSym] = bodyScope;
+    uint32 valuedProperties = 0;
+    for (StructPropertyDecl* property : decl->properties) {
+      if (!property->value) {
+        continue;
+      }
+      valuedProperties++;
+    }
 
     sfs->statements.push_back(ctorDecl);
     ctx.getConstructors()[structType] = lfs;
 
-    for (StructPropertyDecl* prop : decl->properties) {
-      if (!prop->value) {
-        continue;
-      }
-
-      Expr* propValue = prop->value;
-
-      Identifier* thisExpr = makeId(thisId);
-      thisExpr->resultType = structType;
-
-      Identifier* propId = makeId(prop->name->value);
-      PropertySymbol* propSym = static_cast<PropertySymbol*>(ctx.getSymbolLookup()[prop]);
-      propId->resultType = propSym->getScriptType();
-
-      PropertyAccessExpr* access = alloc.make<PropertyAccessExpr>();
-      access->target = thisExpr;
-      access->property = propId;
-      access->resultType = propSym->getScriptType();
-
-      ctx.getSymbolLookup()[thisExpr] = thisSym;
-      ctx.getSymbolLookup()[propId] = propSym;
-
-      BinaryExpr* assignExpr = alloc.make<BinaryExpr>();
-      assignExpr->op = BOP_ASSIGN;
-      assignExpr->lhs = access;
-      assignExpr->rhs = propValue;
-      assignExpr->resultType = propSym->getScriptType();
-
-      ExprStatement* stat = alloc.make<ExprStatement>();
-      stat->expression = assignExpr;
-
-      stats.push_back(stat);
-      stat->parentStatement = funcBlock;
-
-      prop->value = nullptr;
+    if (valuedProperties == 0) {
+      ReturnStatement* retStat = alloc.make<ReturnStatement>();
+      retStat->value = allocExpr;
+      retStat->parentStatement = funcBlock;
+      stats.push_back(retStat);
+      continue;
     }
+
+    LexicalDeclaration* lexDecl = alloc.make<LexicalDeclaration>();
+    lexDecl->isConstDeclaration = true;
+    lexDecl->variableName = makeId(thisId);
+    lexDecl->value = allocExpr;
+    lexDecl->parentStatement = funcBlock;
+
+    LocalVarSymbol* thisSym = alloc.make<LocalVarSymbol>(thisId, structType, POINTER_SIZE, 0, lexDecl);
+
+    stats.push_back(lexDecl);
+    bodyScope->pushSymbol(thisSym);
+    ctx.getScopeLookup()[thisSym] = bodyScope;
+    ctx.getSymbolLookup()[lexDecl] = thisSym;
+
+    createPropertyAssignStatements(decl, thisSym, funcBlock);
+
+    ReturnStatement* retStat = alloc.make<ReturnStatement>();
+    retStat->value = makeId(thisId);
+    retStat->value->resultType = structType;
+    retStat->parentStatement = funcBlock;
+    ctx.getSymbolLookup()[retStat->value] = thisSym;
+
+    stats.push_back(retStat);
   }
 }
 
@@ -861,6 +893,7 @@ void SemanticTransformer::createFileInitMethod() {
 
   Scope* funcScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
   funcScope->pushSymbol(argsSym);
+  ctx.getScopeLookup()[argsSym] = funcScope;
 
   LocalFunction* lf = alloc.make<LocalFunction>(finitName, fdecl, global);
   LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
@@ -869,6 +902,7 @@ void SemanticTransformer::createFileInitMethod() {
   global->pushSymbol(lfs);
   lookup[fdecl] = lfs;
   ctx.getScopeLookup()[lfs] = global;
+  ctx.getAstScopeLookup()[fdecl] = funcScope;
 
   sfs->statements.push_back(fdecl);
 
@@ -884,6 +918,7 @@ void SemanticTransformer::createFileInitMethod() {
     assignExpr->lhs = varId;
     assignExpr->rhs = gvar->value;
     assignExpr->op = BOP_ASSIGN;
+    assignExpr->resultType = gvar->value->resultType;
 
     ExprStatement* exprStat = alloc.make<ExprStatement>();
     exprStat->expression = assignExpr;
@@ -895,19 +930,26 @@ void SemanticTransformer::createFileInitMethod() {
   }
 
   std::vector<LocalFunction*>& mains = ctx.getMainFuncCandidates();
+  LocalFuncSymbol* mainSym;
   LocalFunction* main;
+
   if (mains.empty()) {
+    mainSym = nullptr;
     main = nullptr;
   } else {
-    main = mains.at(0);
+    main = mains[0];
+    mainSym = static_cast<LocalFuncSymbol*>(ctx.getSymbolLookup()[main->getDecl()]);
   }
 
-  if (main) {
+  if (mainSym) {
     FunctionSignature* sign = main->getSignature();
 
     Identifier* callId = makeId(main->getName());
+    lookup[callId] = mainSym;
+
     CallExpr* call = alloc.make<CallExpr>();
     call->target = callId;
+    call->resultType = main->getSignature()->getReturnType();
 
     if (sign->getArgumentsLength() > 0 && sign->getArgumentType(0) == fdecl->signature->getArgumentType(0)) {
       Identifier* argsId = makeId(argsName);
@@ -1266,8 +1308,10 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
 
       if (!inCurrenScope) {
         Scope* containing = ctx.semantics.getScopeLookup()[lvs];
-        containing->removeSymbol(lvs);
-        ctx.scope->pushSymbol(lvs);
+        if (containing) {
+          containing->removeSymbol(lvs);
+          ctx.scope->pushSymbol(lvs);
+        }
       }
       return;
     }

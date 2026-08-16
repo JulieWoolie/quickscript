@@ -35,6 +35,8 @@ class SemanticTransformer {
   //
   void runOptimizer();
 
+  void createPropertyAssignStatements(StructDecl* decl, LocalVarSymbol* thisSym, Block* funcBlock) const;
+
   //
   // Create default constructors for each struct
   // type.
