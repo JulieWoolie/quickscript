@@ -44,6 +44,7 @@ class JsonPrinter: public Visitor {
     void acceptStructDecl(StructDecl* v) override;
     void acceptAssertStatement(AssertStatement* v) override;
     void acceptObjectAllocExpr(ObjectAllocExpr* v) override;
+    void acceptGetStackPointer(GetStackPointer* v) override;
 };
 
 

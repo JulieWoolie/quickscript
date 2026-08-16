@@ -387,6 +387,11 @@ struct PrintingVisitor: Visitor {
         printf(")");
       }
     }
+
+    void acceptGetStackPointer(GetStackPointer* v) override {
+      PRINTNODEBASE
+      printf(")");
+    }
 };
 
 #endif //QUICKSCRIPT_PRINT_VISITOR_H

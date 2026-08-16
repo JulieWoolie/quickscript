@@ -272,3 +272,7 @@ void JsonPrinter::acceptObjectAllocExpr(ObjectAllocExpr* v) {
   }
   END_NODE
 }
+void JsonPrinter::acceptGetStackPointer(GetStackPointer* v) {
+  START_NODE
+  END_NODE
+}
