@@ -1420,6 +1420,7 @@ BytecodeFile compile(SemanticContext& ctx) {
   file.instructionsSize = cctx.getWriter().getLength();
   file.constStringPool = cctx.getStringPool().getData();
   file.stringPoolSize = cctx.getStringPool().getLength();
+  file.globalScopeSize = ctx.getGlobalScope()->getStackSize();
 
   return file;
 }

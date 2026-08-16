@@ -155,6 +155,7 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   sections[HSECT_FTABLE_SIZE] = fTableSize;
   sections[HSECT_INSTR_OFF] = instrStart;
   sections[HSECT_INSTR_SIZE] = instrSize;
+  sections[HSECT_GLOBAL_SCOPE_SIZE] = file.globalScopeSize;
 
   *sizeOut = finalLength;
   return writer.buf;
@@ -166,14 +167,32 @@ static void writePooledString(FILE* out, uint64 off, uint8* strPool) {
   fwrite(strData, 1, len, out);
 }
 
+static conststring TypeTableType_name(TypeTableType type) {
+  switch (type) {
+    case TYPE_TABLE_ARRAY: return "ARRAY";
+    case TYPE_TABLE_SIGNATURE: return "FUNCSIGN";
+    case TYPE_TABLE_STRUCT: return "STRUCT";
+    default: return "";
+  }
+}
+
+static void printTypeIndex(FILE* out, const typeindex idx) {
+  if (idx < LAST_RESERVED_TYPE_INDEX) {
+    fprintf(out, "%s", nativeTypeIndexName(idx));
+    return;
+  }
+  fprintf(out, "%llu", idx);
+}
+
 void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
-  fprintf(printFile, "#\n# QuickScript Compiled IR File\n# File Version: %d\n#", CURRENT_FILE_VERSION);
+  fprintf(printFile, "GLOBAL_SCOPE_SIZE = %llu", file.globalScopeSize);
+  fprintf(printFile, "\nFILE_VERSION = %d", CURRENT_FILE_VERSION);
 
   uint8* stringPool = file.constStringPool;
   const uint64 stringPoolSize = file.stringPoolSize;
   uint64 strPoolOff = 0;
 
-  fprintf(printFile, "\n\nCONST_STRING_POOL:");
+  fprintf(printFile, "\nCONST_STRING_POOL = {");
   while (strPoolOff < stringPoolSize) {
     const uint32 strSize = *reinterpret_cast<uint32*>(stringPool + strPoolOff);
     conststring stringAddr = reinterpret_cast<conststring>(stringPool + strPoolOff);
@@ -181,14 +200,15 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
     writePooledString(printFile, strPoolOff, stringPool);
     strPoolOff += strSize + sizeof(uint32);
   }
+  fprintf(printFile, "\n}");
 
   const uint64 typeTableSize = file.typeTableSize;
   TypeTableEntry** typeTable = file.typeTable;
 
-  fprintf(printFile, "\n\nTYPE_TABLE:");
+  fprintf(printFile, "\nTYPE_TABLE = {");
   for (uint32 i = 0; i < typeTableSize; i++) {
     TypeTableEntry* entry = typeTable[i];
-    fprintf(printFile, "\n  [%llu] (type=%d) {", entry->index, entry->type);
+    fprintf(printFile, "\n  [%llu] {\n    type = %s", entry->index, TypeTableType_name(entry->type));
 
     switch (entry->type) {
       case TYPE_TABLE_STRUCT: {
@@ -196,53 +216,78 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
         fprintf(printFile, "\n    name_offset = %llu # ", str->nameOffset);
         writePooledString(printFile, str->nameOffset, stringPool);
         fprintf(printFile, "\n    constructor_entry = %d", str->constructorFuncIndex);
-        fprintf(printFile, "\n    properties(%d):", str->constructorFuncIndex);
+        fprintf(printFile, "\n    properties = [");
 
         for (uint32 pIdx = 0; pIdx < str->propertyCount; pIdx++) {
           TypeTableStructProperty* prop = &str->properties[pIdx];
 
-          fprintf(printFile, "\n      - name_offset = %llu # ", prop->nameOffset);
+          if (pIdx != 0) {
+            fprintf(printFile, ",");
+          }
+
+          fprintf(printFile, "\n      {");
+          fprintf(printFile, "\n        name_offset = %llu # ", prop->nameOffset);
           writePooledString(printFile, prop->nameOffset, stringPool);
 
           fprintf(printFile, "\n        value_offset = %llu", prop->valueOffset);
-          fprintf(printFile, "\n        type_index = %llu", prop->type);
+          fprintf(printFile, "\n        type_index = ");
+          printTypeIndex(printFile, prop->type);
+
+          fprintf(printFile, "\n      }");
         }
+
+        if (str->propertyCount != 0) {
+          fprintf(printFile, "\n    ");
+        }
+
+        fprintf(printFile, "]");
         break;
       }
       case TYPE_TABLE_SIGNATURE: {
         TypeTableFuncSign* fSign = static_cast<TypeTableFuncSign*>(entry);
-        fprintf(printFile, "\n    return_type = %llu", fSign->returnType);
+        fprintf(printFile, "\n    return_type = ");
+        printTypeIndex(printFile, fSign->returnType);
+
         fprintf(printFile, "\n    variadic = %d", fSign->varargs);
-        fprintf(printFile, "\n    arguments(%d):", fSign->argumentCount);
+        fprintf(printFile, "\n    arguments = [");
         for (uint32 aIdx = 0; aIdx < fSign->argumentCount; aIdx++) {
-          fprintf(printFile, "\n      - %llu", fSign->argTypes[aIdx]);
+          if (aIdx != 0) {
+            fprintf(printFile, ", ");
+          }
+          printTypeIndex(printFile, fSign->argTypes[aIdx]);
         }
+        fprintf(printFile, "]");
         break;
       }
       case TYPE_TABLE_ARRAY: {
         TypeTableArray* arr = static_cast<TypeTableArray*>(entry);
-        fprintf(printFile, "\n    component_type = %llu", arr->componentType);
+        fprintf(printFile, "\n    component_type = ");
+        printTypeIndex(printFile, arr->componentType);
         break;
       }
     }
 
     fprintf(printFile, "\n  }");
   }
+  fprintf(printFile, "\n}");
 
   const uint32 funcTableSize = file.funcTableEntries;
   FunctionTableEntry* funcTable = file.funcTable;
 
-  fprintf(printFile, "\n\nFUNCTION_TABLE:");
+  fprintf(printFile, "\nFUNCTION_TABLE = {");
   for (uint32 i = 0; i < funcTableSize; i++) {
     FunctionTableEntry* entry = &funcTable[i];
-    fprintf(printFile, "\n  [%3d]: name_offset = %llu # ", i, entry->nameOffset);
+    fprintf(printFile, "\n  [%d] {", i);
+    fprintf(printFile, "\n    name_offset = %llu # ", entry->nameOffset);
     writePooledString(printFile, entry->nameOffset, stringPool);
 
-    fprintf(printFile, "\n         signature_index = %llu", entry->signatureIndex);
-    fprintf(printFile, "\n         first_instruction = %llu", entry->startingInstruction);
+    fprintf(printFile, "\n    signature_index = %llu", entry->signatureIndex);
+    fprintf(printFile, "\n    first_instruction = %llu", entry->startingInstruction);
+    fprintf(printFile, "\n  }");
   }
+  fprintf(printFile, "\n}");
 
-  fprintf(printFile, "\n\nINSTRUCTION_BUFFER:");
+  fprintf(printFile, "\nINSTRUCTIONS = {");
 
   uint8* instrBuf = file.instructionBuf;
   const uint64 instrSize = file.instructionsSize;
@@ -257,15 +302,19 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
       if (entry->startingInstruction != instrCount) {
         continue;
       }
-      fprintf(printFile, "\n\n# FUNCTION START: ");
+      if (instrCount != 0) {
+        fprintf(printFile, "\n");
+      }
+      fprintf(printFile, "\n  # FUNCTION START: ");
       writePooledString(printFile, entry->nameOffset, stringPool);
       break;
     }
 
-    fprintf(printFile, "\n[%4d] ", instrCount);
+    fprintf(printFile, "\n  [%4d] ", instrCount);
     printInstructionToString(buf, printFile);
 
     instrOff += LENGTH_INSTRUCTION;
     instrCount++;
   }
+  fprintf(printFile, "\n}");
 }

@@ -6,19 +6,20 @@
 
 #define FILE_PREFIX "quickscript"
 #define PREFIX_LEN 11
-#define START_SIZE_PAIR_SIZE 16
+#define HEADER_SECTION_SIZE 8
 #define HEADER_VERSION_SIZE 2
-#define HEADER_SECTIONS 4
-#define HEADER_LEN (PREFIX_LEN + HEADER_VERSION_SIZE + (START_SIZE_PAIR_SIZE * HEADER_SECTIONS))
+#define HEADER_SECTIONS 9
+#define HEADER_LEN (PREFIX_LEN + HEADER_VERSION_SIZE + (HEADER_SECTION_SIZE * HEADER_SECTIONS))
 
 #define HSECT_STRPOOL_OFF 0
 #define HSECT_STRPOOL_SIZE 1
 #define HSECT_TYPES_OFF 2
 #define HSECT_TYPES_SIZE 3
 #define HSECT_FTABLE_OFF 4
-#define HSECT_FTABLE_SIZE 6
-#define HSECT_INSTR_OFF 4
-#define HSECT_INSTR_SIZE 6
+#define HSECT_FTABLE_SIZE 5
+#define HSECT_INSTR_OFF 6
+#define HSECT_INSTR_SIZE 7
+#define HSECT_GLOBAL_SCOPE_SIZE 8
 
 #define TYPE_TABLE_ARRAY 0x0
 #define TYPE_TABLE_STRUCT 0x1
@@ -74,6 +75,8 @@ struct BytecodeFile {
 
   uint8* instructionBuf = nullptr;
   uint64 instructionsSize = 0;
+
+  uint64 globalScopeSize = 0;
 };
 
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut);
