@@ -27,11 +27,6 @@ typedef uint8 TypeTableType;
 
 #define CURRENT_FILE_VERSION 0
 
-#define FET_NIL 0
-#define FET_LOCAL 1
-#define FET_FOREIGN 2
-typedef uint8 FunctionEntryType;
-
 struct FunctionTableEntry {
   uint64 nameOffset = 0;
   typeindex signatureIndex = 0;
