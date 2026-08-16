@@ -251,9 +251,6 @@ registeridopt CompilerContext::acquireRegister() const {
   if (used == ALL_REGISTERS_USED) {
     return NO_REGISTER;
   }
-  if (used == 0) {
-    return 0;
-  }
 
   uint64 m;
   for (int8 i = 0; i < 64; i++) {
