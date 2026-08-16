@@ -9,6 +9,7 @@ import {
 import {generateOpCodes} from "./opcode-gen";
 import {generateEvaluatorSwitchStatement} from "./evaluator-gen";
 import {generateDocs} from "./docs";
+import {generatePrinterFunction} from "./printer-gen";
 
 async function createOpCodesHeader(res: OpCodeGenResult): Promise<void> {
   const opcodes = res.codes
@@ -137,6 +138,17 @@ opcode conversionOpCode(primitivekind from, primitivekind to) {
   await writeToFile(out, "../src/codegen/type_conv.cc")
 }
 
+async function writeOpCodeTxt(codes: Instruction[]): Promise<void> {
+  let out = ""
+  codes.forEach((v, idx) => {
+    if (idx != 0) {
+      out += `\n`
+    }
+    out += v.opcode
+  })
+  await writeToFile(out, "./opcodes.txt")
+}
+
 async function main(): Promise<void> {
   const res = generateOpCodes()
   const codes = res.codes
@@ -148,6 +160,8 @@ async function main(): Promise<void> {
   await generateDocs(res)
   await generateConversionCompileMethod()
   await generateEvaluatorSwitchStatement(res)
+  await generatePrinterFunction(res)
+  await writeOpCodeTxt(codes)
 }
 
 // @ts-ignore

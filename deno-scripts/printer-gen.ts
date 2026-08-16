@@ -1,0 +1,118 @@
+import {FILE_HEADER, Instruction, InstructionParam, OpCodeGenResult, writeToFile} from "./common";
+
+function getSignatureString(params: InstructionParam[]): string {
+  let sig = ""
+  params.forEach((v, i) => {
+    if (i != 0) {
+      sig += ","
+    }
+    sig += `${v.typename}`
+  })
+  return sig
+}
+
+function generateRegistryStringNameFunc(): string {
+  let out = "\n  switch(r) {"
+  for (let i = 0; i < 64; i++) {
+    let str = i.toString()
+    out += `\n    case ${i}: return "r${str.padStart(2, '0')}";`
+  }
+  out += `\n    default: return "INVALID_REGISTRY";\n  }\n`
+  return out
+}
+
+export async function generatePrinterFunction(res: OpCodeGenResult) {
+  let out = `#ifndef OPCODE_PRINTER_H
+#define OPCODE_PRINTER_H
+
+#include <cstdio>
+
+#include "opcodes.h"
+
+${FILE_HEADER}
+
+void printInstructionToString(uint8* buf, FILE* out);
+
+#endif // OPCODE_PRINTER_H`
+
+  await writeToFile(out, "../src/interpreter/opcode_printer.h")
+
+  out = `#include "opcode_printer.h"
+
+${FILE_HEADER}
+
+static conststring getRegistryName(uint8 r) {${generateRegistryStringNameFunc()}}
+
+void printInstructionToString(uint8* buf, FILE* out) {
+  const opcode code = *reinterpret_cast<opcode*>(buf);
+  fprintf(out, "%-10s", opcode_name(code));
+  
+  switch (code) {`
+
+  const signatureGroups: {[sig: string]: Instruction[]} = {}
+  for (const code of res.codes) {
+    const sig = getSignatureString(code.params)
+    let group = signatureGroups[sig]
+
+    if (group == null) {
+      group = []
+      signatureGroups[sig] = group
+    }
+
+    group.push(code)
+  }
+
+  for (const signature in signatureGroups) {
+    const codes = signatureGroups[signature]
+    for (const code of codes) {
+      out += `\n    case OP_${code.opcode}:`
+    }
+
+    const params = codes[0].params
+    let off = res.opcodeSize
+
+    for (const p of params) {
+      let tn: string = p.typename
+      let formatSpec: string = ""
+      let valExpr: string = ""
+
+      switch (p.typename) {
+        case "uint64":
+          formatSpec = "%llu"
+          break
+        case "int64":
+          formatSpec = "%lld"
+          break
+        case "register":
+          tn = "uint8"
+          formatSpec = "%s"
+          valExpr = `getRegistryName(*(buf + ${off}))`
+          break
+        case "typeindex":
+          tn = "uint32"
+          formatSpec = "TYPE[%d]"
+          break
+        default:
+          formatSpec = "%d"
+          break
+      }
+
+      if (valExpr.length == 0) {
+        if (tn == "uint8") {
+          valExpr = `*(buf + ${off})`
+        } else {
+          valExpr = `*reinterpret_cast<${tn}*>(buf + ${off})`
+        }
+      }
+
+      out += `\n      fprintf(out, " ${formatSpec}", ${valExpr});`
+      off += p.size
+    }
+
+    out += `\n      break;`
+  }
+
+  out += `\n    default:\n      break;\n  }\n}`
+
+  await writeToFile(out, "../src/interpreter/opcode_printer.cc")
+}
