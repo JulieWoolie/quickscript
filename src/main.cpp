@@ -93,11 +93,17 @@ int32 main(int32 argc, cstring argv[]) {
   if (settings.command == CMD_COMPILE) {
     BytecodeFile bfile = compile(ctx);
     uint64 byteArraySize = 0;
-    uint8* savedData = serializeBytecodeFile(bfile, &byteArraySize);
 
     std::string outFile = std::string(settings.outputFile);
     FILE* openFile = fopen(outFile.c_str(), "wb");
-    fwrite(savedData, 1, byteArraySize, openFile);
+
+    if (settings.compileToBinary) {
+      uint8* savedData = serializeBytecodeFile(bfile, &byteArraySize);
+      fwrite(savedData, 1, byteArraySize, openFile);
+    } else {
+      printBytecodeFile(bfile, openFile);
+    }
+
     fclose(openFile);
 
     printf("Saved compiled output to '%s'\n", outFile.c_str());
