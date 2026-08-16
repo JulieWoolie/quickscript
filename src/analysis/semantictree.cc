@@ -170,8 +170,9 @@ void Scope::pushSymbol(const Symbol* before, Symbol* sym) {
 }
 
 void Scope::removeSymbol(Symbol* sym) {
-  for (auto it = m_symbols.begin(); it != m_symbols.end(); ++it) {
+  for (auto it = m_symbols.begin(); it != m_symbols.end(); ) {
     if (*it != sym) {
+      ++it;
       continue;
     }
     m_symbols.erase(it);
