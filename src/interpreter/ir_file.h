@@ -78,4 +78,6 @@ struct BytecodeFile {
 
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut);
 
+void printBytecodeFile(const BytecodeFile& file, FILE* printFile);
+
 #endif //QUICKSCRIPT_IR_FILE_H

@@ -1,5 +1,8 @@
 #include "ir_file.h"
 
+#include "opcodes.h"
+#include "opcode_printer.h"
+
 #define CREATE_WRITE_METHOD(name, type) \
   void name(type x) {\
     ensureHasSpace(sizeof(type));\
@@ -155,4 +158,114 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
 
   *sizeOut = finalLength;
   return writer.buf;
+}
+
+static void writePooledString(FILE* out, uint64 off, uint8* strPool) {
+  const uint32 len = *reinterpret_cast<uint32*>(strPool + off);
+  conststring strData = reinterpret_cast<conststring>(strPool + off + sizeof(uint32));
+  fwrite(strData, 1, len, out);
+}
+
+void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
+  fprintf(printFile, "#\n# QuickScript Compiled IR File\n# File Version: %d\n#", CURRENT_FILE_VERSION);
+
+  uint8* stringPool = file.constStringPool;
+  const uint64 stringPoolSize = file.stringPoolSize;
+  uint64 strPoolOff = 0;
+
+  fprintf(printFile, "\n\nCONST_STRING_POOL:");
+  while (strPoolOff < stringPoolSize) {
+    const uint32 strSize = *reinterpret_cast<uint32*>(stringPool + strPoolOff);
+    conststring stringAddr = reinterpret_cast<conststring>(stringPool + strPoolOff);
+    fprintf(printFile, "\n  [off=%llu size=%d]: ", strPoolOff, strSize);
+    writePooledString(printFile, strPoolOff, stringPool);
+    strPoolOff += strSize + sizeof(uint32);
+  }
+
+  const uint64 typeTableSize = file.typeTableSize;
+  TypeTableEntry** typeTable = file.typeTable;
+
+  fprintf(printFile, "\n\nTYPE_TABLE:");
+  for (uint32 i = 0; i < typeTableSize; i++) {
+    TypeTableEntry* entry = typeTable[i];
+    fprintf(printFile, "\n  [%llu] (type=%d) {", entry->index, entry->type);
+
+    switch (entry->type) {
+      case TYPE_TABLE_STRUCT: {
+        TypeTableStruct* str = static_cast<TypeTableStruct*>(entry);
+        fprintf(printFile, "\n    name_offset = %llu # ", str->nameOffset);
+        writePooledString(printFile, str->nameOffset, stringPool);
+        fprintf(printFile, "\n    constructor_entry = %d", str->constructorFuncIndex);
+        fprintf(printFile, "\n    properties(%d):", str->constructorFuncIndex);
+
+        for (uint32 pIdx = 0; pIdx < str->propertyCount; pIdx++) {
+          TypeTableStructProperty* prop = &str->properties[pIdx];
+
+          fprintf(printFile, "\n      - name_offset = %llu # ", prop->nameOffset);
+          writePooledString(printFile, prop->nameOffset, stringPool);
+
+          fprintf(printFile, "\n        value_offset = %llu", prop->valueOffset);
+          fprintf(printFile, "\n        type_index = %llu", prop->type);
+        }
+        break;
+      }
+      case TYPE_TABLE_SIGNATURE: {
+        TypeTableFuncSign* fSign = static_cast<TypeTableFuncSign*>(entry);
+        fprintf(printFile, "\n    return_type = %llu", fSign->returnType);
+        fprintf(printFile, "\n    variadic = %d", fSign->varargs);
+        fprintf(printFile, "\n    arguments(%d):", fSign->argumentCount);
+        for (uint32 aIdx = 0; aIdx < fSign->argumentCount; aIdx++) {
+          fprintf(printFile, "\n      - %llu", fSign->argTypes[aIdx]);
+        }
+        break;
+      }
+      case TYPE_TABLE_ARRAY: {
+        TypeTableArray* arr = static_cast<TypeTableArray*>(entry);
+        fprintf(printFile, "\n    component_type = %llu", arr->componentType);
+        break;
+      }
+    }
+
+    fprintf(printFile, "\n  }");
+  }
+
+  const uint32 funcTableSize = file.funcTableEntries;
+  FunctionTableEntry* funcTable = file.funcTable;
+
+  fprintf(printFile, "\n\nFUNCTION_TABLE:");
+  for (uint32 i = 0; i < funcTableSize; i++) {
+    FunctionTableEntry* entry = &funcTable[i];
+    fprintf(printFile, "\n  [%3d]: name_offset = %llu # ", i, entry->nameOffset);
+    writePooledString(printFile, entry->nameOffset, stringPool);
+
+    fprintf(printFile, "\n         signature_index = %llu", entry->signatureIndex);
+    fprintf(printFile, "\n         first_instruction = %llu", entry->startingInstruction);
+  }
+
+  fprintf(printFile, "\n\nINSTRUCTION_BUFFER:");
+
+  uint8* instrBuf = file.instructionBuf;
+  const uint64 instrSize = file.instructionsSize;
+  uint64 instrOff = 0;
+  uint32 instrCount = 0;
+
+  while (instrOff < instrSize) {
+    uint8* buf = instrBuf + instrOff;
+
+    for (uint32 fTableIdx = 0; fTableIdx < funcTableSize; fTableIdx++) {
+      const FunctionTableEntry* entry = &funcTable[fTableIdx];
+      if (entry->startingInstruction != instrCount) {
+        continue;
+      }
+      fprintf(printFile, "\n\n# FUNCTION START: ");
+      writePooledString(printFile, entry->nameOffset, stringPool);
+      break;
+    }
+
+    fprintf(printFile, "\n[%4d] ", instrCount);
+    printInstructionToString(buf, printFile);
+
+    instrOff += LENGTH_INSTRUCTION;
+    instrCount++;
+  }
 }
