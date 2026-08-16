@@ -79,4 +79,6 @@ add_executable(quickscript src/main.cpp
         src/parse/JsonPrinter.h
         src/types/ScriptClosureType.cc
         src/types/ScriptClosureType.h
-        src/interpreter/ir_file.cc)
+        src/interpreter/ir_file.cc
+        src/interpreter/opcode_printer.h
+        src/interpreter/opcode_printer.cc)
