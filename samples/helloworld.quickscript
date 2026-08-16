@@ -6,10 +6,17 @@ struct vec2f {
 const bool IS_ENABLED = true
 const uint32 SOMETHING = 23232
 
+uint32 fibonacci(uint32 n) {
+  if n == 0 return 0
+  if n == 1 return 1
+  return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
 int32 main() {
   int32 a = 2
   if IS_ENABLED {
     a *= SOMETHING
   }
+  a = fibonacci(15)
   return a
 }

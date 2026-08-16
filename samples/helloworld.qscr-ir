@@ -4,96 +4,158 @@
 #
 
 CONST_STRING_POOL:
-  [off=0 size=4]: main
-  [off=8 size=19]: vec2f.<constructor>
-  [off=31 size=7]: <finit>
-  [off=42 size=5]: vec2f
-  [off=51 size=1]: x
-  [off=56 size=1]: y
+  [off=0 size=9]: fibonacci
+  [off=13 size=4]: main
+  [off=21 size=19]: vec2f.<constructor>
+  [off=44 size=7]: <finit>
+  [off=55 size=5]: vec2f
+  [off=64 size=1]: x
+  [off=69 size=1]: y
 
 TYPE_TABLE:
   [14] (type=1) {
-    name_offset = 42 # vec2f
-    constructor_entry = 1
-    properties(1):
-      - name_offset = 51 # x
+    name_offset = 55 # vec2f
+    constructor_entry = 2
+    properties(2):
+      - name_offset = 64 # x
         value_offset = 0
         type_index = 10
-      - name_offset = 56 # y
+      - name_offset = 69 # y
         value_offset = 4
         type_index = 10
   }
   [15] (type=3) {
+    return_type = 7
+    variadic = 0
+    arguments(1):
+      - 7
+  }
+  [16] (type=3) {
     return_type = 6
     variadic = 0
     arguments(0):
   }
-  [16] (type=3) {
+  [17] (type=3) {
     return_type = 14
     variadic = 0
     arguments(0):
   }
-  [17] (type=0) {
+  [18] (type=0) {
     component_type = 12
   }
-  [18] (type=3) {
+  [19] (type=3) {
     return_type = 6
     variadic = 0
     arguments(1):
-      - 17
+      - 18
   }
 
 FUNCTION_TABLE:
-  [  0]: name_offset = 0 # main
+  [  0]: name_offset = 0 # fibonacci
          signature_index = 15
          first_instruction = 0
-  [  1]: name_offset = 8 # vec2f.<constructor>
+  [  1]: name_offset = 13 # main
          signature_index = 16
-         first_instruction = 17
-  [  2]: name_offset = 31 # <finit>
-         signature_index = 18
-         first_instruction = 23
+         first_instruction = 38
+  [  2]: name_offset = 21 # vec2f.<constructor>
+         signature_index = 17
+         first_instruction = 61
+  [  3]: name_offset = 44 # <finit>
+         signature_index = 19
+         first_instruction = 67
 
 INSTRUCTION_BUFFER:
 
+# FUNCTION START: fibonacci
+[   0] STACKALLOC    16
+
+# if n == 0 return 0
+[   1] PUSHLINE      10
+[   2] SREAD32       r01 4
+[   3] LOADCONST8    r00 0
+[   4] EQ32          r00 r01 r00
+[   5] JMPI0         11 r00
+[   6] PUSHLINE      10
+[   7] LOADCONST8    r01 0
+[   8] SWRITE8       r01 0
+[   9] STACKFREE     16
+[  10] RET
+
+# if n == 1 return 1
+[  11] PUSHLINE      11
+[  12] SREAD32       r01 4
+[  13] LOADCONST8    r00 1
+[  14] EQ32          r00 r01 r00
+[  15] JMPI0         21 r00
+[  16] PUSHLINE      11
+[  17] LOADCONST8    r01 1
+[  18] SWRITE8       r01 0
+[  19] STACKFREE     16
+[  20] RET
+
+# return fibonacci(n - 1) + fibonacci(n - 2)
+[  21] PUSHLINE      12
+[  22] LFUNCLOOKUP   0 r02
+[  23] SREAD32       r03 4
+[  24] LOADCONST8    r01 1
+[  25] SUBU32        r01 r03 r01
+[  26] SWRITE32      r01 12
+[  27] INVOKE32      r02 r01
+[  28] LFUNCLOOKUP   0 r02
+[  29] SREAD32       r03 4
+[  30] LOADCONST8    r00 2
+[  31] SUBU32        r00 r03 r00
+[  32] SWRITE32      r00 12
+[  33] INVOKE32      r02 r00
+[  34] ADDU32        r00 r01 r00
+[  35] SWRITE32      r00 0
+[  36] STACKFREE     16
+[  37] RET          
+
 # FUNCTION START: main
-[   0] STACKALLOC 16
-[   1] PUSHLINE   10
-[   2] LOADCONST8 r00 2
-[   3] SWRITE8    r00 4
-[   4] PUSHLINE   11
-[   5] GREAD8     r00 0
-[   6] JMPI0      12 r00
-[   7] PUSHLINE   12
-[   8] SREAD32    r00 4
-[   9] GREAD32    r00 1
-[  10] MULI32     r00 r00 r00
-[  11] SWRITE32   r00 0
-[  12] PUSHLINE   14
-[  13] SREAD32    r00 4
-[  14] SWRITE32   r00 0
-[  15] STACKFREE  16
-[  16] RET       
+[  38] STACKALLOC    16
+[  39] PUSHLINE      16
+[  40] LOADCONST8    r00 2
+[  41] SWRITE8       r00 4
+[  42] PUSHLINE      17
+[  43] GREAD8        r00 0
+[  44] JMPI0         50 r00
+[  45] PUSHLINE      18
+[  46] SREAD32       r02 4
+[  47] GREAD32       r01 1
+[  48] MULI32        r01 r02 r01
+[  49] SWRITE32      r01 0
+[  50] PUSHLINE      20
+[  51] LFUNCLOOKUP   0 r01
+[  52] LOADCONST8    r00 15
+[  53] SWRITE8       r00 15
+[  54] INVOKE32      r01 r00
+[  55] SWRITE32      r00 0
+[  56] PUSHLINE      21
+[  57] SREAD32       r00 4
+[  58] SWRITE32      r00 0
+[  59] STACKFREE     16
+[  60] RET          
 
 # FUNCTION START: vec2f.<constructor>
-[  17] STACKALLOC 8
-[  18] PUSHLINE   0
-[  19] HEAPALLOC  r00 8
-[  20] SWRITE64   r00 0
-[  21] STACKFREE  8
-[  22] RET       
+[  61] STACKALLOC    8
+[  62] PUSHLINE      0
+[  63] HEAPALLOC     r00 8
+[  64] SWRITE64      r00 0
+[  65] STACKFREE     8
+[  66] RET          
 
 # FUNCTION START: <finit>
-[  23] STACKALLOC 16
-[  24] PUSHLINE   6
-[  25] LOADCONST8 r00 1
-[  26] GWRITE8    r00 0
-[  27] PUSHLINE   7
-[  28] LOADCONST16 r00 23232
-[  29] GWRITE16   r00 0
-[  30] PUSHLINE   0
-[  31] LFUNCLOOKUP 0 r00
-[  32] INVOKE32   r00 r00
-[  33] SWRITE32   r00 0
-[  34] STACKFREE  16
-[  35] RET       
+[  67] STACKALLOC    16
+[  68] PUSHLINE      6
+[  69] LOADCONST8    r00 1
+[  70] GWRITE8       r00 0
+[  71] PUSHLINE      7
+[  72] LOADCONST16   r00 23232
+[  73] GWRITE16      r00 0
+[  74] PUSHLINE      0
+[  75] LFUNCLOOKUP   1 r01
+[  76] INVOKE32      r01 r00
+[  77] SWRITE32      r00 0
+[  78] STACKFREE     16
+[  79] RET          
