@@ -6,6 +6,8 @@
 #include "../interpreter/opcodes.h"
 #include "../types/ConstTypes.h"
 
+#define RUNTIME_CHECKS
+
 #define BYTEWIDTH_OPCODE(size, writer, opcode) \
   switch (size) {\
     case 1: writer.startInstr(opcode##8); break;\
@@ -473,6 +475,8 @@ static void compileBinaryExpr(
       break;
   }
 
+  ctx.freeRegister(r2);
+
   if (isAssignment) {
     compileWriteOperation(&out, rtype->stackSizeBytes(), ctx, r1);
   } else {
@@ -525,6 +529,8 @@ static void compileCallExpr(const CallExpr* call, const registerid out, Compiler
   writer.appendU8(funcReg);
   writer.appendU8(out);
   writer.endInstr();
+
+  ctx.freeRegister(funcReg);
 }
 
 static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, CompilerContext& ctx) {
@@ -836,6 +842,10 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       }
 
       compileWriteOperation(&addrOut, primType->stackSizeBytes(), ctx, targetRegister);
+
+      if (isPostOp) {
+        ctx.freeRegister(targetRegister);
+      }
       return;
     }
 
@@ -1042,6 +1052,8 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
   } else {
     writer.writeInstructionCounter(condFailedJumpAddr);
   }
+
+  ctx.freeRegister(reg);
 }
 
 static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) {
@@ -1185,7 +1197,7 @@ static void compileReturn(ReturnStatement* ret, CompilerContext& ctx) {
   BytecodeWriter& writer = ctx.getWriter();
 
   if (ret->value) {
-    registerid reg = ctx.acquireRegister();
+    const registerid reg = ctx.acquireRegister();
     ScriptType* returnType = ret->value->resultType;
 
     compileRValue(returnType, ret->value, ctx, reg);
@@ -1391,6 +1403,12 @@ BytecodeFile compile(SemanticContext& ctx) {
   for (LocalFunction* lf : ctx.getLocalFunctions()) {
     compileLocalFunction(lf, cctx);
   }
+
+#ifdef RUNTIME_CHECKS
+  if (registerBitSet != 0) {
+    throw std::runtime_error("Registers not freed after being compiled");
+  }
+#endif
 
   BytecodeFile file;
 
