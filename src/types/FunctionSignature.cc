@@ -115,7 +115,7 @@ int32 FunctionSignature::callSignatureMatches(FunctionSignature* callSign, Funct
       targetType = funcSign->m_paramTypes[i];
     }
 
-    if (i == (funcParamCount - 1)) {
+    if (i == (funcParamCount - 1) && funcVariadic && targetType->kind() == TK_ARRAY) {
       if (targetType == callingType) {
         score += 2;
         continue;
