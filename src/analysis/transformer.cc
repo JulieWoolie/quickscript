@@ -906,7 +906,7 @@ void SemanticTransformer::createFileInitMethod() {
 
   sfs->statements.push_back(fdecl);
 
-  std::vector<LexicalDeclaration*>& globalVars = ctx.getGlobalVariables();
+  const std::vector<LexicalDeclaration*>& globalVars = ctx.getGlobalVariables();
   for (LexicalDeclaration* gvar : globalVars) {
     if (!gvar->value) {
       continue;
@@ -919,10 +919,12 @@ void SemanticTransformer::createFileInitMethod() {
     assignExpr->rhs = gvar->value;
     assignExpr->op = BOP_ASSIGN;
     assignExpr->resultType = gvar->value->resultType;
+    assignExpr->location = gvar->value->location;
 
     ExprStatement* exprStat = alloc.make<ExprStatement>();
     exprStat->expression = assignExpr;
     exprStat->parentStatement = body;
+    exprStat->location = gvar->value->location;
 
     body->statements.push_back(exprStat);
     lookup[varId] = lookup[gvar];
