@@ -10,6 +10,8 @@
 #include "errors.h"
 #include "tester.h"
 #include "analysis/transformer.h"
+#include "codegen/compiler.h"
+#include "interpreter/ir_file.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
@@ -86,6 +88,19 @@ int32 main(int32 argc, cstring argv[]) {
     printf("\n\n ====== AST After semantic transformer ======\n\n");
     PrintingVisitor pv = PrintingVisitor(&table, fname.c_str());
     pv.acceptScriptFileStatement(sfs);
+  }
+
+  if (settings.command == CMD_COMPILE) {
+    BytecodeFile bfile = compile(ctx);
+    uint64 byteArraySize = 0;
+    uint8* savedData = serializeBytecodeFile(bfile, &byteArraySize);
+
+    std::string outFile = std::string(settings.outputFile);
+    FILE* openFile = fopen(outFile.c_str(), "wb");
+    fwrite(savedData, 1, byteArraySize, openFile);
+    fclose(openFile);
+
+    printf("Saved compiled output to '%s'\n", outFile.c_str());
   }
 
   return EXIT_SUCCESS;
