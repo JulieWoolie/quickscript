@@ -29,6 +29,8 @@ class ScriptStructType: public ScriptType {
     conststring getTypeName() const override;
 
     uint64 getHeapSize() const;
+
+    const std::string& getNameString() const;
 };
 
 

@@ -78,3 +78,7 @@ uint64 ScriptStructType::getHeapSize() const {
   }
   return size;
 }
+
+const std::string& ScriptStructType::getNameString() const {
+  return m_name;
+}
