@@ -1195,8 +1195,8 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, 
 
   LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(lf);
   scope->pushSymbol(sym);
-  ctx.getScopeLookup()[sym] = scope;
 
+  ctx.getScopeLookup()[sym] = scope;
   ctx.getSymbolLookup()[v] = sym;
 
   if (isPossibleMainFunction(ctx, v)) {
