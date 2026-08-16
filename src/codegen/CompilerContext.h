@@ -22,6 +22,7 @@ class BytecodeWriter {
 
   uint32 m_instrCount = 0;
   uint64 m_argsStart = 0;
+  bool m_instrStarted = false;
 
   public:
     void reserveSpace(uint64 memsize);
@@ -113,6 +114,7 @@ class CompilerContext {
   uint64* m_registersInUse;
 
   Scope* m_currentScope = nullptr;
+  bool m_returned = false;
 
   public:
     CompilerContext(SemanticContext& ctx, uint64* registryBitset);
@@ -142,6 +144,9 @@ class CompilerContext {
     std::vector<ControlFlowCall>& getControlFlowCalls();
 
     std::vector<CompiledFunction>& getCompiledFunctions();
+
+    bool wasReturnCalled() const;
+    void setReturnCalled(bool b);
 };
 
 

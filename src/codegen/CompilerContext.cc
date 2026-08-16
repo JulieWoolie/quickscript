@@ -40,10 +40,23 @@ void BytecodeWriter::reserveSpace(uint64 memsize) {
 }
 
 void BytecodeWriter::startInstr(opcode code) {
+#ifdef RUNTIME_CHECKS
+  if (m_instrStarted) {
+    std::string error = "Trying to write instruction before calling end on previous one!";
+
+    const opcode startedCode = *reinterpret_cast<opcode*>(m_buf + m_argsStart - LENGTH_OPCODE);
+    error.append("\n  Started on: ");
+    error.append(opcode_name(startedCode));
+
+    throw std::runtime_error(error);
+  }
+#endif
+
   reserveSpace(LENGTH_INSTRUCTION);
   *reinterpret_cast<opcode*>(m_buf + m_len) = code;
   m_len += LENGTH_OPCODE;
   m_argsStart = m_len;
+  m_instrStarted = true;
 }
 
 void BytecodeWriter::endInstr() {
@@ -58,6 +71,8 @@ void BytecodeWriter::endInstr() {
 
   memset(m_buf + m_len, 0, rem);
   m_instrCount++;
+  m_instrStarted = false;
+  m_len += rem;
 }
 
 void BytecodeWriter::writeInstructionCounter(const uint64 offset) const {
@@ -137,7 +152,7 @@ StringPoolAddress ConstStringPoolWriter::emplaceString(const conststring data, c
   uint64 off = 0;
 
   while (off < m_len) {
-    uint32 foundLen = *reinterpret_cast<uint32*>(m_data + off);
+    const uint32 foundLen = *reinterpret_cast<uint32*>(m_data + off);
 
     if (foundLen != len) {
       off += foundLen + sizeof(uint32);
@@ -293,4 +308,12 @@ std::vector<ControlFlowCall>& CompilerContext::getControlFlowCalls() {
 
 std::vector<CompiledFunction>& CompilerContext::getCompiledFunctions() {
   return m_compiledFuncs;
+}
+
+bool CompilerContext::wasReturnCalled() const {
+  return m_returned;
+}
+
+void CompilerContext::setReturnCalled(bool b) {
+  m_returned = b;
 }
