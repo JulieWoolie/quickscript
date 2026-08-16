@@ -20,6 +20,11 @@
 #define HSECT_INSTR_OFF 4
 #define HSECT_INSTR_SIZE 6
 
+#define TYPE_TABLE_ARRAY 0x0
+#define TYPE_TABLE_STRUCT 0x1
+#define TYPE_TABLE_SIGNATURE 0x3
+typedef uint8 TypeTableType;
+
 #define CURRENT_FILE_VERSION 0
 
 #define FET_NIL 0
@@ -34,15 +39,39 @@ struct FunctionTableEntry {
 };
 
 struct TypeTableEntry {
-  ScriptType* type;
-  typeindex index;
+  TypeTableType type = 0;
+  typeindex index = 0;
+};
+
+struct TypeTableArray: TypeTableEntry {
+  typeindex componentType = 0;
+};
+
+struct TypeTableFuncSign: TypeTableEntry {
+  typeindex returnType = 0;
+  bool varargs = false;
+  typeindex* argTypes = nullptr;
+  uint32 argumentCount = 0;
+};
+
+struct TypeTableStructProperty {
+  uint64 nameOffset = 0;
+  uint64 valueOffset = 0;
+  typeindex type = 0;
+};
+
+struct TypeTableStruct: TypeTableEntry {
+  uint64 nameOffset = 0;
+  uint32 constructorFuncIndex = 0;
+  uint32 propertyCount = 0;
+  TypeTableStructProperty* properties = nullptr;
 };
 
 struct BytecodeFile {
   uint8* constStringPool = nullptr;
   uint64 stringPoolSize = 0;
 
-  TypeTableEntry* typeTable = nullptr;
+  TypeTableEntry** typeTable = nullptr;
   uint64 typeTableSize = 0;
 
   FunctionTableEntry* funcTable = nullptr;
