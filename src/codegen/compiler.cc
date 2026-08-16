@@ -451,7 +451,7 @@ static void compileBinaryExpr(
       if (lkind == TK_STRING) {
         BYTEWIDTH_OPCODE(rtype->stackSizeBytes(), writer, OP_STRREP)
       } else {
-        NUMTYPE_OPCODE(lpk, writer, OP_ADD)
+        NUMTYPE_OPCODE(lpk, writer, OP_MUL)
       }
       BIN_APPEND
       break;
@@ -989,6 +989,7 @@ static void compileStatement(Statement* stat, CompilerContext& ctx);
 
 static void compileBlock(const Block* block, CompilerContext& ctx) {
   for (Statement* statement : block->statements) {
+    ctx.setReturnCalled(false);
     compileStatement(statement, ctx);
   }
 }
@@ -1006,6 +1007,7 @@ static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
   BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_SWRITE)
   writer.appendU8(valueReg);
   writer.appendU64(lvs->getStackOffset());
+  writer.endInstr();
 
   ctx.freeRegister(valueReg);
 }
@@ -1033,6 +1035,7 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
 
     writer.writeInstructionCounter(condFailedJumpAddr);
 
+    ctx.setReturnCalled(false);
     compileStatement(stat->elseBody, ctx);
 
     writer.writeInstructionCounter(afterElseAddr);
@@ -1051,12 +1054,22 @@ static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) 
   BytecodeWriter& writer = ctx.getWriter();
   const uint32 start = writer.getInstructionCounter();
 
+  writer.startInstr(OP_STACKALLOC);
+  writer.appendU64(scope->getStackSize());
+  writer.endInstr();
+
   for (Statement* statement : stat->functionBody->statements) {
     compileStatement(statement, ctx);
   }
 
-  writer.startInstr(OP_RET);
-  writer.endInstr();
+  if (!ctx.wasReturnCalled()) {
+    writer.startInstr(OP_STACKFREE);
+    writer.appendU64(scope->getStackSize());
+    writer.endInstr();
+
+    writer.startInstr(OP_RET);
+    writer.endInstr();
+  }
 
   ctx.pushCompiledFunction(lfs, start);
 }
@@ -1185,12 +1198,24 @@ static void compileReturn(ReturnStatement* ret, CompilerContext& ctx) {
     ctx.freeRegister(reg);
   }
 
+  Scope* scope = ctx.getCurrentScope();
+  writer.startInstr(OP_STACKFREE);
+  writer.appendU64(scope->getStackSize());
+  writer.endInstr();
+
   writer.startInstr(OP_RET);
   writer.endInstr();
+
+  ctx.setReturnCalled(true);
 }
 
 static void compileStatement(Statement* stat, CompilerContext& ctx) {
   const astnodetype kind = stat->nodeKind();
+
+  BytecodeWriter& writer = ctx.getWriter();
+  writer.startInstr(OP_PUSHLINE);
+  writer.appendU32(stat->location.line);
+  writer.endInstr();
 
   switch (kind) {
     case AST_Block:
@@ -1368,13 +1393,14 @@ BytecodeFile compile(SemanticContext& ctx) {
   }
 
   BytecodeFile file;
+
+  createTypeTable(file, cctx);
+  createFunctionTable(file, cctx);
+
   file.instructionBuf = cctx.getWriter().getBuffer();
   file.instructionsSize = cctx.getWriter().getLength();
   file.constStringPool = cctx.getStringPool().getData();
   file.stringPoolSize = cctx.getStringPool().getLength();
-
-  createTypeTable(file, cctx);
-  createFunctionTable(file, cctx);
 
   return file;
 }
