@@ -900,7 +900,7 @@ void SemanticTransformer::createFileInitMethod() {
   LocalFunction* lf = alloc.make<LocalFunction>(finitName, fdecl);
   LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
 
-  lf->setScope(global);
+  lf->setScope(funcScope);
 
   ctx.pushLocalFunction(lf);
   global->pushSymbol(lfs);
