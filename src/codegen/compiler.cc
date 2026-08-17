@@ -1066,24 +1066,30 @@ static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) 
 
   BytecodeWriter& writer = ctx.getWriter();
   const uint32 start = writer.getInstructionCounter();
+  const uint64 stackSize = scope->getStackSize();
 
-  writer.startInstr(OP_STACKALLOC);
-  writer.appendU64(scope->getStackSize());
-  writer.endInstr();
+  if (stackSize != 0) {
+    writer.startInstr(OP_STACKALLOC);
+    writer.appendU64(scope->getStackSize());
+    writer.endInstr();
+  }
 
   for (Statement* statement : stat->functionBody->statements) {
     compileStatement(statement, ctx);
   }
 
   if (!ctx.wasReturnCalled()) {
-    writer.startInstr(OP_STACKFREE);
-    writer.appendU64(scope->getStackSize());
-    writer.endInstr();
+    if (stackSize != 0) {
+      writer.startInstr(OP_STACKFREE);
+      writer.appendU64(scope->getStackSize());
+      writer.endInstr();
+    }
 
     writer.startInstr(OP_RET);
     writer.endInstr();
   }
 
+  ctx.setReturnCalled(false);
   ctx.pushCompiledFunction(lfs, start);
 }
 
