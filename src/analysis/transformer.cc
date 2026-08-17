@@ -798,8 +798,10 @@ void SemanticTransformer::createStructConstructors() {
 
     Scope* bodyScope = alloc.make<Scope>(SCOPE_FUNCTION, global);
 
-    LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl, bodyScope);
+    LocalFunction* lf = alloc.make<LocalFunction>(ctorDecl->name->value, ctorDecl);
     LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
+
+    lf->setScope(bodyScope);
 
     ctx.pushLocalFunction(lf);
     global->pushSymbol(lfs);
@@ -895,8 +897,10 @@ void SemanticTransformer::createFileInitMethod() {
   funcScope->pushSymbol(argsSym);
   ctx.getScopeLookup()[argsSym] = funcScope;
 
-  LocalFunction* lf = alloc.make<LocalFunction>(finitName, fdecl, global);
+  LocalFunction* lf = alloc.make<LocalFunction>(finitName, fdecl);
   LocalFuncSymbol* lfs = alloc.make<LocalFuncSymbol>(lf);
+
+  lf->setScope(global);
 
   ctx.pushLocalFunction(lf);
   global->pushSymbol(lfs);
@@ -991,10 +995,7 @@ static stringid getNestedFunctionName(const LocalFunction* lf, SemanticContext& 
   std::string name = "";
   name.append(funcName->data, funcName->len);
 
-  const Scope* scope = lf->getScope();
-  while (scope) {
-    scope = scope->getParent();
-
+  for (const Scope* scope = lf->getScope(); scope; scope = scope->getParent()) {
     if (scope->getType() != SCOPE_FUNCTION) {
       continue;
     }

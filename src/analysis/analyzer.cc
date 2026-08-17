@@ -1135,7 +1135,7 @@ static bool isPossibleMainFunction(SemanticContext& ctx, FunctionDeclStatement* 
   return componentType == ConstTypes::STRING();
 }
 
-static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, bool nested = false) {
+static LocalFunction* createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, bool nested = false) {
   resolveTypeExpr(ctx, v->returnType);
 
   const uint32 paramCount = v->arguments.size();
@@ -1183,12 +1183,12 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, 
     }
 
     ctx.getErrors().error(v->location, "Duplicate function definition");
-    return;
+    return nullptr;
   }
 
   NoFreeAllocator& alloc = ctx.getAllocator();
 
-  LocalFunction* lf = alloc.make<LocalFunction>(v->name->value, v, scope);
+  LocalFunction* lf = alloc.make<LocalFunction>(v->name->value, v);
   lf->setNested(nested);
 
   ctx.pushLocalFunction(lf);
@@ -1202,6 +1202,8 @@ static void createFuncSignature(SemanticContext& ctx, FunctionDeclStatement* v, 
   if (isPossibleMainFunction(ctx, v)) {
     ctx.getMainFuncCandidates().push_back(lf);
   }
+
+  return lf;
 }
 
 static void reportUnused(const SemanticContext& ctx, Scope* scope) {
@@ -1530,13 +1532,25 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
   STAT_PUSH
 
   Scope* parentScope = ctx.getScope();
+  LocalFunction* lf = nullptr;
+
   if (parentScope->getType() != SCOPE_MAIN) {
-    createFuncSignature(ctx, v, true);
+    lf = createFuncSignature(ctx, v, true);
+  } else {
+    for (LocalFunction* localFunc : ctx.getLocalFunctions()) {
+      if (localFunc->getDecl() != v) {
+        continue;
+      }
+      lf = localFunc;
+      break;
+    }
   }
 
   Scope* scope = ctx.pushScope(SCOPE_FUNCTION);
   scope->setExpectedReturnType(v->returnType->referencedType);
+
   ctx.getAstScopeLookup()[v] = scope;
+  lf->setScope(scope);
 
   FunctionSignature* sign = v->signature;
   const uint32 args = v->arguments.size();

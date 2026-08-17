@@ -188,18 +188,20 @@ class LocalFunction {
   const stringid m_name;
   FunctionDeclStatement* const m_decl;
   FunctionSignature* m_signature;
-  Scope* const m_bodyScope;
 
+  Scope* m_bodyScope = nullptr;
   bool m_nested = false;
 
   public:
-    LocalFunction(stringid name, FunctionDeclStatement* decl, Scope* scope);
+    LocalFunction(stringid name, FunctionDeclStatement* decl);
 
     stringid getName() const;
 
     FunctionDeclStatement* getDecl() const;
 
     Scope* getScope() const;
+
+    void setScope(Scope* scope);
 
     FunctionSignature* getSignature() const;
 

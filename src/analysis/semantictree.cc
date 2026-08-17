@@ -107,8 +107,8 @@ symboltype PropertySymbol::stype() const {
   return SYM_Property;
 }
 
-LocalFunction::LocalFunction(stringid name, FunctionDeclStatement* decl, Scope* scope)
-  : m_name(name), m_decl(decl), m_signature(decl->signature), m_bodyScope(scope)
+LocalFunction::LocalFunction(stringid name, FunctionDeclStatement* decl)
+  : m_name(name), m_decl(decl), m_signature(decl->signature)
 {
 
 }
@@ -123,6 +123,10 @@ FunctionDeclStatement* LocalFunction::getDecl() const {
 
 Scope* LocalFunction::getScope() const {
   return m_bodyScope;
+}
+
+void LocalFunction::setScope(Scope* scope) {
+  m_bodyScope = scope;
 }
 
 FunctionSignature* LocalFunction::getSignature() const {
