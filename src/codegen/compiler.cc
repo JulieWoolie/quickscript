@@ -79,6 +79,8 @@ struct AddrOutput {
   int64 stackoffset = 0;
 };
 
+static void compileStoredExpr(ScriptType* type, Expr* expr, CompilerContext& ctx, uint64 off, bool local);
+
 static void compileWriteOperation(
   const AddrOutput* addrout,
   const uint32 stackSize,
@@ -508,15 +510,8 @@ static void compileCallExpr(const CallExpr* call, const registerid out, Compiler
 
   for (Expr* arg : call->arguments) {
     ScriptType* argType = arg->resultType;
-
-    compileRValue(argType, arg, ctx, out);
-    uint64 size = argType->stackSizeBytes();
-
-    BYTEWIDTH_OPCODE(size, writer, OP_SWRITE)
-    writer.appendU8(out);
-    writer.appendU64(offsetStart);
-    writer.endInstr();
-
+    const uint64 size = argType->stackSizeBytes();
+    compileStoredExpr(argType, arg, ctx, offsetStart, true);
     offsetStart += size;
   }
 
@@ -973,29 +968,6 @@ static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, 
   writer.endInstr();
 }
 
-static void compileValueInitialiser(ScriptType* type, CompilerContext& ctx, const registerid out) {
-  BytecodeWriter& writer = ctx.getWriter();
-
-  switch (type->kind()) {
-    case TK_PRIMITIVE:
-    case TK_STRING:
-    case TK_ARRAY:
-    case TK_CLOSURE:
-      BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_LOADCONST)
-      writer.appendU8(out);
-      writer.appendU64(0);
-      writer.endInstr();
-      break;
-
-    case TK_STRUCT:
-      compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
-      break;
-
-    default:
-      break;
-  }
-}
-
 static void compileStatement(Statement* stat, CompilerContext& ctx);
 
 static void compileBlock(const Block* block, CompilerContext& ctx) {
@@ -1007,20 +979,8 @@ static void compileBlock(const Block* block, CompilerContext& ctx) {
 
 static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
   ScriptType* stype = lex->typeExpr->referencedType;
-
-  BytecodeWriter& writer = ctx.getWriter();
-
-  const registerid valueReg = ctx.acquireRegister();
-  compileRValue(stype, lex->value, ctx, valueReg);
-
   LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(ctx.getSemantics().getSymbolLookup()[lex]);
-
-  BYTEWIDTH_OPCODE(lex->value->resultType->stackSizeBytes(), writer, OP_SWRITE)
-  writer.appendU8(valueReg);
-  writer.appendU64(lvs->getStackOffset());
-  writer.endInstr();
-
-  ctx.freeRegister(valueReg);
+  compileStoredExpr(stype, lex->value, ctx, lvs->getStackOffset(), true);
 }
 
 static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
@@ -1200,21 +1160,11 @@ static void compileControlFlow(ControlFlowStatement* cft, CompilerContext& ctx) 
   cfCalls.emplace_back(cft->type, nullptr, addr);
 }
 
-static void compileReturn(ReturnStatement* ret, CompilerContext& ctx) {
+static void compileReturn(const ReturnStatement* ret, CompilerContext& ctx) {
   BytecodeWriter& writer = ctx.getWriter();
 
   if (ret->value) {
-    const registerid reg = ctx.acquireRegister();
-    ScriptType* returnType = ret->value->resultType;
-
-    compileRValue(returnType, ret->value, ctx, reg);
-
-    BYTEWIDTH_OPCODE(returnType->stackSizeBytes(), writer, OP_SWRITE)
-    writer.appendU8(reg);
-    writer.appendU64(0);
-    writer.endInstr();
-
-    ctx.freeRegister(reg);
+    compileStoredExpr(ret->value->resultType, ret->value, ctx, 0, true);
   }
 
   Scope* scope = ctx.getCurrentScope();
@@ -1270,16 +1220,92 @@ static void compileStatement(Statement* stat, CompilerContext& ctx) {
 }
 
 void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid out) {
-  if (!val) {
-    compileValueInitialiser(type, ctx, out);
+  if (type->kind() == TK_STRUCT && (!val || val->nodeKind() == AST_ObjectLiteral)) {
+    compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
+  }
+  compileExpr(val, out, nullptr, ctx);
+}
+
+static bool isStoreableLiteral(Expr* e) {
+  switch (e->nodeKind()) {
+    case AST_IntLiteral:
+    case AST_FloatLiteral:
+    case AST_BooleanLiteral:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static void compileStoredExpr(ScriptType* type, Expr* expr, CompilerContext& ctx, const uint64 off, const bool local) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  if (type->kind() == TK_PRIMITIVE && expr && isStoreableLiteral(expr)) {
+    PrimitiveScriptType* prim = static_cast<PrimitiveScriptType*>(type);
+
+    if (local) {
+      BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_STORECONST)
+    } else {
+      BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_GSTORECONST)
+    }
+
+    writer.appendU32(off);
+
+    switch (expr->nodeKind()) {
+      case AST_IntLiteral: {
+        IntLiteral* il = static_cast<IntLiteral*>(expr);
+        switch (prim->stackSizeBytes()) {
+          case 1:
+            writer.appendU8(il->value);
+            break;
+          case 2:
+            writer.appendU16(il->value);
+            break;
+          case 4:
+            writer.appendU32(il->value);
+            break;
+          default:
+            writer.appendU64(il->value);
+            break;
+        }
+        break;
+      }
+      case AST_FloatLiteral: {
+        FloatLiteral* fl = static_cast<FloatLiteral*>(expr);
+        if (prim->stackSizeBytes() == 4) {
+          writer.appendF32(fl->value);
+        } else {
+          writer.appendF64(fl->value);
+        }
+        break;
+      }
+      case AST_BooleanLiteral: {
+        BooleanLiteral* bl = static_cast<BooleanLiteral*>(expr);
+        writer.appendU8(bl->value ? 1 : 0);
+        break;
+      }
+      default:
+        break;
+    }
+
+    writer.endInstr();
     return;
   }
 
-  if (type->kind() == TK_STRUCT && val->nodeKind() == AST_ObjectLiteral) {
-    compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
+  const registerid valueReg = ctx.acquireRegister();
+  compileRValue(type, expr, ctx, valueReg);
+
+  if (local) {
+    BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_SWRITE)
+  } else {
+    BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_GWRITE)
   }
 
-  compileExpr(val, out, nullptr, ctx);
+  writer.appendU8(valueReg);
+  writer.appendU64(off);
+  writer.endInstr();
+
+  ctx.freeRegister(valueReg);
 }
 
 static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
