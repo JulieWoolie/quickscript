@@ -952,6 +952,7 @@ void SemanticTransformer::createFileInitMethod() {
 
     Identifier* callId = makeId(main->getName());
     lookup[callId] = mainSym;
+    callId->resultType = sign;
 
     CallExpr* call = alloc.make<CallExpr>();
     call->target = callId;
@@ -1190,12 +1191,17 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
   switch (node->nodeKind()) {
     case AST_CallExpr: {
       CASTED_VAR(c, CallExpr, node)
-      uint64 callArgsSize = 0;
+      const FunctionSignature* sig = static_cast<FunctionSignature*>(c->target->resultType);
 
-      callArgsSize += c->resultType->stackSizeBytes();
+      uint64 callArgsSize = sig->getReturnType()->stackSizeBytes();
+      const uint32 argsCount = sig->getArgumentsLength();
+
+      for (uint32 i = 0; i < argsCount; i++) {
+        callArgsSize += sig->getArgumentType(i)->stackSizeBytes();
+      }
+
       for (Expr* arg : c->arguments) {
         processScope(arg, ctx);
-        callArgsSize += arg->resultType->stackSizeBytes();
       }
 
       if (callArgsSize > ctx.callArgsSpace) {
@@ -1322,6 +1328,12 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
       CASTED_VAR(a, AssertStatement, node)
       processScope(a->condition, ctx);
       processScope(a->message, ctx);
+      return;
+    }
+
+    case AST_ExprStatement: {
+      CASTED_VAR(e, ExprStatement, node)
+      processScope(e->expression, ctx);
       return;
     }
 

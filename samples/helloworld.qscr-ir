@@ -118,7 +118,7 @@ INSTRUCTIONS = {
   [  35] RET          
 
   # FUNCTION START: main
-  [  36] STACKALLOC    8
+  [  36] STACKALLOC    16
   [  37] PUSHLINE      16
   [  38] STORECONST32  4 2
   [  39] PUSHLINE      17
@@ -131,13 +131,13 @@ INSTRUCTIONS = {
   [  46] SWRITE32      r01 0
   [  47] PUSHLINE      20
   [  48] LFUNCLOOKUP   0 r01
-  [  49] STORECONST8   7 15
+  [  49] STORECONST8   15 15
   [  50] INVOKE32      r01 r00
   [  51] SWRITE32      r00 0
   [  52] PUSHLINE      21
   [  53] SREAD32       r00 4
   [  54] SWRITE32      r00 0
-  [  55] STACKFREE     8
+  [  55] STACKFREE     16
   [  56] RET          
 
   # FUNCTION START: vec2f.<constructor>
