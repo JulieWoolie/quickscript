@@ -3,6 +3,8 @@
 
 #include "../common.h"
 
+#define STACK_START_SIZE 1024 * 64
+
 class StackMemory {
   uint8* m_buf = nullptr;
   uint64 m_cap = 0;
