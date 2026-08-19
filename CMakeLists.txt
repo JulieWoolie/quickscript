@@ -41,7 +41,6 @@ add_executable(quickscript src/main.cpp
         src/codegen/CompilerContext.h
         src/interpreter/StackMemory.cc
         src/interpreter/StackMemory.h
-        src/interpreter/Stack.h
         src/types/ScriptType.h
         src/types/ScriptType.cc
         src/types/PrimitiveScriptType.cc
