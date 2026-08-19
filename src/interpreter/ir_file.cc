@@ -311,7 +311,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
     }
 
     fprintf(printFile, "\n  [%4d] ", instrCount);
-    printInstructionToString(buf, printFile);
+    printInstructionToString(buf, printFile, stringPool);
 
     instrOff += LENGTH_INSTRUCTION;
     instrCount++;
