@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "../stringtable.h"
-#include "../interpreter/nativeinterface.h"
 #include "../parse/syntaxtree.h"
 #include "../parse/token.h"
 #include "../types/types.h"

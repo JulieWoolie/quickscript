@@ -1,10 +1,7 @@
 #ifndef QUICKSCRIPT_NATIVEINTERFACE_H
 #define QUICKSCRIPT_NATIVEINTERFACE_H
 
-#include <vector>
-
 #include "../common.h"
-#include "../types/types.h"
 
 struct QsString {
   uint32 length = 0;
@@ -66,26 +63,6 @@ class NativeCall {
     uint8* allocHeap(uint64 size);
 
     void heapFree(uint8* addr);
-};
-
-typedef void (*NativeFunction)(NativeCall* call);
-
-struct NativeBinding {
-  std::string name;
-  void* data = nullptr;
-  ScriptType* type = nullptr;
-};
-
-class Bindings {
-  std::vector<NativeBinding> m_bindings;
-
-  public:
-    std::vector<NativeBinding>* getBindings();
-
-    void putConstantF64(conststring name, float64 x);
-    void putConstantF32(conststring name, float32 x);
-
-    void putFunction(conststring name, FunctionSignature* signature, NativeFunction func);
 };
 
 #endif //QUICKSCRIPT_NATIVEINTERFACE_H

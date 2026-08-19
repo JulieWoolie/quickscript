@@ -1,5 +1,7 @@
 #include "nativeinterface.h"
 
+#include <bit>
+
 #define ARGGET(idx, type) return *((type*) (m_args + idx));
 
 void NativeCall::setReturnValue(uint64 value) {
@@ -105,12 +107,3 @@ uint8* NativeCall::allocHeap(uint64 size) {
 void NativeCall::heapFree(uint8* addr) {
   free(addr);
 }
-
-std::vector<NativeBinding>* Bindings::getBindings() {
-  return &m_bindings;
-}
-
-void Bindings::putFunction(conststring name, FunctionSignature* signature, NativeFunction func) {
-  m_bindings.emplace_back(name, (void*) func, signature);
-}
-

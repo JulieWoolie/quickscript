@@ -38,13 +38,11 @@ SemanticContext::SemanticContext(
   TypeTable& types,
   StringTable& strings,
   CompilerErrors& errors,
-  Bindings& bindings,
   NoFreeAllocator& allocator
 )
   : m_types(types),
     m_strings(strings),
     m_errors(errors),
-    m_bindings(bindings),
     m_allocator(allocator)
 {
 
@@ -173,10 +171,6 @@ StringTable& SemanticContext::getStrings() const {
 
 CompilerErrors& SemanticContext::getErrors() const {
   return m_errors;
-}
-
-Bindings& SemanticContext::getBindings() const {
-  return m_bindings;
 }
 
 NoFreeAllocator& SemanticContext::getAllocator() {

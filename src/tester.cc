@@ -412,10 +412,9 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   }
 
   TypeTable lookup = TypeTable();
-  Bindings bindings;
 
   if (result->nodeKind() == AST_ScriptFileStatement) {
-    SemanticContext ctx = SemanticContext(lookup, table, errors, bindings, allocator);
+    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
     runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
   }

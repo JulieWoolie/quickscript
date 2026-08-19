@@ -17,11 +17,6 @@
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
 
-Bindings createStandardBindings() {
-  Bindings bindings;
-  return bindings;
-}
-
 int32 main(int32 argc, cstring argv[]) {
   ProgramSettings settings;
   ParseResult res = parseSettings(settings, argc, argv);
@@ -67,9 +62,8 @@ int32 main(int32 argc, cstring argv[]) {
   }
 
   TypeTable lookup = TypeTable();
-  Bindings bindings = createStandardBindings();
 
-  SemanticContext ctx = SemanticContext(lookup, table, errors, bindings, pool);
+  SemanticContext ctx = SemanticContext(lookup, table, errors, pool);
   runSemanticAnalysis(sfs, ctx);
 
   if (settings.printAst & PRINTAST_AFTER_ANALYSIS) {

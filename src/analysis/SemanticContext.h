@@ -4,7 +4,6 @@
 #include "../allocator.h"
 #include "../errors.h"
 #include "../stringtable.h"
-#include "../interpreter/nativeinterface.h"
 #include "../parse/syntaxtree.h"
 #include "../types/TypeTable.h"
 
@@ -25,7 +24,6 @@ class SemanticContext {
   TypeTable& m_types;
   StringTable& m_strings;
   CompilerErrors& m_errors;
-  Bindings& m_bindings;
   NoFreeAllocator& m_allocator;
 
   std::vector<ScriptType*> m_expectedTypes;
@@ -61,7 +59,6 @@ class SemanticContext {
       TypeTable& types,
       StringTable& strings,
       CompilerErrors& errors,
-      Bindings& bindings,
       NoFreeAllocator& allocator
     );
 
@@ -110,8 +107,6 @@ class SemanticContext {
     StringTable& getStrings() const;
 
     CompilerErrors& getErrors() const;
-
-    Bindings& getBindings() const;
 
     NoFreeAllocator& getAllocator();
 
