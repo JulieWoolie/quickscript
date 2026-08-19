@@ -41,8 +41,6 @@ add_executable(quickscript src/main.cpp
         src/codegen/CompilerContext.h
         src/interpreter/StackMemory.cc
         src/interpreter/StackMemory.h
-        src/interpreter/HeapMemory.cc
-        src/interpreter/HeapMemory.h
         src/interpreter/Stack.h
         src/types/ScriptType.h
         src/types/ScriptType.cc
@@ -81,4 +79,5 @@ add_executable(quickscript src/main.cpp
         src/types/ScriptClosureType.h
         src/interpreter/ir_file.cc
         src/interpreter/opcode_printer.h
-        src/interpreter/opcode_printer.cc)
+        src/interpreter/opcode_printer.cc
+        src/interpreter/heap_mem.h)
