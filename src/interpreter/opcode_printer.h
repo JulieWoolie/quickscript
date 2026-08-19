@@ -10,6 +10,6 @@
 // deno-scripts/opcode-gen.ts
 //
 
-void printInstructionToString(uint8* buf, FILE* out);
+void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
 #endif // OPCODE_PRINTER_H

@@ -6,7 +6,7 @@ function getSignatureString(params: InstructionParam[]): string {
     if (i != 0) {
       sig += ","
     }
-    sig += `${v.typename}`
+    sig += `${v.name}:${v.typename}`
   })
   return sig
 }
@@ -39,7 +39,7 @@ export async function generatePrinterFunction(res: OpCodeGenResult) {
 
 ${FILE_HEADER}
 
-void printInstructionToString(uint8* buf, FILE* out);
+void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
 #endif // OPCODE_PRINTER_H`
 
@@ -51,7 +51,7 @@ ${FILE_HEADER}
 
 static conststring getRegistryName(uint8 r) {${generateRegistryStringNameFunc()}}
 
-void printInstructionToString(uint8* buf, FILE* out) {
+void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
   const opcode code = *reinterpret_cast<opcode*>(buf);
   fprintf(out, "%-${getLongestName(res.codes)}s", opcode_name(code));
   
@@ -105,12 +105,21 @@ void printInstructionToString(uint8* buf, FILE* out) {
           break
       }
 
+      if (p.name == "typeindex") {
+        formatSpec = "TYPE[%d]"
+      }
+
       if (valExpr.length == 0) {
         if (tn == "uint8") {
           valExpr = `*(buf + ${off})`
         } else {
           valExpr = `*reinterpret_cast<${tn}*>(buf + ${off})`
         }
+      }
+
+      if (p.name == "straddr" || p.name == "funcName") {
+        formatSpec = "STRINGS[off=%llu] # %.*s"
+        valExpr += `, *reinterpret_cast<uint32*>(strPool + ${valExpr}), reinterpret_cast<char*>(strPool + sizeof(uint32) + ${valExpr})`
       }
 
       out += `\n      fprintf(out, " ${formatSpec}", ${valExpr});`

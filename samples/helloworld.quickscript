@@ -17,6 +17,7 @@ int32 main() {
   if IS_ENABLED {
     a *= SOMETHING
   }
+  string strVal = "Hello, world!"
   a = fibonacci(15)
   return a
 }

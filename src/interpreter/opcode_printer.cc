@@ -75,7 +75,7 @@ static conststring getRegistryName(uint8 r) {
   }
 }
 
-void printInstructionToString(uint8* buf, FILE* out) {
+void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
   const opcode code = *reinterpret_cast<opcode*>(buf);
   fprintf(out, "%-13s", opcode_name(code));
   
@@ -84,21 +84,166 @@ void printInstructionToString(uint8* buf, FILE* out) {
     case OP_RET:
       break;
     case OP_PUSHLINE:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      break;
     case OP_JMP:
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       break;
     case OP_JMPI0:
     case OP_JMPN0:
-    case OP_LFUNCLOOKUP:
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, " %s", getRegistryName(*(buf + 6)));
       break;
     case OP_MOV:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      break;
+    case OP_LOADCONST8:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %d", *(buf + 3));
+      break;
+    case OP_LOADCONST16:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %d", *reinterpret_cast<uint16*>(buf + 3));
+      break;
+    case OP_LOADCONST32:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 3));
+      break;
+    case OP_LOADCONST64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      break;
+    case OP_LOADCONSTSTR:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " STRINGS[off=%llu] # %.*s", *reinterpret_cast<uint64*>(buf + 3), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 3)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 3)));
+      break;
+    case OP_STACKALLOC:
+    case OP_STACKFREE:
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 2));
+      break;
+    case OP_SREAD8:
+    case OP_SREAD16:
+    case OP_SREAD32:
+    case OP_SREAD64:
+    case OP_GREAD8:
+    case OP_GREAD16:
+    case OP_GREAD32:
+    case OP_GREAD64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      break;
+    case OP_SWRITE8:
+    case OP_SWRITE16:
+    case OP_SWRITE32:
+    case OP_SWRITE64:
+    case OP_GWRITE8:
+    case OP_GWRITE16:
+    case OP_GWRITE32:
+    case OP_GWRITE64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      break;
+    case OP_STORECONST8:
+    case OP_GSTORECONST8:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " %d", *(buf + 6));
+      break;
+    case OP_STORECONST16:
+    case OP_GSTORECONST16:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " %d", *reinterpret_cast<uint16*>(buf + 6));
+      break;
+    case OP_STORECONST32:
+    case OP_GSTORECONST32:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 6));
+      break;
+    case OP_STORECONST64:
+    case OP_GSTORECONST64:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 6));
+      break;
+    case OP_GETSTACKPTR:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      break;
+    case OP_CREAD8:
+    case OP_CREAD16:
+    case OP_CREAD32:
+    case OP_CREAD64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      fprintf(out, " %s", getRegistryName(*(buf + 11)));
+      break;
+    case OP_CWRITE8:
+    case OP_CWRITE16:
+    case OP_CWRITE32:
+    case OP_CWRITE64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      fprintf(out, " %s", getRegistryName(*(buf + 11)));
+      break;
+    case OP_HEAPALLOC:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      break;
+    case OP_HEAPFREE:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      break;
+    case OP_READOBJ8:
+    case OP_READOBJ16:
+    case OP_READOBJ32:
+    case OP_READOBJ64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 4));
+      break;
+    case OP_WRITEOBJ8:
+    case OP_WRITEOBJ16:
+    case OP_WRITEOBJ32:
+    case OP_WRITEOBJ64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 4));
+      break;
+    case OP_READIDX8:
+    case OP_READIDX16:
+    case OP_READIDX32:
+    case OP_READIDX64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " %s", getRegistryName(*(buf + 4)));
+      break;
+    case OP_WRITEIDX8:
+    case OP_WRITEIDX16:
+    case OP_WRITEIDX32:
+    case OP_WRITEIDX64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " %s", getRegistryName(*(buf + 4)));
+      break;
+    case OP_SETARGTYPE:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 6));
+      break;
+    case OP_LFUNCLOOKUP:
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " %s", getRegistryName(*(buf + 6)));
+      break;
+    case OP_NFUNCLOOKUP:
+      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " STRINGS[off=%llu] # %.*s", *reinterpret_cast<uint64*>(buf + 6), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 6)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 6)));
+      fprintf(out, " %s", getRegistryName(*(buf + 14)));
+      break;
     case OP_INVOKEV:
     case OP_INVOKE8:
     case OP_INVOKE16:
     case OP_INVOKE32:
     case OP_INVOKE64:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      break;
     case OP_I8TU8:
     case OP_I8TI16:
     case OP_I8TU16:
@@ -212,101 +357,6 @@ void printInstructionToString(uint8* buf, FILE* out) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
-    case OP_LOADCONST8:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %d", *(buf + 3));
-      break;
-    case OP_LOADCONST16:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %d", *reinterpret_cast<uint16*>(buf + 3));
-      break;
-    case OP_LOADCONST32:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 3));
-      break;
-    case OP_LOADCONST64:
-    case OP_LOADCONSTSTR:
-    case OP_SREAD8:
-    case OP_SREAD16:
-    case OP_SREAD32:
-    case OP_SREAD64:
-    case OP_SWRITE8:
-    case OP_SWRITE16:
-    case OP_SWRITE32:
-    case OP_SWRITE64:
-    case OP_GREAD8:
-    case OP_GREAD16:
-    case OP_GREAD32:
-    case OP_GREAD64:
-    case OP_GWRITE8:
-    case OP_GWRITE16:
-    case OP_GWRITE32:
-    case OP_GWRITE64:
-    case OP_HEAPALLOC:
-    case OP_HEAPFREE:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
-      break;
-    case OP_STACKALLOC:
-    case OP_STACKFREE:
-      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 2));
-      break;
-    case OP_STORECONST8:
-    case OP_GSTORECONST8:
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " %d", *(buf + 6));
-      break;
-    case OP_STORECONST16:
-    case OP_GSTORECONST16:
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " %d", *reinterpret_cast<uint16*>(buf + 6));
-      break;
-    case OP_STORECONST32:
-    case OP_GSTORECONST32:
-    case OP_SETARGTYPE:
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 6));
-      break;
-    case OP_STORECONST64:
-    case OP_GSTORECONST64:
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 6));
-      break;
-    case OP_GETSTACKPTR:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      break;
-    case OP_CREAD8:
-    case OP_CREAD16:
-    case OP_CREAD32:
-    case OP_CREAD64:
-    case OP_CWRITE8:
-    case OP_CWRITE16:
-    case OP_CWRITE32:
-    case OP_CWRITE64:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
-      fprintf(out, " %s", getRegistryName(*(buf + 11)));
-      break;
-    case OP_READOBJ8:
-    case OP_READOBJ16:
-    case OP_READOBJ32:
-    case OP_READOBJ64:
-    case OP_WRITEOBJ8:
-    case OP_WRITEOBJ16:
-    case OP_WRITEOBJ32:
-    case OP_WRITEOBJ64:
-      fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %s", getRegistryName(*(buf + 3)));
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 4));
-      break;
-    case OP_READIDX8:
-    case OP_READIDX16:
-    case OP_READIDX32:
-    case OP_READIDX64:
-    case OP_WRITEIDX8:
-    case OP_WRITEIDX16:
-    case OP_WRITEIDX32:
-    case OP_WRITEIDX64:
     case OP_LSHIFT:
     case OP_RSHIFT:
     case OP_BAND:
@@ -439,11 +489,6 @@ void printInstructionToString(uint8* buf, FILE* out) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
-      break;
-    case OP_NFUNCLOOKUP:
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 6));
-      fprintf(out, " %s", getRegistryName(*(buf + 14)));
       break;
     default:
       break;
