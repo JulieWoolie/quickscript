@@ -3,10 +3,16 @@
 
 #include "../common.h"
 
+#define STRING_POOL_GROWTH 512
+
 struct PoolOffsetRewrite {
-  uint64 replacedOffset;
-  uint64 replaceWith;
+  uint64* replacedOffset;
+  uint64* replaceWith;
   uint32 len;
+
+  PoolOffsetRewrite(uint64* replacedOffsets, uint64* replacedWith, uint32 len);
+
+  ~PoolOffsetRewrite();
 };
 
 class StringPool {
@@ -21,9 +27,9 @@ class StringPool {
     uint32 getLength(uint64 poolOffset) const;
     uint8* getCharacterData(uint64 poolOffset) const;
 
-    uint64 emplaceString(uint32 len, uint8* data);
+    uint64 emplaceString(uint32 len, const uint8* data);
 
-    void emplacePoolData(uint8* data, uint64 len);
+    PoolOffsetRewrite emplacePoolData(uint8* data, uint64 len);
 };
 
 
