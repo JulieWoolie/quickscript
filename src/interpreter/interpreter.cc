@@ -505,14 +505,6 @@ void Interpreter::run() {
      *   - _ CWRITE64
      *   - _ HEAPALLOC
      *   - _ HEAPFREE
-     *   - _ READOBJ8
-     *   - _ READOBJ16
-     *   - _ READOBJ32
-     *   - _ READOBJ64
-     *   - _ WRITEOBJ8
-     *   - _ WRITEOBJ16
-     *   - _ WRITEOBJ32
-     *   - _ WRITEOBJ64
      *   - _ READIDX8
      *   - _ READIDX16
      *   - _ READIDX32
@@ -529,12 +521,6 @@ void Interpreter::run() {
      *   - _ INVOKE16
      *   - _ INVOKE32
      *   - _ INVOKE64
-     *   - _ BAND
-     *   - _ BOR
-     *   - _ BXOR
-     *   - _ LAND
-     *   - _ LOR
-     *   - _ LXOR
      *   - _ EQARR
      *   - _ EQSTRUCT
      *   - _ NEQARR
