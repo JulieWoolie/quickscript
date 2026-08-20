@@ -23,6 +23,19 @@ PoolOffsetRewrite::~PoolOffsetRewrite() {
   len = 0;
 }
 
+uint64 PoolOffsetRewrite::findReplacement(const uint64 stringAddr) const {
+  if (len == 0) {
+    return stringAddr;
+  }
+  for (uint32 i = 0; i < len; i++) {
+    if (replacedOffset[i] != stringAddr) {
+      continue;
+    }
+    return replaceWith[i];
+  }
+  return stringAddr;
+}
+
 StringPool::StringPool() {
 
 }

@@ -15,6 +15,8 @@ struct PoolOffsetRewrite {
   PoolOffsetRewrite(uint64* replacedOffsets, uint64* replacedWith, uint32 len);
 
   ~PoolOffsetRewrite();
+
+  uint64 findReplacement(uint64 stringAddr) const;
 };
 
 class StringPool {
