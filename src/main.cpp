@@ -11,32 +11,20 @@
 #include "tester.h"
 #include "analysis/transformer.h"
 #include "codegen/compiler.h"
+#include "interpreter/interpreter.h"
 #include "interpreter/ir_file.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
 
-int32 main(int32 argc, cstring argv[]) {
-  ProgramSettings settings;
-  ParseResult res = parseSettings(settings, argc, argv);
-
-  if (res == RES_FAILED || settings.command == CMD_HELP) {
-    showHelpMessage();
-    return EXIT_SUCCESS;
-  }
-
-  if (settings.command == CMD_TESTS) {
-    runTests(settings);
-    return EXIT_SUCCESS;
-  }
-
+static bool compileBytecode(const ProgramSettings& settings, BytecodeFile* out) {
   std::string fname = std::string(settings.inputFile);
   std::ifstream file(fname);
 
   if (!file.is_open()) {
     printf("File '%s' doesn't exist or can't be read.\n", fname.c_str());
-    return EXIT_FAILURE;
+    return false;
   }
 
   std::string file_contents { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
@@ -73,7 +61,7 @@ int32 main(int32 argc, cstring argv[]) {
   }
 
   if (errors.getErrorCount() != 0) {
-    return EXIT_FAILURE;
+    return false;
   }
 
   runSemanticTransformer(ctx, sfs);
@@ -84,25 +72,60 @@ int32 main(int32 argc, cstring argv[]) {
     pv.acceptScriptFileStatement(sfs);
   }
 
-  if (settings.command == CMD_COMPILE) {
-    BytecodeFile bfile = compile(ctx);
-    uint64 byteArraySize = 0;
+  *out = compile(ctx);
+  return true;
+}
 
-    std::string outFile = std::string(settings.outputFile);
-    FILE* openFile = fopen(outFile.c_str(), "wb");
+static void compileSource(const BytecodeFile& bfile, const ProgramSettings& settings) {
+  uint64 byteArraySize = 0;
 
-    if (settings.compileToBinary) {
-      uint8* savedData = serializeBytecodeFile(bfile, &byteArraySize);
-      fwrite(savedData, 1, byteArraySize, openFile);
-    } else {
-      printBytecodeFile(bfile, openFile);
-    }
+  std::string outFile = std::string(settings.outputFile);
+  FILE* openFile = fopen(outFile.c_str(), "wb");
 
-    fclose(openFile);
-
-    printf("Saved compiled output to '%s'\n", outFile.c_str());
+  if (settings.compileToBinary) {
+    uint8* savedData = serializeBytecodeFile(bfile, &byteArraySize);
+    fwrite(savedData, 1, byteArraySize, openFile);
+  } else {
+    printBytecodeFile(bfile, openFile);
   }
 
+  fclose(openFile);
+
+  printf("Saved compiled output to '%s'\n", outFile.c_str());
+}
+
+static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& settings) {
+  VirtualMachine vm;
+  vm.addBytecodeFile(bfile);
   return EXIT_SUCCESS;
+}
+
+int32 main(int32 argc, cstring argv[]) {
+  ProgramSettings settings;
+  const ParseResult res = parseSettings(settings, argc, argv);
+
+  if (res == RES_FAILED || settings.command == CMD_HELP) {
+    showHelpMessage();
+    return EXIT_SUCCESS;
+  }
+
+  if (settings.command == CMD_TESTS) {
+    runTests(settings);
+    return EXIT_SUCCESS;
+  }
+
+  BytecodeFile bfile;
+  const bool successfullyCompiled = compileBytecode(settings, &bfile);
+
+  if (!successfullyCompiled) {
+    return EXIT_FAILURE;
+  }
+
+  if (settings.command == CMD_COMPILE) {
+    compileSource(bfile, settings);
+    return EXIT_SUCCESS;
+  }
+
+  return runCompiledFile(bfile, settings);
 }
 
