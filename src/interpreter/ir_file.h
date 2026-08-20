@@ -77,6 +77,9 @@ struct BytecodeFile {
   uint64 instructionsSize = 0;
 
   uint64 globalScopeSize = 0;
+
+  BytecodeFile();
+  ~BytecodeFile();
 };
 
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut);

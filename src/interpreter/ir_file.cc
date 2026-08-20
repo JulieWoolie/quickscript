@@ -102,6 +102,14 @@ static void writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
   }
 }
 
+BytecodeFile::BytecodeFile() {
+
+}
+
+BytecodeFile::~BytecodeFile() {
+
+}
+
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   BinaryWriter writer;
   writer.len = 0;
