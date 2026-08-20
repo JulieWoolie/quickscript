@@ -102,9 +102,7 @@ function generalOperations() {
   byteSizedOpCode("LOADCONST", [reg("out"), sd("val")], [
       "%REG:out% = %CONST:val,%SIZE%%;"
   ])
-  opCode("LOADCONSTSTR", [reg("out"), uint64("straddr")], [
-      ""
-  ])
+  opCode("LOADCONSTSTR", [reg("out"), uint64("straddr")])
 }
 
 function stackOperations() {
@@ -155,8 +153,14 @@ function heapOperations() {
 
   opCode("HEAPALLOC", [reg("out"), uint64("bytes")])
   opCode("HEAPFREE", [reg("addr"), uint64("bytes")])
-  byteSizedOpCode("READOBJ", [reg("obj"), reg("out"), uint32("off")])
-  byteSizedOpCode("WRITEOBJ", [reg("obj"), reg("val"), uint32("off")])
+
+  byteSizedOpCode("READOBJ", [reg("obj"), reg("out"), uint32("off")], [
+      "%REG:out% = *reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32%);"
+  ])
+
+  byteSizedOpCode("WRITEOBJ", [reg("obj"), reg("val"), uint32("off")], [
+      "*reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32%) = %REG:out,%UTYPE%%;"
+  ])
   byteSizedOpCode("READIDX", [reg("obj"), reg("out"), reg("idx")])
   byteSizedOpCode("WRITEIDX", [reg("obj"), reg("val"), reg("idx")])
 }
@@ -243,12 +247,21 @@ function integerBinaryOperations() {
 function booleanBinaryOperations() {
   currentCategory = "2.4.9.2 Boolean-only Binary Operations"
 
-  opCode("BAND", BINARY_ARGS)
-  opCode("BOR", BINARY_ARGS)
-  opCode("BXOR", BINARY_ARGS)
-  opCode("LAND", BINARY_ARGS)
-  opCode("LOR", BINARY_ARGS)
-  opCode("LXOR", BINARY_ARGS)
+  const operators = [
+    {name: "AND", bitwiseOp: "&", logicOp: "&&"},
+    {name: "OR", bitwiseOp: "|", logicOp: "||"},
+    {name: "XOR", bitwiseOp: "^", logicOp: ""},
+  ]
+
+  for (const {name, bitwiseOp, logicOp} of operators) {
+    opCode(`B${name}`, BINARY_ARGS, [`%REG:out% = %REG:lhs% ${bitwiseOp} %REG:rhs%;`])
+
+    if (logicOp.length != 0) {
+      opCode(`L${name}`, BINARY_ARGS, [`%REG:out% = %REG:lhs% ${logicOp} %REG:rhs%;`])
+    } else {
+      opCode(`L${name}`, BINARY_ARGS, [`%REG:out% = !%REG:lhs% != !%REG:rhs%;`])
+    }
+  }
 }
 
 function mathOperations() {

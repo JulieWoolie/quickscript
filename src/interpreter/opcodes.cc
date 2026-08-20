@@ -190,10 +190,10 @@ conststring opcode_name(opcode code) {
     case OP_LSHIFT: return "LSHIFT";
     case OP_RSHIFT: return "RSHIFT";
     case OP_BAND: return "BAND";
-    case OP_BOR: return "BOR";
-    case OP_BXOR: return "BXOR";
     case OP_LAND: return "LAND";
+    case OP_BOR: return "BOR";
     case OP_LOR: return "LOR";
+    case OP_BXOR: return "BXOR";
     case OP_LXOR: return "LXOR";
     case OP_ADDI8: return "ADDI8";
     case OP_ADDU8: return "ADDU8";

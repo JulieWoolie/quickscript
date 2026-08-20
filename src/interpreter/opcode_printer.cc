@@ -356,10 +356,10 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_LSHIFT:
     case OP_RSHIFT:
     case OP_BAND:
-    case OP_BOR:
-    case OP_BXOR:
     case OP_LAND:
+    case OP_BOR:
     case OP_LOR:
+    case OP_BXOR:
     case OP_LXOR:
     case OP_ADDI8:
     case OP_ADDU8:

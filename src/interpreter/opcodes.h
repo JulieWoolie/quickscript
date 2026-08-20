@@ -219,10 +219,10 @@
 
 // 2.4.9.2 Boolean-only Binary Operations
 #define OP_BAND            0x00B7
-#define OP_BOR             0x00B8
-#define OP_BXOR            0x00B9
-#define OP_LAND            0x00BA
-#define OP_LOR             0x00BB
+#define OP_LAND            0x00B8
+#define OP_BOR             0x00B9
+#define OP_LOR             0x00BA
+#define OP_BXOR            0x00BB
 #define OP_LXOR            0x00BC
 
 // 2.4.9.3 General Number Binary Operations

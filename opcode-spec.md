@@ -193,10 +193,10 @@
 | `LSHIFT`        | `0x00B5` | 11      | `lhs: register, rhs: register, out: register`        |
 | `RSHIFT`        | `0x00B6` | 11      | `lhs: register, rhs: register, out: register`        |
 | `BAND`          | `0x00B7` | 11      | `lhs: register, rhs: register, out: register`        |
-| `BOR`           | `0x00B8` | 11      | `lhs: register, rhs: register, out: register`        |
-| `BXOR`          | `0x00B9` | 11      | `lhs: register, rhs: register, out: register`        |
-| `LAND`          | `0x00BA` | 11      | `lhs: register, rhs: register, out: register`        |
-| `LOR`           | `0x00BB` | 11      | `lhs: register, rhs: register, out: register`        |
+| `LAND`          | `0x00B8` | 11      | `lhs: register, rhs: register, out: register`        |
+| `BOR`           | `0x00B9` | 11      | `lhs: register, rhs: register, out: register`        |
+| `LOR`           | `0x00BA` | 11      | `lhs: register, rhs: register, out: register`        |
+| `BXOR`          | `0x00BB` | 11      | `lhs: register, rhs: register, out: register`        |
 | `LXOR`          | `0x00BC` | 11      | `lhs: register, rhs: register, out: register`        |
 | `ADDI8`         | `0x00BD` | 11      | `lhs: register, rhs: register, out: register`        |
 | `ADDU8`         | `0x00BE` | 11      | `lhs: register, rhs: register, out: register`        |

@@ -99,6 +99,30 @@
     case OP_GETSTACKPTR:
       m_registers[args[0]] = reinterpret_cast<uint64>(stack);
       break;
+    case OP_READOBJ8:
+      m_registers[args[1]] = *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(2));
+      break;
+    case OP_READOBJ16:
+      m_registers[args[1]] = *reinterpret_cast<uint16*>(m_registers[args[0]] + READ_U32ARG(2));
+      break;
+    case OP_READOBJ32:
+      m_registers[args[1]] = *reinterpret_cast<uint32*>(m_registers[args[0]] + READ_U32ARG(2));
+      break;
+    case OP_READOBJ64:
+      m_registers[args[1]] = *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(2));
+      break;
+    case OP_WRITEOBJ8:
+      *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(2)) = REG_AS(args[0], uint8);
+      break;
+    case OP_WRITEOBJ16:
+      *reinterpret_cast<uint16*>(m_registers[args[0]] + READ_U32ARG(2)) = REG_AS(args[0], uint16);
+      break;
+    case OP_WRITEOBJ32:
+      *reinterpret_cast<uint32*>(m_registers[args[0]] + READ_U32ARG(2)) = REG_AS(args[0], uint32);
+      break;
+    case OP_WRITEOBJ64:
+      *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(2)) = REG_AS(args[0], uint64);
+      break;
     case OP_I8TU8:
       REG_AS(args[1], uint8) = static_cast<uint8>(REG_AS(args[0], int8));
       break;
@@ -434,6 +458,24 @@
       break;
     case OP_RSHIFT:
       m_registers[args[2]] = m_registers[args[0]] >> m_registers[args[1]];
+      break;
+    case OP_BAND:
+      m_registers[args[2]] = m_registers[args[0]] & m_registers[args[1]];
+      break;
+    case OP_LAND:
+      m_registers[args[2]] = m_registers[args[0]] && m_registers[args[1]];
+      break;
+    case OP_BOR:
+      m_registers[args[2]] = m_registers[args[0]] | m_registers[args[1]];
+      break;
+    case OP_LOR:
+      m_registers[args[2]] = m_registers[args[0]] || m_registers[args[1]];
+      break;
+    case OP_BXOR:
+      m_registers[args[2]] = m_registers[args[0]] ^ m_registers[args[1]];
+      break;
+    case OP_LXOR:
+      m_registers[args[2]] = !m_registers[args[0]] != !m_registers[args[1]];
       break;
     case OP_ADDI8:
       REG_AS(args[2], int8) = REG_AS(args[0], int8) + REG_AS(args[1], int8);
