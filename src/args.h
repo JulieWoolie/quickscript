@@ -17,7 +17,8 @@ typedef uint8 programcommand;
 
 struct ProgramArgs {
   int8* cdata = nullptr;
-  int32* lengths = nullptr;
+  uint32* lengths = nullptr;
+  uint32* starts = nullptr;
   uint32 count = 0;
 };
 

@@ -152,29 +152,42 @@ static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 
 static void collectFollowingArgsForProgram(ProgramSettings& out, const int32 argc, cstring argv[], const uint32 after) {
   uint64 totalLen = 0;
   const uint32 totalCount = argc - after - 1;
-  uint32 lenbuf[totalCount];
+  uint32 lengthBuffer[totalCount];
+  uint32 offsetBuffer[totalCount];
 
+  uint32 runningOffset = 0;
   for (uint32 i = after + 1; i < argc; i++) {
     const uint32 len = strlen(argv[i]);
     totalLen += len;
-    lenbuf[i - after - 1] = len;
+    lengthBuffer[i - after - 1] = len;
+    offsetBuffer[i - after - 1] = runningOffset;
+    runningOffset += len;
   }
 
-  uint64 memSize = totalLen + (totalCount * sizeof(uint32));
-  uint32* block = static_cast<uint32*>(malloc(memSize));
+  const uint64 memSize = (totalCount * sizeof(uint32) * 2) + totalLen;
+  uint8* memBlock = static_cast<uint8*>(malloc(memSize));
 
-  memcpy(block, lenbuf, totalCount);
-
-  int8* cdata = reinterpret_cast<int8*>(block + totalCount);
-  uint64 cdataOff = 0;
+  uint32* offsets = reinterpret_cast<uint32*>(memBlock);
+  uint32* lengths = reinterpret_cast<uint32*>(memBlock + (totalCount * sizeof(uint32)));
+  int8* cdata = reinterpret_cast<int8*>(memBlock + (totalCount * sizeof(uint32) * 2));
 
   for (uint32 i = after + 1; i < argc; i++) {
-    const conststring arg = argv[i];
-    const uint32 len = lenbuf[i - after - 1];
+    const uint32 argIdx = i - after - 1;
 
-    memcpy(cdata + cdataOff, arg, len);
-    cdataOff += len;
+    const uint32 len = lengthBuffer[argIdx];
+    const uint32 off = offsetBuffer[argIdx];
+    const conststring characters = argv[i];
+
+    offsets[argIdx] = off;
+    lengths[argIdx] = len;
+
+    memcpy(cdata + off, characters, len);
   }
+
+  out.runArgs.count = totalCount;
+  out.runArgs.lengths = lengths;
+  out.runArgs.starts = offsets;
+  out.runArgs.cdata = cdata;
 }
 
 static programcommand parseCommand(std::string_view view) {
