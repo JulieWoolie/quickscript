@@ -155,11 +155,11 @@ function heapOperations() {
   opCode("HEAPFREE", [reg("addr"), uint64("bytes")])
 
   byteSizedOpCode("READOBJ", [reg("obj"), reg("out"), uint32("off")], [
-      "%REG:out% = *reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32%);"
+      "%REG:out% = *reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE);"
   ])
 
   byteSizedOpCode("WRITEOBJ", [reg("obj"), reg("val"), uint32("off")], [
-      "*reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32%) = %REG:out,%UTYPE%%;"
+      "*reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE) = %REG:out,%UTYPE%%;"
   ])
   byteSizedOpCode("READIDX", [reg("obj"), reg("out"), reg("idx")])
   byteSizedOpCode("WRITEIDX", [reg("obj"), reg("val"), reg("idx")])
