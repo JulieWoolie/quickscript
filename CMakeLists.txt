@@ -79,4 +79,5 @@ add_executable(quickscript src/main.cpp
         src/interpreter/ir_file.cc
         src/interpreter/opcode_printer.h
         src/interpreter/opcode_printer.cc
-        src/interpreter/heap_mem.h)
+        src/interpreter/heap_mem.h
+        src/interpreter/interpreter.cc)
