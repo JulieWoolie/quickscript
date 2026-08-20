@@ -32,6 +32,7 @@ struct FunctionTableEntry {
   uint64 nameOffset = 0;
   typeindex signatureIndex = 0;
   uint64 startingInstruction = 0;
+  uint64 stackSize = 0;
 };
 
 struct TypeTableEntry {

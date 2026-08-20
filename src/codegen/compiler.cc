@@ -1026,25 +1026,12 @@ static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) 
 
   BytecodeWriter& writer = ctx.getWriter();
   const uint32 start = writer.getInstructionCounter();
-  const uint64 stackSize = scope->getStackSize();
-
-  if (stackSize != 0) {
-    writer.startInstr(OP_STACKALLOC);
-    writer.appendU64(scope->getStackSize());
-    writer.endInstr();
-  }
 
   for (Statement* statement : stat->functionBody->statements) {
     compileStatement(statement, ctx);
   }
 
   if (!ctx.wasReturnCalled()) {
-    if (stackSize != 0) {
-      writer.startInstr(OP_STACKFREE);
-      writer.appendU64(scope->getStackSize());
-      writer.endInstr();
-    }
-
     writer.startInstr(OP_RET);
     writer.endInstr();
   }
@@ -1166,11 +1153,6 @@ static void compileReturn(const ReturnStatement* ret, CompilerContext& ctx) {
   if (ret->value) {
     compileStoredExpr(ret->value->resultType, ret->value, ctx, 0, true);
   }
-
-  Scope* scope = ctx.getCurrentScope();
-  writer.startInstr(OP_STACKFREE);
-  writer.appendU64(scope->getStackSize());
-  writer.endInstr();
 
   writer.startInstr(OP_RET);
   writer.endInstr();

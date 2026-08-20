@@ -107,11 +107,8 @@ function generalOperations() {
 
 function stackOperations() {
   currentCategory = "2.4.2 Stack Memory OP Codes"
-  opCode("STACKALLOC", [uint64("bytes")])
-  opCode("STACKFREE", [uint64("bytes")])
   byteSizedOpCode("SREAD", [reg("out"), uint64("offset")])
   byteSizedOpCode("SWRITE", [reg("val"), uint64("offset")])
-
   byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")])
 }
 

@@ -97,6 +97,7 @@ static void writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
   for (uint32 i = 0; i < funcTableSize; i++) {
     FunctionTableEntry* te = &table[i];
     writer.writeU64(te->nameOffset);
+    writer.writeU64(te->stackSize);
     writer.writeU32(te->startingInstruction);
     writer.writeU32(te->signatureIndex);
   }
