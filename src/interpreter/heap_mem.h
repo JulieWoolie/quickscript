@@ -11,8 +11,10 @@ class HeapMemory {
     void freeBytes(void* ptr);
 
     QsArray allocArray(uint32 count, uint64 elemSize);
+    QsArray allocString(uint32 length);
 
-    QsString allocString(uint32 length);
+    QsArray allocConstArray(uint32 count, uint64 elemSize);
+    QsArray allocConstString(uint32 length);
 };
 
 #endif //QUICKSCRIPT_HEAP_MEM_H
