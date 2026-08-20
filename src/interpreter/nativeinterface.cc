@@ -67,37 +67,17 @@ QsString NativeCall::getStrArgument(uint32 idx) {
 }
 
 QsArray NativeCall::getArrayArgument(uint32 idx) {
-  const uint64 ptr = getU64Argument(idx);
-  uint32* addr = reinterpret_cast<uint32*>(ptr);
-
-  const uint32 len = addr[0];
-
-  QsArray str;
-  str.capacity = len;
-  str.data = reinterpret_cast<uint8*>(addr);
-
-  return str;
+  void* addr = reinterpret_cast<void*>(getU64Argument(idx));
+  return castToQsArray(addr);
 }
 
 QsObject NativeCall::getObjectArgument(uint32 idx) {
-  uint64 ptr = getU64Argument(idx);
-  uint8* addr = (uint8*) ptr;
-
-  QsObject obj;
-  obj.data = addr;
-
-  return obj;
+  void* addr = reinterpret_cast<void*>(getU64Argument(idx));
+  return castToQsObject(addr);
 }
 
 QsString NativeCall::getScriptString(uint64 heapAddr) {
-  uint32* addr = (uint32*) heapAddr;
-  const uint32 len = addr[0];
-
-  QsString str;
-  str.length = len;
-  str.charData = reinterpret_cast<int8*>(addr + 1);
-
-  return str;
+  return castToQsString(reinterpret_cast<void*>(heapAddr));
 }
 
 uint8* NativeCall::allocHeap(uint64 size) {
