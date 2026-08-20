@@ -2,31 +2,7 @@
 #define QUICKSCRIPT_NATIVEINTERFACE_H
 
 #include "../common.h"
-
-struct QsString {
-  uint32 length = 0;
-  int8* charData = nullptr;
-};
-
-struct QsArray {
-  uint32 capacity = 0;
-  uint8* data = nullptr;
-};
-
-struct QsObject {
-  uint8* data = nullptr;
-
-  int8 getI8Property(uint64 offset);
-  uint8 getU8Property(uint64 offset);
-  int16 getI16Property(uint64 offset);
-  uint16 getU16Property(uint64 offset);
-  int32 getI32Property(uint64 offset);
-  uint32 getU32Property(uint64 offset);
-  int64 getI64Property(uint64 offset);
-  uint64 getU64Property(uint64 offset);
-  float32 getF32Property(uint64 offset);
-  float64 getF64Property(uint64 offset);
-};
+#include "objects.h"
 
 class NativeCall {
   uint64* m_args = nullptr;

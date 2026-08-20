@@ -1,20 +1,18 @@
 #ifndef QUICKSCRIPT_HEAP_MEM_H
 #define QUICKSCRIPT_HEAP_MEM_H
 
-#include <cstdlib>
-
+#include "objects.h"
 #include "../common.h"
 
 class HeapMemory {
 
   public:
-    void* allocBytes(const uint64 bytes) {
-      return malloc(bytes);
-    }
+    void* allocBytes(uint64 bytes);
+    void freeBytes(void* ptr);
 
-    void freeBytes(void* ptr) {
-      return free(ptr);
-    }
+    QsArray allocArray(uint32 count, uint64 elemSize);
+
+    QsString allocString(uint32 length);
 };
 
 #endif //QUICKSCRIPT_HEAP_MEM_H

@@ -80,4 +80,7 @@ add_executable(quickscript src/main.cpp
         src/interpreter/opcode_printer.h
         src/interpreter/opcode_printer.cc
         src/interpreter/heap_mem.h
-        src/interpreter/interpreter.cc)
+        src/interpreter/interpreter.cc
+        src/interpreter/heap_mem.cc
+        src/interpreter/objects.h
+        src/interpreter/objects.cc)
