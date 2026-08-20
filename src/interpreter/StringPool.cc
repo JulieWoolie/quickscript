@@ -12,7 +12,15 @@ PoolOffsetRewrite::PoolOffsetRewrite(uint64* replacedOffsets, uint64* replacedWi
 }
 
 PoolOffsetRewrite::~PoolOffsetRewrite() {
+  if (!replacedOffset) {
+    return;
+  }
 
+  free(replacedOffset);
+
+  replacedOffset = nullptr;
+  replaceWith = nullptr;
+  len = 0;
 }
 
 StringPool::StringPool() {
@@ -30,23 +38,23 @@ StringPool::~StringPool() {
 }
 
 uint32 StringPool::getLength(const uint64 poolOffset) const {
-  return *reinterpret_cast<uint32*>(m_data + poolOffset);
+  return STRPOOL_LEN(m_data, poolOffset);
 }
 
-uint8* StringPool::getCharacterData(const uint64 poolOffset) const {
-  return m_data + poolOffset + sizeof(uint32);
+int8* StringPool::getCharacterData(const uint64 poolOffset) const {
+  return STRPOOL_DATA(m_data, poolOffset);
 }
 
 uint64 StringPool::emplaceString(const uint32 len, const uint8* data) {
   uint64 off = 0;
   while (off < m_len) {
-    uint32 eLen = *reinterpret_cast<uint32*>(m_data + off);
+    uint32 eLen = STRPOOL_LEN(m_data, off);
     if (eLen != len) {
       off += eLen + sizeof(uint32);
       continue;
     }
 
-    uint8* eContent = m_data + off + sizeof(uint32);
+    const int8* eContent = STRPOOL_DATA(m_data, off);
     if (memcmp(data, eContent, eLen) == 0) {
       return off;
     }
