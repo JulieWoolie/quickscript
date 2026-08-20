@@ -8,71 +8,92 @@ interface PlaceholderProcessor {
 interface PlaceholderContext {
   opcodeSize: number
   instr: Instruction
+
+  getArgOffset(name: string): number
 }
 
 const PROCESSORS: PlaceholderProcessor[] = [
   {
     placeholderStart: "reg",
     handle(args: string[], ctx: PlaceholderContext): string {
-      return `instr.bytes[${args}]`
+      const off = ctx.getArgOffset(args[0])
+      let regExpr = `m_registers[args[${ctx.getArgOffset(args[0])}]]`
+      if (args.length == 1) {
+        return regExpr
+      }
+      return `REG_AS(args[${off}], ${args[1]})`
+    }
+  },
+  {
+    placeholderStart: "const",
+    handle(args: string[], ctx: PlaceholderContext): string {
+      const off = ctx.getArgOffset(args[0])
+      let size = "8"
+
+      if (args.length > 1) {
+        size = args[1]
+      }
+
+      return `READ_U${size}ARG(${off})`
+    }
+  },
+  {
+    placeholderStart: "offset",
+    handle(args: string[], ctx: PlaceholderContext): string {
+      return `${ctx.getArgOffset(args[0])}`
     }
   }
 ]
 
 export async function generateEvaluatorSwitchStatement(res: OpCodeGenResult): Promise<void> {
-  let out: string = ``
+  let out: string = `
+${FILE_HEADER}
+// This file exists soley to be included into the interpreter 
+// file so the switch statement isn't log as hell
+// 
+  `
 
   for (const code of res.codes) {
     if (code.cSourceCode == undefined) {
       continue
     }
 
-    out += `\ncase OP_${code.opcode}: {`
-
-    let pOff = 0
-    for (const param of code.params) {
-      let tn = param.typename
-      if (tn == "register") {
-        tn = "uint8"
-      }
-
-      out += `\n  const ${tn} ${param.name} = *`
-
-      let mustCast = tn != "uint8"
-      if (mustCast) {
-        out += `*reinterpret_cast<${tn}*>`
-      }
-      if (mustCast || pOff > 0) {
-        out += "("
-      }
-      out += `instr.args`
-      if (pOff != 0) {
-        out += `+ ${pOff}`
-      }
-      if (mustCast || pOff > 0) {
-        out += ")"
-      }
-      out += ";"
-
-      pOff += param.size
-    }
+    out += `\n    case OP_${code.opcode}:`
 
     for (const line of code.cSourceCode) {
-      out += `\n  ${replacePlaceholders(line, res.opcodeSize, code)}`
+      const formattedLine = replacePlaceholders(line, res.opcodeSize, code)
+      out += `\n      ${formattedLine}`
+      if (!formattedLine.endsWith(";")) {
+        out += ";"
+      }
     }
 
-    out += `\n  break;`
-    out += `\n}`
+    out += `\n      break;`
   }
 
-  await writeToFile(out, "./evaluator.c")
+  await writeToFile(out, "../src/interpreter/evaluator.cc")
 }
 
 function replacePlaceholders(line: string, opcodeSize: number, instr: Instruction): string {
-  const ctx: PlaceholderContext = {instr, opcodeSize}
+  const ctx: PlaceholderContext = {
+    instr,
+    opcodeSize,
+
+    getArgOffset(name: string): number {
+      let off = 0
+      for (const p of instr.params) {
+        if (p.name != name) {
+          off += p.size
+          continue
+        }
+        return off
+      }
+      return 0
+    }
+  }
 
   for (const prop of PROCESSORS) {
-    const str = `%${prop.placeholderStart}`
+    const str = `%${prop.placeholderStart.toUpperCase()}`
     while (line.includes(str)) {
       const startIdx = line.indexOf(str)
       const endIdx = line.indexOf('%', startIdx + str.length)

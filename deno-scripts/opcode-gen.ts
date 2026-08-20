@@ -96,34 +96,56 @@ function generalOperations() {
   opCode("JMPN0", [uint32("to"), reg("condition")])
 
   opCode("MOV", [reg("from"), reg("to")], [
-      "registers[from] = registers[to];"
+      "%REG:to% = %REG:from%;"
   ])
 
   byteSizedOpCode("LOADCONST", [reg("out"), sd("val")], [
-      "registers[out] = val;"
+      "%REG:out% = %CONST:val,%SIZE%%;"
   ])
-  opCode("LOADCONSTSTR", [reg("out"), uint64("straddr")])
+  opCode("LOADCONSTSTR", [reg("out"), uint64("straddr")], [
+      ""
+  ])
 }
 
 function stackOperations() {
   currentCategory = "2.4.2 Stack Memory OP Codes"
-  byteSizedOpCode("SREAD", [reg("out"), uint64("offset")])
-  byteSizedOpCode("SWRITE", [reg("val"), uint64("offset")])
-  byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")])
+
+  byteSizedOpCode("SREAD", [reg("out"), uint64("offset")], [
+      "%REG:out% = READ_U%SIZE%(stack, READ_U%SIZE%ARG(%OFFSET:offset%));"
+  ])
+
+  byteSizedOpCode("SWRITE", [reg("val"), uint64("offset")], [
+      "WRITE_U%SIZE%(stack, READ_U64ARG(%OFFSET:offset%), %REG:val%);"
+  ])
+
+  byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")], [
+      "WRITE_U%SIZE%(stack, READ_U64ARG(%OFFSET:offset%), %CONST:value,%SIZE%%);"
+  ])
 }
 
 function globalStackOperations() {
   currentCategory = "2.4.3 Global Memory OP Codes"
 
-  byteSizedOpCode("GREAD", [reg("out"), uint64("offset")])
-  byteSizedOpCode("GWRITE", [reg("val"), uint64("offset")])
-  byteSizedOpCode("GSTORECONST", [uint32("offset"), sd("value")])
+  byteSizedOpCode("GREAD", [reg("out"), uint64("offset")], [
+    "%REG:out% = READ_U%SIZE%(global, READ_U%SIZE%ARG(%OFFSET:offset%));"
+  ])
+
+  byteSizedOpCode("GWRITE", [reg("val"), uint64("offset")], [
+    "WRITE_U%SIZE%(global, READ_U64ARG(%OFFSET:offset%), %REG:val%);"
+  ])
+
+  byteSizedOpCode("GSTORECONST", [uint32("offset"), sd("value")], [
+    "WRITE_U%SIZE%(global, READ_U64ARG(%OFFSET:offset%), %CONST:value,%SIZE%%);"
+  ])
 }
 
 function closureOperations() {
   currentCategory = "2.4.4 Closure OP Codes"
 
-  opCode("GETSTACKPTR", [reg("out")])
+  opCode("GETSTACKPTR", [reg("out")], [
+      "%REG:out% = reinterpret_cast<uint64>(stack);"
+  ])
+
   byteSizedOpCode("CREAD", [reg("closure"), uint64("off"), reg("out")])
   byteSizedOpCode("CWRITE", [reg("closure"), uint64("off"), reg("val")])
 }
@@ -166,8 +188,7 @@ function conversionOperations() {
       }
 
       const source: string[] = [
-        `const ${f.fullname} f = *reinterpret_cast<${f.fullname}*>(registers + in);`,
-        `registers[out] = static_cast<${t.fullname}>(f);`
+        `%REG:out,${t.fullname}% = static_cast<${t.fullname}>(%REG:in,${f.fullname}%);`
       ]
 
       opCode(`${f.shorthand}T${t.shorthand}`, UNARY_ARGS, source)
@@ -178,14 +199,28 @@ function conversionOperations() {
 function unaryOperations() {
   currentCategory = "2.4.8 Unary Operations"
 
-  opCode("BNEGATE", UNARY_ARGS)
-  opCode("LNEGATE", UNARY_ARGS)
+  opCode("BNEGATE", UNARY_ARGS, ["%REG:out% = ~%REG:in%;"])
+  opCode("LNEGATE", UNARY_ARGS, ["%REG:out% = %REG:in% ? 0 : 1;"])
 
   const numberUnaryOperations = ["NEG", "INC", "DEC"]
 
   for (const op of numberUnaryOperations) {
     for (const ts of NUMBER_TYPES) {
-      opCode(`${op}${ts.shorthand}`, UNARY_ARGS)
+      let source = ""
+      if (op == "NEG") {
+        let typeName
+        if (!ts.signed) {
+          typeName = ts.fullname.substring(1)
+        } else {
+          typeName = ts.fullname
+        }
+
+        source = `%REG:out,${typeName}% = -%REG:in,${typeName}%;`
+      } else {
+        source = `%REG:out,${ts.fullname}% = %REG:in,${ts.fullname}% ${op == 'INC' ? '+' : '-'} 1;`
+      }
+
+      opCode(`${op}${ts.shorthand}`, UNARY_ARGS, [source])
     }
   }
 }
@@ -200,7 +235,7 @@ function integerBinaryOperations() {
 
   for (const op of operations) {
     opCode(op.code, BINARY_ARGS, [
-      `registers[out] = REGREAD(lhs, uint64) ${op.operator} REGREAD(rhs, uint64);`
+      `%REG:out% = %REG:lhs% ${op.operator} %REG:rhs%;`
     ])
   }
 }
@@ -221,15 +256,18 @@ function mathOperations() {
 
   for (const mathOp of MATH_OPERATIONS) {
     for (const type of NUMBER_TYPES) {
-      let source: string[]
+      let source: string
+      const tn = type.fullname
 
-      if (mathOp.type == "native") {
-        source = [`registers[out] = REGREAD(lhs, ${type.fullname}) ${mathOp.operator} REGREAD(rhs, ${type.fullname});`]
+      if (mathOp.name == "mod" && !type.integral) {
+        source = `%REG:out,${tn}% = fmod(%REG:lhs,${tn}%, %REG:rhs,${tn}%);`
+      } else if (mathOp.type == "native") {
+        source = `%REG:out,${tn}% = %REG:lhs,${tn}% ${mathOp.operator} %REG:rhs,${tn}%;`
       } else {
-        source = [`registers[out] = ${mathOp.functionName}(REGREAD(lhs, ${type.fullname}), REGREAD(rhs, ${type.fullname}));`]
+        source = `%REG:out,${tn}% = ${mathOp.functionName}(%REG:lhs,${tn}%, %REG:rhs,${tn}%);`
       }
 
-      opCode(`${mathOp.name.toUpperCase()}${type.shorthand}`, BINARY_ARGS, source)
+      opCode(`${mathOp.name.toUpperCase()}${type.shorthand}`, BINARY_ARGS, [source])
     }
   }
 }
@@ -243,7 +281,7 @@ function comparisonOperators() {
   ]
   for (const eqOp of equalityOperators) {
     byteSizedOpCode(eqOp.name, BINARY_ARGS, [
-        `registers[out] = REGREAD(lhs, %UTYPE%) ${eqOp.operator} REGREAD(rhs, %UTYPE%);`
+        `%REG:out% = %REG:lhs% ${eqOp.operator} %REG:rhs%;`
     ])
 
     opCode(`${eqOp.name}ARR`, BINARY_ARGS)
@@ -258,8 +296,10 @@ function comparisonOperators() {
   ]
   for (const cmpOp of comparisonOperators) {
     for (const ts of NUMBER_TYPES) {
+      const tn = ts.fullname
+
       opCode(`${cmpOp.name}${ts.shorthand}`, BINARY_ARGS, [
-          `registers[out] = REGREAD(lhs, ${ts.fullname}) ${cmpOp.operator} REGREAD(rhs, ${ts.fullname});`
+          `%REG:out% = %REG:lhs,${tn}% ${cmpOp.operator} %REG:rhs,${tn}%;`
       ])
     }
     opCode(`${cmpOp.name}ARR`, BINARY_ARGS)
