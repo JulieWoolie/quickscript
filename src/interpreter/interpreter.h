@@ -9,19 +9,13 @@
 #include "opcodes.h"
 #include "StackMemory.h"
 #include "StringPool.h"
+#include "../args.h"
 #include "../common.h"
 
 #define REGISTERS_COUNT 64
 #define MAX_ARGS 128
 #define MAX_CALL_DEPTH 1024
-
-struct Instruction {
-  opcode code;
-  uint8 args[LENGTH_ARGS];
-};
-
-static_assert(sizeof(Instruction) == LENGTH_INSTRUCTION);
-static_assert(offsetof(Instruction, args) == LENGTH_OPCODE);
+#define NO_RETURN_ADDR 0xFFFFFFFF
 
 struct CallFrame {
   uint32 line = 0;
@@ -32,7 +26,7 @@ struct CallFrame {
   uint8* stackBase = nullptr;
   uint64 allocatedSize = 0;
 
-  uint32 returnAddr = 0;
+  uint32 returnAddr = NO_RETURN_ADDR;
 };
 
 class InstructionBuf {
@@ -46,7 +40,7 @@ class InstructionBuf {
 
     void insertInstructions(const uint8* instrBuf, uint64 len);
 
-    void getInstruction(Instruction* out, uint32 instrIndex) const;
+    void getInstruction(opcode* code, uint8** args, uint32 instrIndex) const;
 
     uint64 length() const;
 
@@ -71,9 +65,10 @@ class GlobalMemorySpace {
     uint64 size() const;
 };
 
-class ScriptFunction {
+struct ScriptFunction {
   uint32 firstInstrIndex = 0;
   uint64 nameOffset = 0;
+  uint64 stackSize = 0;
   FunctionSignature* signature = nullptr;
 };
 
@@ -91,7 +86,9 @@ class VirtualMachine {
     VirtualMachine();
     ~VirtualMachine();
 
-    void addBytecodeFile(const BytecodeFile& file);
+    uint32 addBytecodeFile(const BytecodeFile& file);
+
+    int32 beginExecution(uint32 funcEntryIdx, const ProgramArgs& args);
 
     TypeTable& getTypes();
     StringPool& getStringPool();
@@ -101,7 +98,7 @@ class VirtualMachine {
     std::vector<ScriptFunction>& getFunctions();
 };
 
-class InterpreterState {
+class Interpreter {
   VirtualMachine& m_vm;
 
   StackMemory m_stack;
@@ -112,15 +109,21 @@ class InterpreterState {
   CallFrame m_callFrames[MAX_CALL_DEPTH];
   uint32 m_frameCount = 0;
 
+  uint64 m_instrCount;
+
   public:
-    explicit InterpreterState(VirtualMachine& vm);
-    ~InterpreterState();
+    explicit Interpreter(VirtualMachine& vm);
+    ~Interpreter();
 
     CallFrame* getCallFrame(uint32 off = 0);
     CallFrame* pushNewFrame();
     void popCallFrame();
 
     VirtualMachine& getVirtualMachine() const;
+
+    int32 beginExecution(const ScriptFunction& func, uint64 argsArrayAddr);
+
+    void run();
 };
 
 #endif //QUICKSCRIPT_INTERPRETER_H

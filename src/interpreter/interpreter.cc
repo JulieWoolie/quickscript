@@ -24,16 +24,16 @@ void InstructionBuf::insertInstructions(const uint8* instrBuf, const uint64 len)
   m_len = newLen;
 }
 
-void InstructionBuf::getInstruction(Instruction* out, const uint32 instrIndex) const {
+void InstructionBuf::getInstruction(opcode* code, uint8** args, uint32 instrIndex) const {
   uint64 offset = instrIndex;
   offset *= LENGTH_INSTRUCTION;
 
   if (offset > m_len) {
-    out->code = OP_NOP;
+    *code = OP_NOP;
     return;
   }
 
-  memcpy(out, m_buf + offset, LENGTH_INSTRUCTION);
+  *args = m_buf + offset + LENGTH_OPCODE;
 }
 
 uint64 InstructionBuf::length() const {
@@ -288,7 +288,28 @@ static void loadTypes(TypeTable& table, const BytecodeFile& file, TypeReindexLis
   }
 }
 
-void VirtualMachine::addBytecodeFile(const BytecodeFile& file) {
+static void addFunctionEntries(
+  const TypeTable& types,
+  const BytecodeFile& file,
+  const InstructionRewrite& rewrites,
+  std::vector<ScriptFunction>& functions
+) {
+  FunctionTableEntry* funcTable = file.funcTable;
+  const uint32 funcCount = file.funcTableEntries;
+
+  for (uint32 i = 0; i < funcCount; i++) {
+    FunctionTableEntry* fte = &funcTable[i];
+
+    const uint32 firstInstr = fte->startingInstruction + rewrites.jumpAddrOffset;
+    const uint64 nameAddr = rewrites.stringRewrites.findReplacement(fte->nameOffset);
+
+    FunctionSignature* sign = static_cast<FunctionSignature*>(types.lookupByIndex(rewrites.typeRewrites.findRewritten(fte->signatureIndex)));
+
+    functions.emplace_back(firstInstr, nameAddr, fte->stackSize, sign);
+  }
+}
+
+uint32 VirtualMachine::addBytecodeFile(const BytecodeFile& file) {
   const uint64 globalMemOff = m_globalMem.size();
   const uint32 jumpAddrOff = m_instrBuf.length();
   const uint32 funcIdxOffset = m_functions.size();
@@ -309,7 +330,36 @@ void VirtualMachine::addBytecodeFile(const BytecodeFile& file) {
     .funcIdxOffset = funcIdxOffset
   };
 
+  addFunctionEntries(m_types, file, instrRewrite, m_functions);
   rewriteInstructions(m_instrBuf.getBuffer() + jumpAddrOff, file.instructionsSize, instrRewrite);
+
+  return file.entryPointIndex + funcIdxOffset;
+}
+
+int32 VirtualMachine::beginExecution(const uint32 funcEntryIdx, const ProgramArgs& args) {
+  const ScriptFunction& func = m_functions[funcEntryIdx];
+
+  uint64 argsAddr;
+
+  if (args.count == 0) {
+    argsAddr = 0;
+  } else {
+    QsArray arr = m_heap.allocArray(args.count, POINTER_SIZE);
+    argsAddr = arr.address();
+
+    for (uint32 i = 0; i < args.count; i++) {
+      const uint32 start = args.starts[i];
+      const uint32 len = args.lengths[i];
+
+      QsString str = m_heap.allocString(len);
+      memcpy(str.characterData, args.cdata + start, len);
+
+      arr.u64At(i) = str.address();
+    }
+  }
+
+  Interpreter interp = Interpreter(*this);
+  return interp.beginExecution(func, argsAddr);
 }
 
 TypeTable& VirtualMachine::getTypes() {
@@ -336,15 +386,15 @@ std::vector<ScriptFunction>& VirtualMachine::getFunctions() {
   return m_functions;
 }
 
-InterpreterState::InterpreterState(VirtualMachine& vm) : m_vm(vm) {
+Interpreter::Interpreter(VirtualMachine& vm) : m_vm(vm) {
 
 }
 
-InterpreterState::~InterpreterState() {
+Interpreter::~Interpreter() {
 
 }
 
-CallFrame* InterpreterState::getCallFrame(const uint32 off) {
+CallFrame* Interpreter::getCallFrame(const uint32 off) {
   if (off > m_frameCount) {
     return nullptr;
   }
@@ -353,7 +403,7 @@ CallFrame* InterpreterState::getCallFrame(const uint32 off) {
   return &m_callFrames[idx];
 }
 
-CallFrame* InterpreterState::pushNewFrame() {
+CallFrame* Interpreter::pushNewFrame() {
   if (m_frameCount >= MAX_CALL_DEPTH) {
     return nullptr;
   }
@@ -363,7 +413,7 @@ CallFrame* InterpreterState::pushNewFrame() {
 
   frame->line = 0;
   frame->allocatedSize = 0;
-  frame->returnAddr = 0;
+  frame->returnAddr = NO_RETURN_ADDR;
   frame->stackBase = nullptr;
   frame->filename = "";
   frame->name = "";
@@ -371,13 +421,168 @@ CallFrame* InterpreterState::pushNewFrame() {
   return frame;
 }
 
-void InterpreterState::popCallFrame() {
+void Interpreter::popCallFrame() {
   if (m_frameCount == 0) {
     return;
   }
   m_frameCount--;
 }
 
-VirtualMachine& InterpreterState::getVirtualMachine() const {
+VirtualMachine& Interpreter::getVirtualMachine() const {
   return m_vm;
+}
+
+int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsArrayAddr) {
+  const StringPool& strPool = m_vm.getStringPool();
+  const uint32 nameLen = strPool.getLength(func.nameOffset);
+  const int8* nameContent = strPool.getCharacterData(func.nameOffset);
+
+  CallFrame* frame = pushNewFrame();
+  frame->name = std::string(nameContent, nameLen);
+
+  m_instrCount = func.firstInstrIndex;
+
+  return 0;
+}
+
+#define READ_I8ARG(off) *reinterpret_cast<int8*>(args + off)
+#define READ_U8ARG(off) args[off]
+#define READ_I16ARG(off) *reinterpret_cast<int16*>(args + off)
+#define READ_U16ARG(off) *reinterpret_cast<uint16*>(args + off)
+#define READ_I32ARG(off) *reinterpret_cast<int32*>(args + off)
+#define READ_U32ARG(off) *reinterpret_cast<uint32*>(args + off)
+#define READ_I64ARG(off) *reinterpret_cast<int64*>(args + off)
+#define READ_U64ARG(off) *reinterpret_cast<uint64*>(args + off)
+#define READ_F32ARG(off) *reinterpret_cast<float32*>(args + off)
+#define READ_F64ARG(off) *reinterpret_cast<float64*>(args + off)
+
+#define READ_U8(buf, off) buf[off]
+#define WRITE_U8(buf, off, val) *reinterpret_cast<uint8*>(buf + off) = val
+#define READ_U16(buf, off) *reinterpret_cast<uint16*>(buf + off)
+#define WRITE_U16(buf, off, val) *reinterpret_cast<uint16*>(buf + off) = val
+#define READ_U32(buf, off) *reinterpret_cast<uint32*>(buf + off)
+#define WRITE_U32(buf, off, val) *reinterpret_cast<uint32*>(buf + off) = val
+#define READ_U64(buf, off) *reinterpret_cast<uint64*>(buf + off)
+#define WRITE_U64(buf, off, val) *reinterpret_cast<uint64*>(buf + off) = val
+
+#define REG_AS(reg, type) *reinterpret_cast<type*>(&m_registers[reg])
+
+void Interpreter::run() {
+  opcode code = OP_NOP;
+  uint8* args = nullptr;
+
+  uint8* stack = nullptr;
+  uint8* global = m_vm.getGlobalMemory().getData();
+
+  CallFrame* frame = nullptr;
+
+  begin:
+  m_vm.getInstructions().getInstruction(&code, &args, m_instrCount);
+  frame = getCallFrame();
+
+  if (!frame) {
+    return;
+  }
+
+  stack = frame->stackBase;
+
+  switch (code) {
+    /*
+     * TODO:
+     *   - X PUSHLINE
+     *   - _ RET
+     *   - X JMP
+     *   - X JMPI0
+     *   - X JMPN0
+     *   - _ LOADCONSTSTR
+     *   - _ CREAD8
+     *   - _ CREAD16
+     *   - _ CREAD32
+     *   - _ CREAD64
+     *   - _ CWRITE8
+     *   - _ CWRITE16
+     *   - _ CWRITE32
+     *   - _ CWRITE64
+     *   - _ HEAPALLOC
+     *   - _ HEAPFREE
+     *   - _ READOBJ8
+     *   - _ READOBJ16
+     *   - _ READOBJ32
+     *   - _ READOBJ64
+     *   - _ WRITEOBJ8
+     *   - _ WRITEOBJ16
+     *   - _ WRITEOBJ32
+     *   - _ WRITEOBJ64
+     *   - _ READIDX8
+     *   - _ READIDX16
+     *   - _ READIDX32
+     *   - _ READIDX64
+     *   - _ WRITEIDX8
+     *   - _ WRITEIDX16
+     *   - _ WRITEIDX32
+     *   - _ WRITEIDX64
+     *   - _ SETARGTYPE
+     *   - _ LFUNCLOOKUP
+     *   - _ NFUNCLOOKUP
+     *   - _ INVOKEV
+     *   - _ INVOKE8
+     *   - _ INVOKE16
+     *   - _ INVOKE32
+     *   - _ INVOKE64
+     *   - _ BAND
+     *   - _ BOR
+     *   - _ BXOR
+     *   - _ LAND
+     *   - _ LOR
+     *   - _ LXOR
+     *   - _ EQARR
+     *   - _ EQSTRUCT
+     *   - _ NEQARR
+     *   - _ NEQSTRUCT
+     *   - _ GTARR
+     *   - _ GTEARR
+     *   - _ LTARR
+     *   - _ LTEARR
+     *   - _ STRCONCAT
+     *   - _ STRREP8
+     *   - _ STRREP16
+     *   - _ STRREP32
+     *   - _ STRREP64
+     *
+     */
+
+    case OP_RET:
+      if (frame->returnAddr != NO_RETURN_ADDR) {
+        m_instrCount = frame->returnAddr;
+      }
+      m_stack.popFrame(frame->allocatedSize);
+      goto begin;
+    case OP_PUSHLINE:
+      frame->line = READ_U32ARG(0);
+      break;
+    case OP_JMP:
+      m_instrCount = READ_U32ARG(0);
+      goto begin;
+    case OP_JMPI0:
+      if (m_registers[args[4]]) {
+        break;
+      }
+      m_instrCount = READ_U32ARG(0);
+      goto begin;
+    case OP_JMPN0:
+      if (!m_registers[args[4]]) {
+        break;
+      }
+      m_instrCount = READ_U32ARG(0);
+      goto begin;
+
+    // region SIMPLE_INSTRUCTIONS
+#include "evaluator.cc"
+    // endregion
+    default:
+      break;
+  }
+
+  m_instrCount++;
+  goto begin;
 }
