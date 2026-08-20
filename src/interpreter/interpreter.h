@@ -1,7 +1,12 @@
 #ifndef QUICKSCRIPT_INTERPRETER_H
 #define QUICKSCRIPT_INTERPRETER_H
 
+#include <string>
+#include <vector>
+
 #include "heap_mem.h"
+#include "ir_file.h"
+#include "opcodes.h"
 #include "StackMemory.h"
 #include "StringPool.h"
 #include "../common.h"
@@ -11,9 +16,12 @@
 #define MAX_CALL_DEPTH 1024
 
 struct Instruction {
-  uint16 opcode;
+  opcode code;
   uint8 args[LENGTH_ARGS];
 };
+
+static_assert(sizeof(Instruction) == LENGTH_INSTRUCTION);
+static_assert(offsetof(Instruction, args) == LENGTH_OPCODE);
 
 struct CallFrame {
   uint32 line = 0;
@@ -28,14 +36,25 @@ struct CallFrame {
 };
 
 class InstructionBuf {
-  Instruction* m_buf = nullptr;
+  uint8* m_buf = nullptr;
   uint64 m_cap = 0;
   uint64 m_len = 0;
+  uint64 m_instrCount = 0;
 
   public:
     InstructionBuf();
 
+    void insertInstructions(const uint8* instrBuf, uint64 len);
 
+    void getInstruction(Instruction* out, uint32 instrIndex) const;
+
+    uint64 length() const;
+
+    uint64 capacity() const;
+
+    uint8* getBuffer() const;
+
+    uint64 getInstructionCount() const;
 };
 
 class GlobalMemorySpace {
@@ -45,35 +64,53 @@ class GlobalMemorySpace {
   public:
     GlobalMemorySpace();
 
+    void grow(uint64 bytes);
 
+    uint8* getData() const;
+
+    uint64 size() const;
+};
+
+class ScriptFunction {
+  uint32 firstInstrIndex = 0;
+  uint64 nameOffset = 0;
+  FunctionSignature* signature = nullptr;
 };
 
 class VirtualMachine {
   HeapMemory m_heap;
   StringPool m_stringPool;
+  TypeTable m_types;
 
   InstructionBuf m_instrBuf;
   GlobalMemorySpace m_globalMem;
 
+  std::vector<ScriptFunction> m_functions;
+
   public:
     VirtualMachine();
+    ~VirtualMachine();
 
-    StringPool& getStringPool() const;
-    HeapMemory& getHeap() const;
-    InstructionBuf& getInstructions() const;
-    GlobalMemorySpace getGlobalMemory() const;
+    void addBytecodeFile(const BytecodeFile& file);
+
+    TypeTable& getTypes();
+    StringPool& getStringPool();
+    HeapMemory& getHeap();
+    InstructionBuf& getInstructions();
+    GlobalMemorySpace& getGlobalMemory();
+    std::vector<ScriptFunction>& getFunctions();
 };
 
 class InterpreterState {
+  VirtualMachine& m_vm;
+
   StackMemory m_stack;
 
   uint64 m_registers[REGISTERS_COUNT] = {};
   uint64 m_argTypeIndexes[MAX_ARGS] = {};
 
-  VirtualMachine& m_vm;
-
   CallFrame m_callFrames[MAX_CALL_DEPTH];
-  uint64 m_frameCount = 0;
+  uint32 m_frameCount = 0;
 
   public:
     explicit InterpreterState(VirtualMachine& vm);
