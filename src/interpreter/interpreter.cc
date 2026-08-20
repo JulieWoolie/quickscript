@@ -344,15 +344,15 @@ int32 VirtualMachine::beginExecution(const uint32 funcEntryIdx, const ProgramArg
   if (args.count == 0) {
     argsAddr = 0;
   } else {
-    QsArray arr = m_heap.allocArray(args.count, POINTER_SIZE);
+    QsArray arr = m_heap.allocConstArray(args.count, POINTER_SIZE);
     argsAddr = arr.address();
 
     for (uint32 i = 0; i < args.count; i++) {
       const uint32 start = args.starts[i];
       const uint32 len = args.lengths[i];
 
-      QsString str = m_heap.allocString(len);
-      memcpy(str.characterData, args.cdata + start, len);
+      QsArray str = m_heap.allocConstString(len);
+      memcpy(str.data, args.cdata + start, len);
 
       arr.u64At(i) = str.address();
     }
