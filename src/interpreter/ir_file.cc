@@ -165,6 +165,7 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   sections[HSECT_INSTR_OFF] = instrStart;
   sections[HSECT_INSTR_SIZE] = instrSize;
   sections[HSECT_GLOBAL_SCOPE_SIZE] = file.globalScopeSize;
+  sections[HSECT_ENTRYPOINT_FUNC_IDX] = file.entryPointIndex;
 
   *sizeOut = finalLength;
   return writer.buf;
@@ -194,8 +195,9 @@ static void printTypeIndex(FILE* out, const typeindex idx) {
 }
 
 void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
-  fprintf(printFile, "GLOBAL_SCOPE_SIZE = %llu", file.globalScopeSize);
-  fprintf(printFile, "\nFILE_VERSION = %d", CURRENT_FILE_VERSION);
+  fprintf(printFile, "FILE_VERSION = %d", CURRENT_FILE_VERSION);
+  fprintf(printFile, "\nGLOBAL_SCOPE_SIZE = %llu", file.globalScopeSize);
+  fprintf(printFile, "\nENTRYPOINT_FUNCTION_INDEX = %llu", file.entryPointIndex);
 
   uint8* stringPool = file.constStringPool;
   const uint64 stringPoolSize = file.stringPoolSize;
@@ -292,6 +294,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
 
     fprintf(printFile, "\n    signature_index = %llu", entry->signatureIndex);
     fprintf(printFile, "\n    first_instruction = %llu", entry->startingInstruction);
+    fprintf(printFile, "\n    stack_size = %llu", entry->stackSize);
     fprintf(printFile, "\n  }");
   }
   fprintf(printFile, "\n}");

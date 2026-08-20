@@ -902,6 +902,7 @@ void SemanticTransformer::createFileInitMethod() {
 
   lf->setScope(funcScope);
 
+  ctx.setEntryPoint(lfs);
   ctx.pushLocalFunction(lf);
   global->pushSymbol(lfs);
   lookup[fdecl] = lfs;

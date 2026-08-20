@@ -200,3 +200,11 @@ DependencyGraph& SemanticContext::getDependencyGraph() {
 std::vector<StructDecl*>& SemanticContext::getDeclaredStructs() {
   return m_declaredStructs;
 }
+
+LocalFuncSymbol* SemanticContext::getEntryPoint() const {
+  return m_entryPoint;
+}
+
+void SemanticContext::setEntryPoint(LocalFuncSymbol* sym) {
+  m_entryPoint = sym;
+}

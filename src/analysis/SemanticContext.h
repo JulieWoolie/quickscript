@@ -54,6 +54,8 @@ class SemanticContext {
   Scope* m_globalScope = nullptr;
   Scope* m_currentScope = nullptr;
 
+  LocalFuncSymbol* m_entryPoint = nullptr;
+
   public:
     SemanticContext(
       TypeTable& types,
@@ -121,6 +123,10 @@ class SemanticContext {
     DependencyGraph& getDependencyGraph();
 
     std::vector<StructDecl*>& getDeclaredStructs();
+
+    LocalFuncSymbol* getEntryPoint() const;
+
+    void setEntryPoint(LocalFuncSymbol* sym);
 };
 
 

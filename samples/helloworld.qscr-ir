@@ -1,5 +1,6 @@
-GLOBAL_SCOPE_SIZE = 5
 FILE_VERSION = 0
+GLOBAL_SCOPE_SIZE = 5
+ENTRYPOINT_FUNCTION_INDEX = 3
 CONST_STRING_POOL = {
   [off=0 size=9]: fibonacci
   [off=13 size=13]: Hello, world!
@@ -62,108 +63,102 @@ FUNCTION_TABLE = {
     name_offset = 0 # fibonacci
     signature_index = 15
     first_instruction = 0
+    stack_size = 16
   }
   [1] {
     name_offset = 30 # main
     signature_index = 16
-    first_instruction = 36
+    first_instruction = 32
+    stack_size = 24
   }
   [2] {
     name_offset = 38 # vec2f.<constructor>
     signature_index = 17
-    first_instruction = 60
+    first_instruction = 54
+    stack_size = 8
   }
   [3] {
     name_offset = 61 # <finit>
     signature_index = 19
-    first_instruction = 66
+    first_instruction = 58
+    stack_size = 16
   }
 }
 INSTRUCTIONS = {
   # FUNCTION START: fibonacci
-  [   0] STACKALLOC    16
-  [   1] PUSHLINE      10
-  [   2] SREAD32       r01 4
-  [   3] LOADCONST8    r00 0
-  [   4] EQ32          r00 r01 r00
-  [   5] JMPI0         10 r00
-  [   6] PUSHLINE      10
-  [   7] STORECONST8   0 0
-  [   8] STACKFREE     16
-  [   9] RET          
-  [  10] PUSHLINE      11
-  [  11] SREAD32       r01 4
-  [  12] LOADCONST8    r00 1
-  [  13] EQ32          r00 r01 r00
-  [  14] JMPI0         19 r00
-  [  15] PUSHLINE      11
-  [  16] STORECONST8   0 1
-  [  17] STACKFREE     16
-  [  18] RET          
-  [  19] PUSHLINE      12
-  [  20] LFUNCLOOKUP   0 r02
-  [  21] SREAD32       r04 4
-  [  22] LOADCONST8    r03 1
-  [  23] SUBU32        r03 r04 r03
-  [  24] SWRITE32      r03 12
-  [  25] INVOKE32      r02 r01
-  [  26] LFUNCLOOKUP   0 r02
-  [  27] SREAD32       r04 4
-  [  28] LOADCONST8    r03 2
-  [  29] SUBU32        r03 r04 r03
-  [  30] SWRITE32      r03 12
-  [  31] INVOKE32      r02 r00
-  [  32] ADDU32        r00 r01 r00
-  [  33] SWRITE32      r00 0
-  [  34] STACKFREE     16
-  [  35] RET          
+  [   0] PUSHLINE      10
+  [   1] SREAD32       r01 4
+  [   2] LOADCONST8    r00 0
+  [   3] EQ32          r00 r01 r00
+  [   4] JMPI0         8 r00
+  [   5] PUSHLINE      10
+  [   6] STORECONST8   0 0
+  [   7] RET          
+  [   8] PUSHLINE      11
+  [   9] SREAD32       r01 4
+  [  10] LOADCONST8    r00 1
+  [  11] EQ32          r00 r01 r00
+  [  12] JMPI0         16 r00
+  [  13] PUSHLINE      11
+  [  14] STORECONST8   0 1
+  [  15] RET          
+  [  16] PUSHLINE      12
+  [  17] LFUNCLOOKUP   0 r02
+  [  18] SREAD32       r04 4
+  [  19] LOADCONST8    r03 1
+  [  20] SUBU32        r03 r04 r03
+  [  21] SWRITE32      r03 12
+  [  22] INVOKE32      r02 r01
+  [  23] LFUNCLOOKUP   0 r02
+  [  24] SREAD32       r04 4
+  [  25] LOADCONST8    r03 2
+  [  26] SUBU32        r03 r04 r03
+  [  27] SWRITE32      r03 12
+  [  28] INVOKE32      r02 r00
+  [  29] ADDU32        r00 r01 r00
+  [  30] SWRITE32      r00 0
+  [  31] RET          
 
   # FUNCTION START: main
-  [  36] STACKALLOC    24
-  [  37] PUSHLINE      16
-  [  38] STORECONST32  4 2
-  [  39] PUSHLINE      17
-  [  40] GREAD8        r00 0
-  [  41] JMPI0         47 r00
-  [  42] PUSHLINE      18
-  [  43] SREAD32       r02 4
-  [  44] GREAD32       r01 1
-  [  45] MULI32        r01 r02 r01
-  [  46] SWRITE32      r01 0
-  [  47] PUSHLINE      20
-  [  48] LOADCONSTSTR  r00 STRINGS[off=13] # Hello, world!
-  [  49] SWRITE64      r00 8
-  [  50] PUSHLINE      21
-  [  51] LFUNCLOOKUP   0 r01
-  [  52] STORECONST8   23 15
-  [  53] INVOKE32      r01 r00
-  [  54] SWRITE32      r00 0
-  [  55] PUSHLINE      22
-  [  56] SREAD32       r00 4
-  [  57] SWRITE32      r00 0
-  [  58] STACKFREE     24
-  [  59] RET          
+  [  32] PUSHLINE      16
+  [  33] STORECONST32  4 2
+  [  34] PUSHLINE      17
+  [  35] GREAD8        r00 0
+  [  36] JMPI0         42 r00
+  [  37] PUSHLINE      18
+  [  38] SREAD32       r02 4
+  [  39] GREAD32       r01 1
+  [  40] MULI32        r01 r02 r01
+  [  41] SWRITE32      r01 0
+  [  42] PUSHLINE      20
+  [  43] LOADCONSTSTR  r00 STRINGS[off=13] # Hello, world!
+  [  44] SWRITE64      r00 8
+  [  45] PUSHLINE      21
+  [  46] LFUNCLOOKUP   0 r01
+  [  47] STORECONST8   23 15
+  [  48] INVOKE32      r01 r00
+  [  49] SWRITE32      r00 0
+  [  50] PUSHLINE      22
+  [  51] SREAD32       r00 4
+  [  52] SWRITE32      r00 0
+  [  53] RET          
 
   # FUNCTION START: vec2f.<constructor>
-  [  60] STACKALLOC    8
-  [  61] PUSHLINE      0
-  [  62] HEAPALLOC     r00 8
-  [  63] SWRITE64      r00 0
-  [  64] STACKFREE     8
-  [  65] RET          
+  [  54] PUSHLINE      0
+  [  55] HEAPALLOC     r00 8
+  [  56] SWRITE64      r00 0
+  [  57] RET          
 
   # FUNCTION START: <finit>
-  [  66] STACKALLOC    16
-  [  67] PUSHLINE      6
-  [  68] LOADCONST8    r00 1
-  [  69] GWRITE8       r00 0
-  [  70] PUSHLINE      7
-  [  71] LOADCONST16   r00 23232
-  [  72] GWRITE16      r00 0
-  [  73] PUSHLINE      0
-  [  74] LFUNCLOOKUP   1 r01
-  [  75] INVOKE32      r01 r00
-  [  76] SWRITE32      r00 0
-  [  77] STACKFREE     16
-  [  78] RET          
+  [  58] PUSHLINE      6
+  [  59] LOADCONST8    r00 1
+  [  60] GWRITE8       r00 0
+  [  61] PUSHLINE      7
+  [  62] LOADCONST16   r00 23232
+  [  63] GWRITE16      r00 0
+  [  64] PUSHLINE      0
+  [  65] LFUNCLOOKUP   1 r01
+  [  66] INVOKE32      r01 r00
+  [  67] SWRITE32      r00 0
+  [  68] RET          
 }

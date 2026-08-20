@@ -1400,12 +1400,25 @@ static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
     table[i] = {
       .nameOffset = cfunc.poolId,
       .signatureIndex = tIndex,
-      .startingInstruction = cfunc.bodyStart
+      .startingInstruction = cfunc.bodyStart,
+      .stackSize = cfunc.functionSymbol->getFunction()->getScope()->getStackSize()
     };
   }
 
   out.funcTable = table;
   out.funcTableEntries = compiledFuncs.size();
+}
+
+static void setEntryPointIndex(BytecodeFile& file, CompilerContext& cctx) {
+  LocalFuncSymbol* entryPointSym = cctx.getSemantics().getEntryPoint();
+  std::vector<CompiledFunction>& compiled = cctx.getCompiledFunctions();
+  for (uint32 ci = 0; ci < compiled.size(); ci++) {
+    CompiledFunction* cf = &compiled[ci];
+    if (cf->functionSymbol != entryPointSym) {
+      continue;
+    }
+    file.entryPointIndex = ci;
+  }
 }
 
 BytecodeFile compile(SemanticContext& ctx) {
@@ -1429,6 +1442,7 @@ BytecodeFile compile(SemanticContext& ctx) {
 
   createTypeTable(file, cctx);
   createFunctionTable(file, cctx);
+  setEntryPointIndex(file, cctx);
 
   file.instructionBuf = cctx.getWriter().getBuffer();
   file.instructionsSize = cctx.getWriter().getLength();
