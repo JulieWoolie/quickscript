@@ -21,11 +21,24 @@ ScriptStructType* ScriptStructType::create(
   const uint64 totalSize = propArrMemSize + typeMemSize;
 
   ScriptStructType* data = static_cast<ScriptStructType*>(malloc(totalSize));
-  StructProperty* propArr = reinterpret_cast<StructProperty*>(data + 1);
+  StructProperty* propArr;
 
-  for (uint32 i = 0; i < propCount; i++) {
-    StructProperty* dest = &propArr[i];
-    new (dest) StructProperty(properties[i]);
+  if (propCount != 0) {
+    propArr = reinterpret_cast<StructProperty*>(data + 1);
+
+    if (properties) {
+      for (uint32 i = 0; i < propCount; i++) {
+        StructProperty* dest = &propArr[i];
+        new (dest) StructProperty(properties[i]);
+      }
+    } else {
+      for (uint32 i = 0; i < propCount; i++) {
+        StructProperty* dest = &propArr[i];
+        new (dest) StructProperty("", nullptr);
+      }
+    }
+  } else {
+    propArr = nullptr;
   }
 
   return new (data) ScriptStructType(std::move(name), propArr, propCount);
