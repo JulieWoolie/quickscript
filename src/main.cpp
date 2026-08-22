@@ -6,7 +6,6 @@
 #include "allocator.h"
 #include "common.h"
 #include "analysis/analyzer.h"
-#include "interpreter/nativeinterface.h"
 #include "errors.h"
 #include "tester.h"
 #include "analysis/transformer.h"
