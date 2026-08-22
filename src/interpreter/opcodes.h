@@ -358,4 +358,6 @@ typedef uint16 opcode;
 
 conststring opcode_name(opcode code);
 
+uint8 getInstructionLength(opcode code);
+
 #endif //QUICKSCRIPT_OPCODES_H

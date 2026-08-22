@@ -56,6 +56,8 @@ typedef ${res.baseType} opcode;
 
 conststring opcode_name(opcode code);
 
+uint8 getInstructionLength(opcode code);
+
 #endif //QUICKSCRIPT_OPCODES_H`
 
   await writeToFile(out, "../src/interpreter/opcodes.h")
@@ -79,7 +81,40 @@ conststring opcode_name(opcode code) {
     default: return "NOP";
   }
 }
-`
+
+uint8 getInstructionLength(const opcode code) {
+  switch (code) {`
+
+  let sizeGroups: {[size: string]: string[]} = {}
+  for (const code of opcodes) {
+    let size = 0
+    for (const p of code.params) {
+      size += p.size
+    }
+
+    let arr = sizeGroups[`${size}`]
+    if (arr == undefined) {
+      arr = []
+      sizeGroups[`${size}`] = arr
+    }
+
+    arr.push(code.opcode)
+  }
+
+  for (const size in sizeGroups) {
+    for (const code of sizeGroups[size]) {
+      out += `\n    case OP_${code}:`
+    }
+
+    if (size == "0") {
+      out += `\n      return LENGTH_OPCODE;`
+    } else {
+      out += `\n      return ${size} + LENGTH_OPCODE;`
+    }
+  }
+
+  out += `\n    default:\n      return 0;\n  }\n}`
+
   await writeToFile(out, "../src/interpreter/opcodes.cc")
 }
 

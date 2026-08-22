@@ -1523,6 +1523,7 @@ BytecodeFile compile(SemanticContext& ctx) {
 
   file.instructionBuf = cctx.getWriter().getBuffer();
   file.instructionsSize = cctx.getWriter().getLength();
+  file.instructionCount = cctx.getWriter().getInstructionCounter();
   file.constStringPool = cctx.getStringPool().getData();
   file.stringPoolSize = cctx.getStringPool().getLength();
   file.globalScopeSize = ctx.getGlobalScope()->getStackSize();

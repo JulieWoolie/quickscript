@@ -8,7 +8,7 @@
 #define PREFIX_LEN 11
 #define HEADER_SECTION_SIZE 8
 #define HEADER_VERSION_SIZE 2
-#define HEADER_SECTIONS 10
+#define HEADER_SECTIONS 11
 #define HEADER_LEN (PREFIX_LEN + HEADER_VERSION_SIZE + (HEADER_SECTION_SIZE * HEADER_SECTIONS))
 
 #define HSECT_STRPOOL_OFF 0
@@ -19,8 +19,9 @@
 #define HSECT_FTABLE_SIZE 5
 #define HSECT_INSTR_OFF 6
 #define HSECT_INSTR_SIZE 7
-#define HSECT_GLOBAL_SCOPE_SIZE 8
-#define HSECT_ENTRYPOINT_FUNC_IDX 9
+#define HSECT_INSTR_COUNT 8
+#define HSECT_GLOBAL_SCOPE_SIZE 9
+#define HSECT_ENTRYPOINT_FUNC_IDX 10
 
 #define TYPE_TABLE_ARRAY 0x0
 #define TYPE_TABLE_STRUCT 0x1
@@ -78,6 +79,7 @@ struct BytecodeFile {
 
   uint8* instructionBuf = nullptr;
   uint64 instructionsSize = 0;
+  uint64 instructionCount = 0;
 
   uint64 globalScopeSize = 0;
 

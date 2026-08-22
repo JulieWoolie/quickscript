@@ -103,6 +103,18 @@ static void writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
   }
 }
 
+static void writeInstructions(const BytecodeFile& file, BinaryWriter& writer) {
+  uint64 off = 0;
+  while (off < file.instructionsSize) {
+    const opcode code = *reinterpret_cast<opcode*>(file.instructionBuf + off);
+    const uint8 len = getInstructionLength(code);
+
+    writer.copyDataFrom(file.instructionBuf + off, len);
+
+    off += LENGTH_INSTRUCTION;
+  }
+}
+
 BytecodeFile::BytecodeFile() {
 
 }
@@ -145,8 +157,8 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
 
   // Instructions Buffer
   const uint64 instrStart = writer.len;
-  writer.copyDataFrom(file.instructionBuf, file.instructionsSize);
-  const uint64 instrSize = file.instructionsSize;
+  writeInstructions(file, writer);
+  const uint64 instrSize = writer.len - instrStart;
 
   const uint64 finalLength = writer.len;
 
@@ -164,6 +176,7 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   sections[HSECT_FTABLE_SIZE] = fTableSize;
   sections[HSECT_INSTR_OFF] = instrStart;
   sections[HSECT_INSTR_SIZE] = instrSize;
+  sections[HSECT_INSTR_COUNT] = file.instructionCount;
   sections[HSECT_GLOBAL_SCOPE_SIZE] = file.globalScopeSize;
   sections[HSECT_ENTRYPOINT_FUNC_IDX] = file.entryPointIndex;
 
