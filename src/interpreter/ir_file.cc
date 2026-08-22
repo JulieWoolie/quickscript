@@ -206,6 +206,7 @@ BytecodeFile::~BytecodeFile() {
   instructionCount = 0;
 
   globalScopeSize = 0;
+  entryPointIndex = 0;
 }
 
 
