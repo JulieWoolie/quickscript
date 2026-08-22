@@ -989,7 +989,7 @@ static void acceptExpr(SemanticContext& ctx, Expr* v) {
       v->resultType = ConstTypes::BOOL();
       break;
     case AST_CharLiteral:
-      v->resultType = ConstTypes::INT8();
+      v->resultType = ConstTypes::UINT8();
       break;
     case AST_StringLiteral:
       v->resultType = ConstTypes::STRING();

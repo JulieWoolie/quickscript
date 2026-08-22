@@ -36,7 +36,7 @@ bool, TT_KEYW_BOOL
 boolean, TT_KEYW_BOOL
 byte, TT_KEYW_INT8
 ubyte, TT_KEYW_UINT8
-char, TT_KEYW_INT8
+char, TT_KEYW_UINT8
 uchar, TT_KEYW_UINT8
 short, TT_KEYW_INT16
 ushort, TT_KEYW_UINT16

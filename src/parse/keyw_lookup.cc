@@ -105,7 +105,7 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
     {
       {""}, {""}, {""}, {""},
 #line 39 "qs-keywords.gperf"
-      {"char", TT_KEYW_INT8},
+      {"char", TT_KEYW_UINT8},
 #line 40 "qs-keywords.gperf"
       {"uchar", TT_KEYW_UINT8},
       {""},

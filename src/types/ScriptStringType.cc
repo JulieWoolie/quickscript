@@ -10,7 +10,7 @@ uint32 ScriptStringType::typeFlags() const {
 }
 
 ScriptType* ScriptStringType::getIndexReturnType() const {
-  return ConstTypes::INT8();
+  return ConstTypes::UINT8();
 }
 
 ScriptType* ScriptStringType::getPropertyType(std::string_view propertyName) const {
