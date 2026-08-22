@@ -386,6 +386,28 @@ std::vector<ScriptFunction>& VirtualMachine::getFunctions() {
   return m_functions;
 }
 
+#define READ_I8ARG(off) *reinterpret_cast<int8*>(args + off)
+#define READ_U8ARG(off) args[off]
+#define READ_I16ARG(off) *reinterpret_cast<int16*>(args + off)
+#define READ_U16ARG(off) *reinterpret_cast<uint16*>(args + off)
+#define READ_I32ARG(off) *reinterpret_cast<int32*>(args + off)
+#define READ_U32ARG(off) *reinterpret_cast<uint32*>(args + off)
+#define READ_I64ARG(off) *reinterpret_cast<int64*>(args + off)
+#define READ_U64ARG(off) *reinterpret_cast<uint64*>(args + off)
+#define READ_F32ARG(off) *reinterpret_cast<float32*>(args + off)
+#define READ_F64ARG(off) *reinterpret_cast<float64*>(args + off)
+
+#define READ_U8(buf, off) buf[off]
+#define WRITE_U8(buf, off, val) *reinterpret_cast<uint8*>(buf + off) = val
+#define READ_U16(buf, off) *reinterpret_cast<uint16*>(buf + off)
+#define WRITE_U16(buf, off, val) *reinterpret_cast<uint16*>(buf + off) = val
+#define READ_U32(buf, off) *reinterpret_cast<uint32*>(buf + off)
+#define WRITE_U32(buf, off, val) *reinterpret_cast<uint32*>(buf + off) = val
+#define READ_U64(buf, off) *reinterpret_cast<uint64*>(buf + off)
+#define WRITE_U64(buf, off, val) *reinterpret_cast<uint64*>(buf + off) = val
+
+#define REG_AS(reg, type) *reinterpret_cast<type*>(&m_registers[reg])
+
 Interpreter::Interpreter(VirtualMachine& vm) : m_vm(vm) {
 
 }
@@ -425,6 +447,14 @@ void Interpreter::popCallFrame() {
   if (m_frameCount == 0) {
     return;
   }
+
+  CallFrame* frame = getCallFrame();
+
+  m_stack.popFrame(frame->allocatedSize);
+
+  frame->allocatedSize = 0;
+  frame->stackBase = nullptr;
+
   m_frameCount--;
 }
 
@@ -440,32 +470,22 @@ int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsA
   CallFrame* frame = pushNewFrame();
   frame->name = std::string(nameContent, nameLen);
 
+  uint8* stackFrame = m_stack.allocateFrame(func.stackSize);
+  frame->stackBase = stackFrame;
+  frame->allocatedSize = func.stackSize;
+
+  // Write to offset 4, since offset 0..3 is the int32 return value
+  WRITE_U64(stackFrame, 4, argsArrayAddr);
+
   m_instrCount = func.firstInstrIndex;
 
-  return 0;
+  run();
+
+  const int32 retVal = READ_U32(stackFrame, 0);
+  popCallFrame();
+
+  return retVal;
 }
-
-#define READ_I8ARG(off) *reinterpret_cast<int8*>(args + off)
-#define READ_U8ARG(off) args[off]
-#define READ_I16ARG(off) *reinterpret_cast<int16*>(args + off)
-#define READ_U16ARG(off) *reinterpret_cast<uint16*>(args + off)
-#define READ_I32ARG(off) *reinterpret_cast<int32*>(args + off)
-#define READ_U32ARG(off) *reinterpret_cast<uint32*>(args + off)
-#define READ_I64ARG(off) *reinterpret_cast<int64*>(args + off)
-#define READ_U64ARG(off) *reinterpret_cast<uint64*>(args + off)
-#define READ_F32ARG(off) *reinterpret_cast<float32*>(args + off)
-#define READ_F64ARG(off) *reinterpret_cast<float64*>(args + off)
-
-#define READ_U8(buf, off) buf[off]
-#define WRITE_U8(buf, off, val) *reinterpret_cast<uint8*>(buf + off) = val
-#define READ_U16(buf, off) *reinterpret_cast<uint16*>(buf + off)
-#define WRITE_U16(buf, off, val) *reinterpret_cast<uint16*>(buf + off) = val
-#define READ_U32(buf, off) *reinterpret_cast<uint32*>(buf + off)
-#define WRITE_U32(buf, off, val) *reinterpret_cast<uint32*>(buf + off) = val
-#define READ_U64(buf, off) *reinterpret_cast<uint64*>(buf + off)
-#define WRITE_U64(buf, off, val) *reinterpret_cast<uint64*>(buf + off) = val
-
-#define REG_AS(reg, type) *reinterpret_cast<type*>(&m_registers[reg])
 
 void Interpreter::run() {
   opcode code = OP_NOP;
@@ -538,11 +558,13 @@ void Interpreter::run() {
      */
 
     case OP_RET:
-      if (frame->returnAddr != NO_RETURN_ADDR) {
-        m_instrCount = frame->returnAddr;
+      if (frame->returnAddr == NO_RETURN_ADDR) {
+        return;
       }
-      m_stack.popFrame(frame->allocatedSize);
+      m_instrCount = frame->returnAddr;
+      popCallFrame();
       goto begin;
+
     case OP_PUSHLINE:
       frame->line = READ_U32ARG(0);
       break;
