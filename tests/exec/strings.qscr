@@ -1,0 +1,11 @@
+# MODE run
+
+void main() {
+  string s = "Hello"
+  assert s.length == 5 : "String 'Hello' is not 5 chars"
+  assert s[0] == 'H' : "s[0] != 'H'"
+  assert s[1] == 'e' : "s[1] != 'e'"
+  assert s[2] == 'l' : "s[2] != 'l'"
+  assert s[3] == 'l' : "s[3] != 'l'"
+  assert s[4] == 'o' : "s[4] != 'o'"
+}
