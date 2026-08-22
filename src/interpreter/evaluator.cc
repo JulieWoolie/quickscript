@@ -6,6 +6,8 @@
 // This file exists soley to be included into the interpreter 
 // file so the switch statement isn't log as hell
 // 
+// DO NOT ADD THIS FILE TO CMakeLists.txt
+// 
   
     case OP_NOP:
       break;
