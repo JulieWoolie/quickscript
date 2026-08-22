@@ -75,11 +75,11 @@
 | `SETARGTYPE`    | `0x003F` | 6       | `index: uint32, typeindex: uint32`                   |
 | `LFUNCLOOKUP`   | `0x0040` | 9       | `index: uint32, out: register`                       |
 | `NFUNCLOOKUP`   | `0x0041` | 1       | `typeindex: uint32, funcName: uint64, out: register` |
-| `INVOKEV`       | `0x0042` | 12      | `func: register, out: register`                      |
-| `INVOKE8`       | `0x0043` | 12      | `func: register, out: register`                      |
-| `INVOKE16`      | `0x0044` | 12      | `func: register, out: register`                      |
-| `INVOKE32`      | `0x0045` | 12      | `func: register, out: register`                      |
-| `INVOKE64`      | `0x0046` | 12      | `func: register, out: register`                      |
+| `INVOKEV`       | `0x0042` | 13      | `func: register`                                     |
+| `INVOKE8`       | `0x0043` | 13      | `func: register`                                     |
+| `INVOKE16`      | `0x0044` | 13      | `func: register`                                     |
+| `INVOKE32`      | `0x0045` | 13      | `func: register`                                     |
+| `INVOKE64`      | `0x0046` | 13      | `func: register`                                     |
 | `I8TU8`         | `0x0047` | 12      | `in: register, out: register`                        |
 | `I8TI16`        | `0x0048` | 12      | `in: register, out: register`                        |
 | `I8TU16`        | `0x0049` | 12      | `in: register, out: register`                        |

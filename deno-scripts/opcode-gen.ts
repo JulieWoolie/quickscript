@@ -176,8 +176,8 @@ function functionCallOperations() {
   opCode("LFUNCLOOKUP", [uint32("index"), reg("out")])
   opCode("NFUNCLOOKUP", [uint32("typeindex"), uint64("funcName"), reg("out")])
 
-  opCode("INVOKEV", [reg("func"), reg("out")])
-  byteSizedOpCode("INVOKE", [reg("func"), reg("out")])
+  opCode("INVOKEV", [reg("func")])
+  byteSizedOpCode("INVOKE", [reg("func")])
 }
 
 function conversionOperations() {

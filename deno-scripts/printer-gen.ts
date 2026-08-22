@@ -15,7 +15,17 @@ function generateRegistryStringNameFunc(): string {
   let out = "\n  switch(r) {"
   for (let i = 0; i < 64; i++) {
     let str = i.toString()
-    out += `\n    case ${i}: return "r${str.padStart(2, '0')}";`
+    let regName: string
+
+    if (i == 0) {
+      regName = `rvr`
+    } else if (i == 1) {
+      regName = "icr"
+    } else {
+      regName = `r${str.padStart(2, '0')}`
+    }
+
+    out += `\n    case ${i}: return "${regName}";`
   }
   out += `\n    default: return "INVALID_REGISTRY";\n  }\n`
   return out

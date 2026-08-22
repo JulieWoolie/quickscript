@@ -7,8 +7,8 @@
 
 static conststring getRegistryName(uint8 r) {
   switch(r) {
-    case 0: return "r00";
-    case 1: return "r01";
+    case 0: return "rvr";
+    case 1: return "icr";
     case 2: return "r02";
     case 3: return "r03";
     case 4: return "r04";
@@ -238,7 +238,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_INVOKE32:
     case OP_INVOKE64:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
     case OP_I8TU8:
     case OP_I8TI16:
