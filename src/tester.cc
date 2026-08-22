@@ -434,7 +434,14 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
     VirtualMachine vm = VirtualMachine();
 
     uint32 entryPoint = vm.addBytecodeFile(bfile);
-    vm.beginExecution(entryPoint, settings.runArgs);
+
+    try {
+      vm.beginExecution(entryPoint, settings.runArgs);
+    } catch (std::runtime_error& exc) {
+      fprintf(stderr, "Failed with exception: ");
+      fprintf(stderr, "%s\n", exc.what());
+      return false;
+    }
 
     return true;
   }
