@@ -1,0 +1,19 @@
+uint32 fibonacci(uint32 n) {
+  if n == 0 return 0
+  if n == 1 return 1
+
+  uint32 gparent = 0
+  uint32 parent = 1
+
+  for (uint32 i = 0; i < n - 1; i++) {
+    uint32 r = gparent + parent
+    gparent = parent
+    parent = r
+  }
+
+  return parent
+}
+
+int32 main() {
+  return fibonacci(15)
+}
