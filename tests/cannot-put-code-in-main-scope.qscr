@@ -1,3 +1,5 @@
+# MODE validate
+
 # ERROR message="Code Block not allowed here"
 {}
 

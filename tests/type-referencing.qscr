@@ -1,3 +1,5 @@
+# MODE validate
+
 void main() {
   # Correct
   vec2 v = {x = 0, y = 0}

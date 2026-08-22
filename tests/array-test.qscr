@@ -1,3 +1,5 @@
+# MODE validate
+
 void main() {
   int32[] arr = [1, 2]
 

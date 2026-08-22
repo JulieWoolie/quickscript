@@ -1,3 +1,5 @@
+# MODE validate
+
 void main() {
   # ERROR message="Statement not allowed as if statement's body"
   if (true) uint32 i = 0

@@ -1,3 +1,5 @@
+# MODE validate
+
 struct vec2 {
   float32 x = 0.0
   float32 y = 0.0

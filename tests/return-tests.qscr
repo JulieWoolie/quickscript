@@ -1,3 +1,5 @@
+# MODE validate
+
 void voidMethod() {
   return
 }

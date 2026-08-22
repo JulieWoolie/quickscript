@@ -1,7 +1,9 @@
-# ERROR line=5 message="Invalid left-hand-side expression; cannot be assigned to"
-# ERROR line=6 message="Invalid left-hand-side expression; cannot be assigned to"
+# MODE validate
 
 void main() {
+  # ERROR message="Invalid left-hand-side expression; cannot be assigned to"
   12 = 10
+
+  # ERROR message="Invalid left-hand-side expression; cannot be assigned to"
   false = true
 }

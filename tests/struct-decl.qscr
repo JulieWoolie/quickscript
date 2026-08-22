@@ -1,3 +1,5 @@
+# MODE validate
+
 struct StructType {
   # ERROR message="Cannot assign string value to property int32 StructType.wrongType"
   int32 wrongType = ""
