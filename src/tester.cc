@@ -366,7 +366,9 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const P
   TokenList tlist;
   StringTable table;
 
-  conststring fileName = reinterpret_cast<conststring>(filePath.c_str());
+  const std::string pathString = filePath.string();
+
+  conststring fileName = pathString.c_str();
   CompilerErrors errors = CompilerErrors(&file_contents, fileName);
   errors.setSilent(true);
 
@@ -450,19 +452,18 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const P
       std::string textIrPath = textIrFile.string();
       std::string binIrPath = binaryIrFile.string();
 
-      FILE* textFile = fopen(textIrPath.c_str(), "w");
-      printBytecodeFile(bfile, textFile);
+      FILE* fileHandle = nullptr;
 
-      fclose(textFile);
-      textFile = fopen(binIrPath.c_str(), "w");
-
+      fileHandle = fopen(binIrPath.c_str(), "w");
       uint64 binSize = 0;
       uint8* binData = serializeBytecodeFile(bfile, &binSize);
-
-      fwrite(binData, binSize, 1, textFile);
-      fclose(textFile);
-
+      fwrite(binData, binSize, 1, fileHandle);
+      fclose(fileHandle);
       free(binData);
+
+      fileHandle = fopen(textIrPath.c_str(), "w");
+      printBytecodeFile(bfile, fileHandle);
+      fclose(fileHandle);
     }
 
     VirtualMachine vm = VirtualMachine();

@@ -42,7 +42,7 @@ struct BinaryWriter {
 
   void copyDataFrom(const void* from, uint64 bytes) {
     ensureHasSpace(bytes);
-    memcpy(buf, from, bytes);
+    memcpy(buf + len, from, bytes);
     len += bytes;
   }
 };
