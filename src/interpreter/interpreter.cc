@@ -555,11 +555,6 @@ void Interpreter::run() {
      *   - _ LTARR
      *   - _ LTEARR
      *   - _ STRCONCAT
-     *   - _ STRREP8
-     *   - _ STRREP16
-     *   - _ STRREP32
-     *   - _ STRREP64
-     *
      */
 
     case OP_RET:
