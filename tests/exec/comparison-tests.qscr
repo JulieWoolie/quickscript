@@ -1,0 +1,6 @@
+# MODE run
+
+void main() {
+  assert 1 < 2 : "Int one is not less than 2"
+  assert 1.0 < 2.0 : "Float one is not less than 2"
+}

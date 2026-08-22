@@ -327,7 +327,9 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
 static PropertySymbol* findPropSymbol(Scope* scope, const ScriptType* structType, const stringid propName) {
   while (scope) {
     for (Symbol* symbol : scope->getSymbols()) {
-      if (symbol->getName() != propName || symbol->stype() != SYM_Property) {
+      const symboltype stype = symbol->stype();
+
+      if (symbol->getName() != propName || (stype != SYM_Property && stype != SYM_NativeProp)) {
         continue;
       }
 
@@ -363,7 +365,7 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
     return;
   }
 
-  std::string_view queriedProp = ctx.getStrings().getview(v->property->value);
+  const std::string_view queriedProp = v->property->value->view();
   PropertySymbol* sps = findPropSymbol(ctx.getScope(), resType, v->property->value);
 
   if (!sps) {
@@ -374,10 +376,11 @@ static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v
       NoFreeAllocator& alloc = ctx.getAllocator();
 
       // Native type, mark as used so no warnings appear
-      sps = alloc.make<PropertySymbol>(resType, v->property->value, propertyType);
+      sps = alloc.make<NativePropertySymbol>(resType, v->property->value, propertyType);
       sps->addFlags(SYMFLAG_USED);
 
       global->pushSymbol(sps);
+      ctx.getScopeLookup()[sps] = global;
     }
   }
 
@@ -789,7 +792,7 @@ static void checkAssignability(SemanticContext& ctx, Expr* expr) {
       }
 
       if (objType->kind() == TK_STRUCT) {
-        PropertySymbol* pSym = static_cast<PropertySymbol*>(ctx.getSymbolLookup()[prop->property]);
+        LocalStructPropSymbol* pSym = static_cast<LocalStructPropSymbol*>(ctx.getSymbolLookup()[prop->property]);
 
         if (!pSym) {
           return;
@@ -1093,7 +1096,7 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
       continue;
     }
 
-    PropertySymbol* sym = alloc.make<PropertySymbol>(type, propDecl->name->value, typeProp->type);
+    LocalStructPropSymbol* sym = alloc.make<LocalStructPropSymbol>(type, propDecl->name->value, typeProp->type);
     scope->pushSymbol(sym);
     ctx.getSymbolLookup()[propDecl] = sym;
     ctx.getScopeLookup()[sym] = scope;
@@ -1254,7 +1257,7 @@ static void reportUnused(const SemanticContext& ctx, Scope* scope) {
         }
         break;
       case SYM_Property: {
-        const PropertySymbol* sps = static_cast<PropertySymbol*>(sym);
+        const LocalStructPropSymbol* sps = static_cast<LocalStructPropSymbol*>(sym);
         const uint32 writes = sps->getWrites();
         const uint32 reads = sps->getReads();
 
@@ -1705,18 +1708,6 @@ static void acceptStatement(SemanticContext& ctx, Statement* stat) {
   }
 }
 
-static void addDefaultSymbols(SemanticContext& ctx, Scope* scope) {
-  NoFreeAllocator& alloc = ctx.getAllocator();
-  StringTable& strings = ctx.getStrings();
-
-  stringid lengthId = strings.allocate("length");
-
-  PropertySymbol* stringLength = alloc.make<PropertySymbol>(ConstTypes::STRING(), lengthId, ConstTypes::UINT32());
-  stringLength->addFlags(SYMFLAG_BINDING);
-
-  scope->pushSymbol(stringLength);
-}
-
 static void reportInvalidDependencies(SemanticContext& ctx, DependencyGraph& graph, Symbol* sym) {
   if (!graph.hasDependencies(sym)) {
     return;
@@ -1780,8 +1771,6 @@ void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
   ctx.setGlobalScope(scope);
   ctx.getAstScopeLookup()[v] = scope;
-
-  addDefaultSymbols(ctx, scope);
 
   scope->setExpectedReturnType(nullptr);
 

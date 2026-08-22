@@ -742,7 +742,7 @@ void SemanticTransformer::createPropertyAssignStatements(StructDecl* decl, Local
     thisExpr->resultType = decl->type;
 
     Identifier* propId = makeId(prop->name->value);
-    PropertySymbol* propSym = static_cast<PropertySymbol*>(ctx.getSymbolLookup()[prop]);
+    LocalStructPropSymbol* propSym = static_cast<LocalStructPropSymbol*>(ctx.getSymbolLookup()[prop]);
     propId->resultType = propSym->getScriptType();
 
     PropertyAccessExpr* access = alloc.make<PropertyAccessExpr>();

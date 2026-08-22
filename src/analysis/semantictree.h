@@ -50,6 +50,7 @@ typedef uint8 scopetype;
 #define SYM_LocalFunc     2
 #define SYM_Property      3
 #define SYM_LocalStruct   4
+#define SYM_NativeProp    5
 typedef uint8 symboltype;
 
 // Symbol is a native binding
@@ -148,13 +149,18 @@ class LocalVarSymbol: public Symbol {
 class PropertySymbol: public Symbol {
   ScriptType* const m_holderType;
 
+  public:
+    PropertySymbol(ScriptType* holderType, stringid name, ScriptType* scriptType);
+
+    ScriptType* getHolderType() const;
+};
+
+class LocalStructPropSymbol: public PropertySymbol {
   uint32 m_writes = 0;
   uint32 m_reads = 0;
 
   public:
-    explicit PropertySymbol(ScriptType* holderType, stringid name, ScriptType* type);
-
-    ScriptType* getHolderType() const;
+    explicit LocalStructPropSymbol(ScriptType* holderType, stringid name, ScriptType* type);
 
     symboltype stype() const override;
 
@@ -163,6 +169,13 @@ class PropertySymbol: public Symbol {
 
     uint32 getWrites() const;
     void setWrites(uint32 writes);
+};
+
+class NativePropertySymbol: public PropertySymbol {
+  public:
+    explicit NativePropertySymbol(ScriptType* holderType, stringid name, ScriptType* type);
+
+    symboltype stype() const override;
 };
 
 class LocalStructSymbol: public Symbol {

@@ -1,5 +1,7 @@
 #include "semantictree.h"
 
+#include "../types/ConstTypes.h"
+
 Symbol::Symbol(const stringid name, ScriptType* scriptType)
   : m_name(name), m_type(scriptType), m_flags(0)
 {
@@ -95,15 +97,20 @@ symboltype LocalVarSymbol::stype() const {
   return SYM_LocalVar;
 }
 
-PropertySymbol::PropertySymbol(ScriptType* holderType, stringid name, ScriptType* type)
-  : Symbol(name, type), m_holderType(holderType) {
+PropertySymbol::PropertySymbol(ScriptType* holderType, stringid name, ScriptType* scriptType)
+  : Symbol(name, scriptType), m_holderType(holderType) {
+
 }
 
 ScriptType* PropertySymbol::getHolderType() const {
   return m_holderType;
 }
 
-symboltype PropertySymbol::stype() const {
+LocalStructPropSymbol::LocalStructPropSymbol(ScriptType* holderType, stringid name, ScriptType* type)
+  : PropertySymbol(holderType, name, type) {
+}
+
+symboltype LocalStructPropSymbol::stype() const {
   return SYM_Property;
 }
 
@@ -244,17 +251,27 @@ Scope* Scope::getParent() const {
   return m_parentScope;
 }
 
-uint32 PropertySymbol::getReads() const {
+uint32 LocalStructPropSymbol::getReads() const {
   return m_reads;
 }
-void PropertySymbol::setReads(uint32 reads) {
+void LocalStructPropSymbol::setReads(uint32 reads) {
   m_reads = reads;
 }
-uint32 PropertySymbol::getWrites() const {
+uint32 LocalStructPropSymbol::getWrites() const {
   return m_writes;
 }
-void PropertySymbol::setWrites(uint32 writes) {
+void LocalStructPropSymbol::setWrites(uint32 writes) {
   m_writes = writes;
+}
+
+NativePropertySymbol::NativePropertySymbol(ScriptType* holderType, stringid name, ScriptType* type)
+  : PropertySymbol(holderType, name, type)
+{
+
+}
+
+symboltype NativePropertySymbol::stype() const {
+  return SYM_NativeProp;
 }
 
 LocalStructSymbol::LocalStructSymbol(stringid name, ScriptStructType* type, StructDecl* decl)
