@@ -101,6 +101,30 @@
     case OP_GETSTACKPTR:
       m_registers[args[0]] = reinterpret_cast<uint64>(stack);
       break;
+    case OP_CREAD8:
+      m_registers[args[9]] = *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(1));
+      break;
+    case OP_CREAD16:
+      m_registers[args[9]] = *reinterpret_cast<uint16*>(m_registers[args[0]] + READ_U32ARG(1));
+      break;
+    case OP_CREAD32:
+      m_registers[args[9]] = *reinterpret_cast<uint32*>(m_registers[args[0]] + READ_U32ARG(1));
+      break;
+    case OP_CREAD64:
+      m_registers[args[9]] = *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(1));
+      break;
+    case OP_CWRITE8:
+      *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(1)) = REG_AS(args[9], uint8);
+      break;
+    case OP_CWRITE16:
+      *reinterpret_cast<uint16*>(m_registers[args[0]] + READ_U32ARG(1)) = REG_AS(args[9], uint16);
+      break;
+    case OP_CWRITE32:
+      *reinterpret_cast<uint32*>(m_registers[args[0]] + READ_U32ARG(1)) = REG_AS(args[9], uint32);
+      break;
+    case OP_CWRITE64:
+      *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(1)) = REG_AS(args[9], uint64);
+      break;
     case OP_READOBJ8:
       m_registers[args[1]] = *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE);
       break;
@@ -114,16 +138,16 @@
       m_registers[args[1]] = *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE);
       break;
     case OP_WRITEOBJ8:
-      *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[0], uint8);
+      *reinterpret_cast<uint8*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[1], uint8);
       break;
     case OP_WRITEOBJ16:
-      *reinterpret_cast<uint16*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[0], uint16);
+      *reinterpret_cast<uint16*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[1], uint16);
       break;
     case OP_WRITEOBJ32:
-      *reinterpret_cast<uint32*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[0], uint32);
+      *reinterpret_cast<uint32*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[1], uint32);
       break;
     case OP_WRITEOBJ64:
-      *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[0], uint64);
+      *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[1], uint64);
       break;
     case OP_I8TU8:
       REG_AS(args[1], uint8) = static_cast<uint8>(REG_AS(args[0], int8));

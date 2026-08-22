@@ -144,8 +144,12 @@ function closureOperations() {
       "%REG:out% = reinterpret_cast<uint64>(stack);"
   ])
 
-  byteSizedOpCode("CREAD", [reg("closure"), uint64("off"), reg("out")])
-  byteSizedOpCode("CWRITE", [reg("closure"), uint64("off"), reg("val")])
+  byteSizedOpCode("CREAD", [reg("closure"), uint64("off"), reg("out")], [
+    "%REG:out% = *reinterpret_cast<%UTYPE%*>(%REG:closure% + %CONST:off,32%);"
+  ])
+  byteSizedOpCode("CWRITE", [reg("closure"), uint64("off"), reg("val")], [
+    "*reinterpret_cast<%UTYPE%*>(%REG:closure% + %CONST:off,32%) = %REG:val,%UTYPE%%;"
+  ])
 }
 
 function heapOperations() {
@@ -159,7 +163,7 @@ function heapOperations() {
   ])
 
   byteSizedOpCode("WRITEOBJ", [reg("obj"), reg("val"), uint32("off")], [
-      "*reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE) = %REG:out,%UTYPE%%;"
+      "*reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE) = %REG:val,%UTYPE%%;"
   ])
   byteSizedOpCode("READIDX", [reg("obj"), reg("out"), reg("idx")])
   byteSizedOpCode("WRITEIDX", [reg("obj"), reg("val"), reg("idx")])
