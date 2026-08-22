@@ -12,6 +12,7 @@ conststring opcode_name(opcode code) {
     case OP_JMP: return "JMP";
     case OP_JMPI0: return "JMPI0";
     case OP_JMPN0: return "JMPN0";
+    case OP_ASSERT: return "ASSERT";
     case OP_MOV: return "MOV";
     case OP_LOADCONST8: return "LOADCONST8";
     case OP_LOADCONST16: return "LOADCONST16";

@@ -1,162 +1,112 @@
 FILE_VERSION = 0
-GLOBAL_SCOPE_SIZE = 5
-ENTRYPOINT_FUNCTION_INDEX = 3
+GLOBAL_SCOPE_SIZE = 0
+ENTRYPOINT_FUNCTION_INDEX = 2
 CONST_STRING_POOL = {
   [off=0 size=9]: fibonacci
-  [off=13 size=13]: Hello, world!
-  [off=30 size=4]: main
-  [off=38 size=19]: vec2f.<constructor>
-  [off=61 size=7]: <finit>
-  [off=72 size=5]: vec2f
-  [off=81 size=1]: x
-  [off=86 size=1]: y
+  [off=13 size=4]: main
+  [off=21 size=7]: <finit>
 }
 TYPE_TABLE = {
   [14] {
-    type = STRUCT
-    name_offset = 72 # vec2f
-    constructor_entry = 2
-    properties = [
-      {
-        name_offset = 81 # x
-        value_offset = 0
-        type_index = FLOAT32
-      },
-      {
-        name_offset = 86 # y
-        value_offset = 4
-        type_index = FLOAT32
-      }
-    ]
-  }
-  [15] {
     type = FUNCSIGN
     return_type = UINT32
     variadic = 0
     arguments = [UINT32]
   }
-  [16] {
+  [15] {
     type = FUNCSIGN
     return_type = INT32
     variadic = 0
     arguments = []
   }
-  [17] {
-    type = FUNCSIGN
-    return_type = 14
-    variadic = 0
-    arguments = []
-  }
-  [18] {
+  [16] {
     type = ARRAY
     component_type = STRING
   }
-  [19] {
+  [17] {
     type = FUNCSIGN
     return_type = INT32
     variadic = 0
-    arguments = [18]
+    arguments = [16]
   }
 }
 FUNCTION_TABLE = {
   [0] {
     name_offset = 0 # fibonacci
-    signature_index = 15
+    signature_index = 14
     first_instruction = 0
-    stack_size = 8
+    stack_size = 20
   }
   [1] {
-    name_offset = 30 # main
-    signature_index = 16
-    first_instruction = 32
-    stack_size = 16
+    name_offset = 13 # main
+    signature_index = 15
+    first_instruction = 44
+    stack_size = 4
   }
   [2] {
-    name_offset = 38 # vec2f.<constructor>
+    name_offset = 21 # <finit>
     signature_index = 17
-    first_instruction = 54
-    stack_size = 0
-  }
-  [3] {
-    name_offset = 61 # <finit>
-    signature_index = 19
-    first_instruction = 57
+    first_instruction = 49
     stack_size = 8
   }
 }
 INSTRUCTIONS = {
   # FUNCTION START: fibonacci
-  [   0] PUSHLINE      10
-  [   1] SREAD32       r03 0
-  [   2] LOADCONST8    r02 0
+  [   0] PUSHLINE      2
+  [   1] SREAD32       r02 0
+  [   2] LOADCONST8    r03 0
   [   3] EQ32          r02 r03 r02
   [   4] JMPI0         8 r02
-  [   5] PUSHLINE      10
+  [   5] PUSHLINE      2
   [   6] LOADCONST8    rvr 0
   [   7] RET          
-  [   8] PUSHLINE      11
-  [   9] SREAD32       r03 0
-  [  10] LOADCONST8    r02 1
+  [   8] PUSHLINE      3
+  [   9] SREAD32       r02 0
+  [  10] LOADCONST8    r03 1
   [  11] EQ32          r02 r03 r02
   [  12] JMPI0         16 r02
-  [  13] PUSHLINE      11
+  [  13] PUSHLINE      3
   [  14] LOADCONST8    rvr 1
   [  15] RET          
-  [  16] PUSHLINE      12
-  [  17] LFUNCLOOKUP   0 r03
-  [  18] SREAD32       r05 0
-  [  19] LOADCONST8    r04 1
-  [  20] SUBU32        r04 r05 r04
-  [  21] SWRITE32      r04 4
-  [  22] INVOKE        r03
-  [  23] MOV           rvr r02
-  [  24] LFUNCLOOKUP   0 r03
-  [  25] SREAD32       r05 0
-  [  26] LOADCONST8    r04 2
-  [  27] SUBU32        r04 r05 r04
-  [  28] SWRITE32      r04 4
-  [  29] INVOKE        r03
-  [  30] ADDU32        rvr r02 rvr
-  [  31] RET          
+  [  16] PUSHLINE      5
+  [  17] PUSHLINE      6
+  [  18] STORECONST32  8 1
+  [  19] PUSHLINE      8
+  [  20] SREAD32       r02 12
+  [  21] SREAD32       r04 0
+  [  22] LTU32         r02 r04 r02
+  [  23] JMPI0         41 r02
+  [  24] PUSHLINE      8
+  [  25] PUSHLINE      9
+  [  26] SREAD32       r04 4
+  [  27] SREAD32       r05 8
+  [  28] ADDU32        r04 r05 r04
+  [  29] SWRITE32      r04 16
+  [  30] PUSHLINE      10
+  [  31] SREAD32       r04 8
+  [  32] SWRITE32      r04 4
+  [  33] PUSHLINE      11
+  [  34] SREAD32       r04 16
+  [  35] SWRITE32      r04 8
+  [  36] SREAD32       r04 12
+  [  37] MOV           r04 r03
+  [  38] INCU32        r04 r04
+  [  39] SWRITE32      r04 12
+  [  40] JMP           20
+  [  41] PUSHLINE      14
+  [  42] SREAD32       rvr 8
+  [  43] RET          
 
   # FUNCTION START: main
-  [  32] PUSHLINE      16
-  [  33] STORECONST32  0 2
-  [  34] PUSHLINE      17
-  [  35] GREAD8        r02 0
-  [  36] JMPI0         42 r02
-  [  37] PUSHLINE      18
-  [  38] SREAD32       r04 0
-  [  39] GREAD32       r03 1
-  [  40] MULI32        r03 r04 r03
-  [  41] SWRITE32      r03 0
-  [  42] PUSHLINE      20
-  [  43] LOADCONSTSTR  r02 STRINGS[off=13] # Hello, world!
-  [  44] SWRITE64      r02 4
-  [  45] PUSHLINE      21
-  [  46] LFUNCLOOKUP   0 r03
-  [  47] STORECONST8   15 15
-  [  48] INVOKE        r03
-  [  49] MOV           rvr r02
-  [  50] SWRITE32      r02 0
-  [  51] PUSHLINE      22
-  [  52] SREAD32       rvr 0
-  [  53] RET          
-
-  # FUNCTION START: vec2f.<constructor>
-  [  54] PUSHLINE      0
-  [  55] HEAPALLOC     rvr 8
-  [  56] RET          
+  [  44] PUSHLINE      18
+  [  45] LFUNCLOOKUP   0 r02
+  [  46] STORECONST8   0 15
+  [  47] INVOKE        r02
+  [  48] RET          
 
   # FUNCTION START: <finit>
-  [  57] PUSHLINE      6
-  [  58] LOADCONST8    r02 1
-  [  59] GWRITE8       r02 0
-  [  60] PUSHLINE      7
-  [  61] LOADCONST16   r02 23232
-  [  62] GWRITE16      r02 0
-  [  63] PUSHLINE      0
-  [  64] LFUNCLOOKUP   1 r02
-  [  65] INVOKE        r02
-  [  66] RET          
+  [  49] PUSHLINE      0
+  [  50] LFUNCLOOKUP   1 r02
+  [  51] INVOKE        r02
+  [  52] RET          
 }

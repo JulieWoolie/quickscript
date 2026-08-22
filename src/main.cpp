@@ -96,8 +96,11 @@ static void compileSource(const BytecodeFile& bfile, const ProgramSettings& sett
 
 static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& settings) {
   VirtualMachine vm;
-  vm.addBytecodeFile(bfile);
-  return EXIT_SUCCESS;
+  const uint32 entryPoint = vm.addBytecodeFile(bfile);
+  int32 retVal = vm.beginExecution(entryPoint, settings.runArgs);
+
+  printf("Finished with return code %d\n", retVal);
+  return retVal;
 }
 
 int32 main(int32 argc, cstring argv[]) {

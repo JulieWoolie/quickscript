@@ -237,7 +237,7 @@ static void loadTypes(TypeTable& table, const BytecodeFile& file, TypeReindexLis
       case TYPE_TABLE_SIGNATURE: {
         TypeTableFuncSign* sign = static_cast<TypeTableFuncSign*>(entry);
 
-        ScriptType* retType = table.lookupByIndex(out.findRewritten(sign->index));
+        ScriptType* retType = table.lookupByIndex(out.findRewritten(sign->returnType));
         bool variadic = sign->varargs;
 
         const uint32 argCount = sign->argumentCount;
@@ -418,7 +418,7 @@ Interpreter::~Interpreter() {
 }
 
 CallFrame* Interpreter::getCallFrame(const uint32 off) {
-  if (off > m_frameCount) {
+  if (off >= m_frameCount) {
     return nullptr;
   }
 
@@ -463,17 +463,64 @@ VirtualMachine& Interpreter::getVirtualMachine() const {
   return m_vm;
 }
 
+static std::string createCallStackString(CallFrame frames[], const uint32 frameCount) {
+  std::string result;
+  for (uint32 i = frameCount; i != 0; i--) {
+    CallFrame* frame = &frames[i];
+    result.append("\n  ");
+
+    result.append("[");
+    result.append(std::to_string(i));
+    result.append("] ");
+
+    result.append("at ");
+    result.append(frame->name);
+    result.append("#");
+    result.append(std::to_string(frame->line));
+  }
+  return result;
+}
+
 void Interpreter::moveExecutionTo(const ScriptFunction& func) {
+  CallFrame* oldFrame = getCallFrame();
+
   const StringPool& strPool = m_vm.getStringPool();
   const uint32 nameLen = strPool.getLength(func.nameOffset);
   const int8* nameContent = strPool.getCharacterData(func.nameOffset);
 
   CallFrame* frame = pushNewFrame();
+  if (!frame) {
+    std::string errorMsg = createCallStackString(m_callFrames, m_frameCount);
+    errorMsg.insert(0, "Maximum call depth reached:");
+    throw std::runtime_error(errorMsg);
+  }
+
   frame->name = std::string(nameContent, nameLen);
 
-  uint8* stackFrame = m_stack.allocateFrame(func.stackSize);
-  frame->stackBase = stackFrame;
-  frame->allocatedSize = func.stackSize;
+  uint64 stackSize = func.stackSize;
+  uint64 stackOffset = 0;
+
+  if (oldFrame) {
+    uint64 paramsSize = 0;
+    const FunctionSignature* sign = func.signature;
+
+    for (uint32 i = 0; i < sign->getArgumentsLength(); i++) {
+      paramsSize += sign->getArgumentType(i)->stackSizeBytes();
+    }
+
+    stackSize -= paramsSize;
+    stackOffset = paramsSize;
+  }
+
+  uint8* stackFrame = m_stack.allocateFrame(stackSize);
+  frame->stackBase = stackFrame - stackOffset;
+  frame->allocatedSize = stackSize;
+
+  if (!oldFrame) {
+    frame->returnAddr = NO_RETURN_ADDR;
+  } else {
+    frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
+  }
 
   m_registers[REGISTER_INSTR_COUNTER] = func.firstInstrIndex;
 }
@@ -489,8 +536,7 @@ int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsA
 
   run();
 
-  const int32 retVal = m_registers[REGISTER_RETURN_VALUE];
-  return retVal;
+  return m_registers[REGISTER_RETURN_VALUE];
 }
 
 static uint64 stringRepeat(void* strAddr, const uint32 repeats, HeapMemory& heap) {
@@ -527,7 +573,7 @@ void Interpreter::run() {
 
   switch (code) {
     /*
-     * TODO:
+     * TODO Add code for these instructions (auto generated are not in the list)
      *   - X PUSHLINE
      *   - X RET
      *   - X JMP
@@ -556,7 +602,7 @@ void Interpreter::run() {
         popCallFrame();
         return;
       }
-      m_registers[REGISTER_INSTR_COUNTER] = frame->returnAddr ;
+      m_registers[REGISTER_INSTR_COUNTER] = frame->returnAddr;
       popCallFrame();
       goto begin;
 
@@ -580,7 +626,7 @@ void Interpreter::run() {
       goto begin;
 
     case OP_LFUNCLOOKUP:
-      m_registers[args[4]] = reinterpret_cast<uint64>(&m_vm.getFunctions()[REG_AS(args[0], uint32)]);
+      m_registers[args[4]] = reinterpret_cast<uint64>(&m_vm.getFunctions().at(READ_U32ARG(0)));
       break;
 
     case OP_INVOKE:
@@ -592,6 +638,24 @@ void Interpreter::run() {
       uint8* strPtr = m_vm.getStringPool().getPointer(strOffset);
       m_registers[args[0]] = reinterpret_cast<uint64>(strPtr);
       break;
+    }
+
+    case OP_ASSERT: {
+      uint64 cond = m_registers[args[0]];
+      void* strPtr = REG_AS(args[1], void*);
+
+      if (cond) {
+        break;
+      }
+
+      std::string errorMsg = "Assert failed!";
+      if (strPtr) {
+        const QsArray arr = castToQsArray(strPtr);
+        errorMsg.append("\n  ");
+        errorMsg.append(reinterpret_cast<int8*>(arr.data), arr.length);
+      }
+
+      throw std::runtime_error(errorMsg);
     }
 
     // region Generated Instructions
@@ -641,16 +705,16 @@ void Interpreter::run() {
       WRITE_U64(stack, READ_U64ARG(1), m_registers[args[0]]);
       break;
     case OP_STORECONST8:
-      WRITE_U8(stack, READ_U64ARG(0), READ_U8ARG(4));
+      WRITE_U8(stack, READ_U32ARG(0), READ_U8ARG(4));
       break;
     case OP_STORECONST16:
-      WRITE_U16(stack, READ_U64ARG(0), READ_U16ARG(4));
+      WRITE_U16(stack, READ_U32ARG(0), READ_U16ARG(4));
       break;
     case OP_STORECONST32:
-      WRITE_U32(stack, READ_U64ARG(0), READ_U32ARG(4));
+      WRITE_U32(stack, READ_U32ARG(0), READ_U32ARG(4));
       break;
     case OP_STORECONST64:
-      WRITE_U64(stack, READ_U64ARG(0), READ_U64ARG(4));
+      WRITE_U64(stack, READ_U32ARG(0), READ_U64ARG(4));
       break;
     case OP_GREAD8:
       m_registers[args[0]] = READ_U8(global, READ_U8ARG(1));
@@ -677,16 +741,16 @@ void Interpreter::run() {
       WRITE_U64(global, READ_U64ARG(1), m_registers[args[0]]);
       break;
     case OP_GSTORECONST8:
-      WRITE_U8(global, READ_U64ARG(0), READ_U8ARG(4));
+      WRITE_U8(global, READ_U32ARG(0), READ_U8ARG(4));
       break;
     case OP_GSTORECONST16:
-      WRITE_U16(global, READ_U64ARG(0), READ_U16ARG(4));
+      WRITE_U16(global, READ_U32ARG(0), READ_U16ARG(4));
       break;
     case OP_GSTORECONST32:
-      WRITE_U32(global, READ_U64ARG(0), READ_U32ARG(4));
+      WRITE_U32(global, READ_U32ARG(0), READ_U32ARG(4));
       break;
     case OP_GSTORECONST64:
-      WRITE_U64(global, READ_U64ARG(0), READ_U64ARG(4));
+      WRITE_U64(global, READ_U32ARG(0), READ_U64ARG(4));
       break;
     case OP_GETSTACKPTR:
       m_registers[args[0]] = reinterpret_cast<uint64>(stack);

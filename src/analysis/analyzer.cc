@@ -1648,18 +1648,20 @@ static void acceptAssertStatement(SemanticContext& ctx, const AssertStatement* v
     );
   }
 
-  if (v->message) {
-    acceptExpr(ctx, v->message);
+  if (!v->message) {
+    return;
+  }
 
-    const ScriptType* msgType = v->message->resultType;
-    const typekind msgKind = msgType->kind();
+  acceptExpr(ctx, v->message);
 
-    if (msgKind != TK_UNKNOWN && msgKind != TK_STRING) {
-      ctx.getErrors().error(
-        v->message->location,
-        "assert statement message cannot be assigned to string"
-      );
-    }
+  const ScriptType* msgType = v->message->resultType;
+  const typekind msgKind = msgType->kind();
+
+  if (msgKind != TK_UNKNOWN && msgKind != TK_STRING) {
+    ctx.getErrors().error(
+      v->message->location,
+      "assert statement message cannot be assigned to string"
+    );
   }
 }
 

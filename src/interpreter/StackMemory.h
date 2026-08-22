@@ -15,6 +15,7 @@ class StackMemory {
     ~StackMemory();
 
     uint8* allocateFrame(uint64 bytes);
+
     void popFrame(uint64 bytes);
 
     uint8* getBuffer() const;

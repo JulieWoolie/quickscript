@@ -1328,7 +1328,9 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
     case AST_AssertStatement: {
       CASTED_VAR(a, AssertStatement, node)
       processScope(a->condition, ctx);
-      processScope(a->message, ctx);
+      if (a->message) {
+        processScope(a->message, ctx);
+      }
       return;
     }
 

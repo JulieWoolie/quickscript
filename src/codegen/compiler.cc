@@ -34,7 +34,7 @@
 #define BIN_APPEND \
       writer.appendU8(r1);\
       writer.appendU8(r2);\
-      writer.appendU8(r1);\
+      writer.appendU8(outReg);\
       writer.endInstr();
 
 #define CMP_CASE(cmptype) \
@@ -269,7 +269,7 @@ static void compileIdentifier(
 
     if (addr) {
       addr->outptype = isMain ? OUTP_GLOBAL : OUTP_STACK;
-      addr->memoffset = lvs->getStackOffset();
+      addr->stackoffset = lvs->getStackOffset();
     }
   }
 }
@@ -296,7 +296,7 @@ static void compileNonReadingExpr(Expr* expr, AddrOutput* addr, CompilerContext&
 
 static void compileBinaryExpr(
   const BinaryExpr* bin,
-  const RegisterId r1,
+  const RegisterId outReg,
   CompilerContext& ctx
 ) {
   BytecodeWriter& writer = ctx.getWriter();
@@ -361,10 +361,10 @@ static void compileBinaryExpr(
     AddrOutput out;
     compileNonReadingExpr(lhs, &out, ctx);
 
-    compileExpr(rhs, r1, nullptr, ctx);
+    compileExpr(rhs, outReg, nullptr, ctx);
 
     uint32 stackSize = rhs->resultType->stackSizeBytes();
-    compileWriteOperation(&out, stackSize, ctx, r1);
+    compileWriteOperation(&out, stackSize, ctx, outReg);
 
     return;
   }
@@ -373,7 +373,7 @@ static void compileBinaryExpr(
   AddrOutput out;
 
   if (nonAssign == BOP_LOG_AND || nonAssign == BOP_LOG_OR) {
-    compileExpr(lhs, r1, &out, ctx);
+    compileExpr(lhs, outReg, &out, ctx);
 
     if (nonAssign == BOP_LOG_AND) {
       writer.startInstr(OP_JMPI0);
@@ -384,14 +384,14 @@ static void compileBinaryExpr(
     const uint64 jumpAddrOffset = writer.getAddress();
 
     writer.appendU32(0);
-    writer.appendU8(r1);
+    writer.appendU8(outReg);
 
-    compileExpr(rhs, r1, &out, ctx);
+    compileExpr(rhs, outReg, &out, ctx);
 
     writer.writeInstructionCounter(jumpAddrOffset);
 
     if (isAssignment) {
-      compileWriteOperation(&out, 1, ctx, r1);
+      compileWriteOperation(&out, 1, ctx, outReg);
     }
 
     return;
@@ -400,10 +400,24 @@ static void compileBinaryExpr(
   ScriptType* ltype = lhs->resultType;
   ScriptType* rtype = rhs->resultType;
 
+  RegisterId r1;
+
+  if (outReg == REGISTER_RETURN_VALUE) {
+    r1 = ctx.acquireRegister();
+  } else {
+    r1 = outReg;
+  }
+
   const RegisterId r2 = ctx.acquireRegister();
 
-  compileExpr(lhs, r2, &out, ctx);
-  compileExpr(rhs, r1, nullptr, ctx);
+  compileExpr(lhs, r1, &out, ctx);
+  compileExpr(rhs, r2, nullptr, ctx);
+
+  if (outReg == REGISTER_RETURN_VALUE) {
+    ctx.freeRegister(r1);
+  }
+
+  ctx.freeRegister(r2);
 
   const typekind lkind = ltype->kind();
   primitivekind lpk = PK_NIL;
@@ -477,8 +491,6 @@ static void compileBinaryExpr(
       break;
   }
 
-  ctx.freeRegister(r2);
-
   if (isAssignment) {
     compileWriteOperation(&out, rtype->stackSizeBytes(), ctx, r1);
   } else {
@@ -494,7 +506,7 @@ static void compileBinaryExpr(
   }
 }
 
-static void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out);
+static bool compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out);
 
 static void compileFuncCall(BytecodeWriter& writer, const RegisterId funcReg, const RegisterId out) {
   writer.startInstr(OP_INVOKE);
@@ -513,19 +525,26 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
   Scope* scope = ctx.getCurrentScope();
   BytecodeWriter& writer = ctx.getWriter();
 
-  uint64 offsetStart = scope->getStackSize();
-  for (const Expr* arg : call->arguments) {
-    offsetStart -= arg->resultType->stackSizeBytes();
+  FunctionSignature* targetSign = static_cast<FunctionSignature*>(call->target->resultType);
+
+  uint64 offsets[targetSign->getArgumentsLength()];
+  uint64 runningOffset = 0;
+
+  for (uint32 i = 0; i < targetSign->getArgumentsLength(); i++) {
+    const ScriptType* argType = targetSign->getArgumentType(i);
+    const uint64 argSize = argType->stackSizeBytes();
+
+    offsets[i] = scope->getStackSize() - (runningOffset + argSize);
+    runningOffset += argSize;
   }
 
   const RegisterId funcReg = ctx.acquireRegister();
   compileExpr(call->target, funcReg, nullptr, ctx);
 
-  for (Expr* arg : call->arguments) {
-    ScriptType* argType = arg->resultType;
-    const uint64 size = argType->stackSizeBytes();
-    compileStoredExpr(argType, arg, ctx, offsetStart, true);
-    offsetStart += size;
+  for (uint32 i = 0; i < call->arguments.size(); i++) {
+    Expr* arg = call->arguments.at(i);
+    const uint64 argOffset = offsets[i];
+    compileStoredExpr(arg->resultType, arg, ctx, argOffset, true);
   }
 
   compileFuncCall(writer, funcReg, out);
@@ -539,7 +558,7 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
   switch (kind) {
     // TODO: Expressions
     //  - X ID
-    //  -   Call
+    //  - X Call
     //  - X PropAccess
     //  - X IndexAccess
     //  - X BooleanLiteral
@@ -1085,6 +1104,10 @@ static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
   compileStatement(loop->loopBody, ctx);
   compileExpr(loop->third, thirdReg, nullptr, ctx);
 
+  writer.startInstr(OP_JMP);
+  writer.appendU32(conditionInstr);
+  writer.endInstr();
+
   const uint64 endInstr = writer.getInstructionCounter();
   writer.writeInstructionCounter(endWriteAddr, endInstr);
 
@@ -1160,6 +1183,32 @@ static void compileReturn(const ReturnStatement* ret, CompilerContext& ctx) {
   ctx.setReturnCalled(true);
 }
 
+static void compileAssert(AssertStatement* assert, CompilerContext& ctx) {
+  const RegisterId condReg = ctx.acquireRegister();
+  const RegisterId msgReg = ctx.acquireRegister();
+
+  BytecodeWriter& writer = ctx.getWriter();
+
+  compileExpr(assert->condition, condReg, nullptr, ctx);
+
+  if (assert->message) {
+    compileExpr(assert->message, msgReg, nullptr, ctx);
+  } else {
+    writer.startInstr(OP_LOADCONST64);
+    writer.appendU8(msgReg);
+    writer.appendU64(0);
+    writer.endInstr();
+  }
+
+  writer.startInstr(OP_ASSERT);
+  writer.appendU8(condReg);
+  writer.appendU8(msgReg);
+  writer.endInstr();
+
+  ctx.freeRegister(condReg);
+  ctx.freeRegister(msgReg);
+}
+
 static void compileStatement(Statement* stat, CompilerContext& ctx) {
   const astnodetype kind = stat->nodeKind();
 
@@ -1196,16 +1245,25 @@ static void compileStatement(Statement* stat, CompilerContext& ctx) {
       ctx.freeRegister(resultRegister);
       return;
     }
+    case AST_AssertStatement:
+      compileAssert(static_cast<AssertStatement*>(stat), ctx);
+      return;
     default:
       return;
   }
 }
 
-void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out) {
+bool compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out) {
+  bool b = false;
   if (type->kind() == TK_STRUCT && (!val || val->nodeKind() == AST_ObjectLiteral)) {
     compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
+    b = true;
   }
-  compileExpr(val, out, nullptr, ctx);
+  if (val) {
+    compileExpr(val, out, nullptr, ctx);
+    b = true;
+  }
+  return b;
 }
 
 static bool isStoreableLiteral(Expr* e) {
@@ -1275,7 +1333,12 @@ static void compileStoredExpr(ScriptType* type, Expr* expr, CompilerContext& ctx
   }
 
   const RegisterId valueReg = ctx.acquireRegister();
-  compileRValue(type, expr, ctx, valueReg);
+  const bool wroteAnything = compileRValue(type, expr, ctx, valueReg);
+
+  if (!wroteAnything) {
+    ctx.freeRegister(valueReg);
+    return;
+  }
 
   if (local) {
     BYTEWIDTH_OPCODE(type->stackSizeBytes(), writer, OP_SWRITE)

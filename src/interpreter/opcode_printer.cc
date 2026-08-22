@@ -94,6 +94,10 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, " %s", getRegistryName(*(buf + 6)));
       break;
+    case OP_ASSERT:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      break;
     case OP_MOV:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));

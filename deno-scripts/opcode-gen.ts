@@ -94,6 +94,7 @@ function generalOperations() {
   opCode("JMP", [uint32("to")])
   opCode("JMPI0", [uint32("to"), reg("condition")])
   opCode("JMPN0", [uint32("to"), reg("condition")])
+  opCode("ASSERT", [reg("condition"), reg("message")])
 
   opCode("MOV", [reg("from"), reg("to")], [
       "%REG:to% = %REG:from%;"
@@ -117,7 +118,7 @@ function stackOperations() {
   ])
 
   byteSizedOpCode("STORECONST", [uint32("offset"), sd("value")], [
-      "WRITE_U%SIZE%(stack, READ_U64ARG(%OFFSET:offset%), %CONST:value,%SIZE%%);"
+      "WRITE_U%SIZE%(stack, READ_U32ARG(%OFFSET:offset%), %CONST:value,%SIZE%%);"
   ])
 }
 
@@ -133,7 +134,7 @@ function globalStackOperations() {
   ])
 
   byteSizedOpCode("GSTORECONST", [uint32("offset"), sd("value")], [
-    "WRITE_U%SIZE%(global, READ_U64ARG(%OFFSET:offset%), %CONST:value,%SIZE%%);"
+    "WRITE_U%SIZE%(global, READ_U32ARG(%OFFSET:offset%), %CONST:value,%SIZE%%);"
   ])
 }
 
