@@ -1,0 +1,5 @@
+# MODE run
+
+void main() {
+  assert 1 == 1 : "One does not equal one"
+}
