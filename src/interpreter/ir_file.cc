@@ -177,7 +177,7 @@ static void writePooledString(FILE* out, uint64 off, uint8* strPool) {
   fwrite(strData, 1, len, out);
 }
 
-static conststring TypeTableType_name(TypeTableType type) {
+static conststring TypeTableType_name(const TypeTableType type) {
   switch (type) {
     case TYPE_TABLE_ARRAY: return "ARRAY";
     case TYPE_TABLE_SIGNATURE: return "FUNCSIGN";
