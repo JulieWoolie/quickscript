@@ -140,10 +140,12 @@ static void compileIndexAccessExpr(
   const RegisterId idxReg = ctx.acquireRegister();
 
   compileExpr(access->target, targetReg, nullptr, ctx);
-  uint32 stackSize = access->resultType->stackSizeBytes();
+  compileExpr(access->index, idxReg, nullptr, ctx);
 
   if (out != NO_REGISTER) {
+    const uint32 stackSize = access->resultType->stackSizeBytes();
     BytecodeWriter& writer = ctx.getWriter();
+
     BYTEWIDTH_OPCODE(stackSize, writer, OP_READIDX)
     writer.appendU8(targetReg);
     writer.appendU8(out);
@@ -174,28 +176,31 @@ static void compilePropertyAccess(
 
   compileExpr(prop->target, targetReg, nullptr, ctx);
 
-  uint32 propertyOffset;
+  BytecodeWriter& writer = ctx.getWriter();
 
   if (targetKind != TK_STRUCT) {
-    // Only non struct property that is available is the length property on
-    // arrays and strings which is always at offset 0x0
-    propertyOffset = 0;
-  } else {
-    std::string_view view = ctx.getSemantics().getStrings().getview(prop->property->value);
-    ScriptStructType* structType = static_cast<ScriptStructType*>(type);
+    writer.startInstr(OP_ARRLEN);
+    writer.appendU8(targetReg);
+    writer.appendU8(out);
+    writer.endInstr();
+    ctx.freeRegister(targetReg);
+    return;
+  }
 
-    propertyOffset = 0;
+  std::string_view view = ctx.getSemantics().getStrings().getview(prop->property->value);
+  ScriptStructType* structType = static_cast<ScriptStructType*>(type);
 
-    for (uint32 p = 0; p < structType->getPropertyCount(); p++) {
-      const StructProperty* structProp = structType->getProperty(p);
+  uint32 propertyOffset = 0;
 
-      if (structProp->name != view) {
-        propertyOffset += structProp->type->stackSizeBytes();
-        continue;
-      }
+  for (uint32 p = 0; p < structType->getPropertyCount(); p++) {
+    const StructProperty* structProp = structType->getProperty(p);
 
-      break;
+    if (structProp->name != view) {
+      propertyOffset += structProp->type->stackSizeBytes();
+      continue;
     }
+
+    break;
   }
 
   if (out != NO_REGISTER) {
@@ -551,6 +556,45 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
   ctx.freeRegister(funcReg);
 }
 
+static void compileArrayLiteral(ArrayLiteral* lit, const RegisterId out, CompilerContext& ctx) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
+
+  ScriptType* cType = arrType->getComponentType();
+
+  const uint64 componentSize = cType->stackSizeBytes();
+  const uint64 count = lit->values.size();
+
+  writer.startInstr(OP_ARRAYALLOC);
+  writer.appendU8(out);
+  writer.appendU32(count);
+  writer.appendU32(ctx.getSemantics().getTypes().findIndex(arrType));
+  writer.endInstr();
+
+  const RegisterId valueReg = ctx.acquireRegister();
+  const RegisterId indexReg = ctx.acquireRegister();
+
+  for (uint32 i = 0; i < count; i++) {
+    Expr* value = lit->values[i];
+    compileRValue(cType, value, ctx, valueReg);
+
+    writer.startInstr(OP_LOADCONST32);
+    writer.appendU8(indexReg);
+    writer.appendU32(i);
+    writer.endInstr();
+
+    BYTEWIDTH_OPCODE(componentSize, writer, OP_WRITEIDX)
+    writer.appendU8(out);
+    writer.appendU8(valueReg);
+    writer.appendU8(indexReg);
+    writer.endInstr();
+  }
+
+  ctx.freeRegister(valueReg);
+  ctx.freeRegister(indexReg);
+}
+
 static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, CompilerContext& ctx) {
   const astnodetype kind = expr->nodeKind();
   BytecodeWriter& writer = ctx.getWriter();
@@ -655,45 +699,9 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
       return;
     }
 
-    case AST_ArrayLiteral: {
-      const ArrayLiteral* lit = static_cast<ArrayLiteral*>(expr);
-      const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
-
-      ScriptType* cType = arrType->getComponentType();
-
-      const uint64 componentSize = cType->stackSizeBytes();
-      const uint64 count = lit->values.size();
-      const uint64 memSize = sizeof(uint32) + (componentSize * count);
-
-      writer.startInstr(OP_HEAPALLOC);
-      writer.appendU8(out);
-      writer.appendU64(memSize);
-      writer.endInstr();
-
-      const RegisterId valueReg = ctx.acquireRegister();
-      const RegisterId indexReg = ctx.acquireRegister();
-
-      for (uint32 i = 0; i < count; i++) {
-        Expr* value = lit->values[i];
-        compileRValue(cType, value, ctx, valueReg);
-
-        writer.startInstr(OP_LOADCONST32);
-        writer.appendU8(indexReg);
-        writer.appendU32(i);
-        writer.endInstr();
-
-        BYTEWIDTH_OPCODE(componentSize, writer, OP_WRITEIDX)
-        writer.appendU8(out);
-        writer.appendU8(valueReg);
-        writer.appendU8(indexReg);
-        writer.endInstr();
-      }
-
-      ctx.freeRegister(valueReg);
-      ctx.freeRegister(indexReg);
-
+    case AST_ArrayLiteral:
+      compileArrayLiteral(static_cast<ArrayLiteral*>(expr), out, ctx);
       return;
-    }
 
     case AST_ObjectLiteral: {
       //
