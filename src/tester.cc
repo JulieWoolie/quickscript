@@ -353,7 +353,7 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors, Node* a
 
 static void breakpoint() {}
 
-bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& settings) {
+bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const ProgramSettings& settings) {
   std::ifstream instream(filePath);
 
   if (!instream.is_open()) {
@@ -373,7 +373,6 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
   Lexer l = Lexer(file_contents, &tlist, &table, &errors);
   l.setCommentsIgnored(false);
 
-  TestCase tcase;
   bool stepFailed = false;
 
   try {
@@ -414,6 +413,19 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
     return checkErrors(tcase, errors, result);
   }
 
+  if (!tcase.dumpDirectory.empty()) {
+    std::filesystem::create_directories(tcase.dumpDirectory);
+
+    // Write JSON AST
+    JsonPrinter printer;
+    result->acceptVisit(&printer);
+
+    const std::string& jsonString = printer.getResult();
+    std::ofstream jsonStream(tcase.dumpDirectory / "ast.json");
+
+    jsonStream << jsonString;
+  }
+
   TypeTable lookup = TypeTable();
 
   if (result->nodeKind() == AST_ScriptFileStatement) {
@@ -430,6 +442,28 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
 
     runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
     BytecodeFile bfile = compile(ctx);
+
+    if (!tcase.dumpDirectory.empty()) {
+      std::filesystem::path binaryIrFile = tcase.dumpDirectory / "bytecode.qscr-bin";
+      std::filesystem::path textIrFile = tcase.dumpDirectory / "bytecode.qscr-ir";
+
+      std::string textIrPath = textIrFile.string();
+      std::string binIrPath = binaryIrFile.string();
+
+      FILE* textFile = fopen(textIrPath.c_str(), "w");
+      printBytecodeFile(bfile, textFile);
+
+      fclose(textFile);
+      textFile = fopen(binIrPath.c_str(), "w");
+
+      uint64 binSize = 0;
+      uint8* binData = serializeBytecodeFile(bfile, &binSize);
+
+      fwrite(binData, binSize, 1, textFile);
+      fclose(textFile);
+
+      free(binData);
+    }
 
     VirtualMachine vm = VirtualMachine();
 
@@ -467,7 +501,15 @@ void runTests(const ProgramSettings& settings) {
       }
 
       const std::filesystem::path& path = entry.path();
-      bool success = runTestCase(path, settings);
+      TestCase tcase;
+
+      if (!settings.testDumpDirectory.empty()) {
+        std::filesystem::path dumpDir = settings.testDumpDirectory;
+        dumpDir /= std::filesystem::relative(path, dirpath);
+        tcase.dumpDirectory = dumpDir;
+      }
+
+      bool success = runTestCase(tcase, path, settings);
 
       total++;
 

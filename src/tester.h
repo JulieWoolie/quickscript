@@ -24,11 +24,12 @@ struct TestCase {
   bool breakpoint = false;
   std::vector<ExpectedError> expectedErrors;
   std::string expectedAst;
+  std::filesystem::path dumpDirectory;
 };
 
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table);
 
-bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& settings);
+bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const ProgramSettings& settings);
 
 void runTests(const ProgramSettings& settings);
 
