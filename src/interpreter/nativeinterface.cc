@@ -61,7 +61,7 @@ float64 NativeCall::getF64Argument(uint32 idx) const {
   return std::bit_cast<float64>(m_args[idx]);
 }
 
-QsString NativeCall::getStrArgument(uint32 idx) {
+QsArray NativeCall::getStringArgument(uint32 idx) {
   const uint64 ptr = getU64Argument(idx);
   return getScriptString(ptr);
 }

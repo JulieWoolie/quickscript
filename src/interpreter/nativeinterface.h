@@ -30,6 +30,8 @@ class NativeCall {
     float32 getF32Argument(uint32 idx);
     float64 getF64Argument(uint32 idx) const;
 
+    QsArray getStringArgument(uint32 idx);
+
     QsArray getArrayArgument(uint32 idx);
 
     QsObject getObjectArgument(uint32 idx);
