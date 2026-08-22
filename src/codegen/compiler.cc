@@ -875,6 +875,15 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
       return;
     }
 
+    case AST_CharLiteral: {
+      CharLiteral* cLit = static_cast<CharLiteral*>(expr);
+      writer.startInstr(OP_LOADCONST8);
+      writer.appendU8(out);
+      writer.appendU8(cLit->value->data[0]);
+      writer.endInstr();
+      return;
+    }
+
     case AST_StringLiteral: {
       const StringLiteral* lit = static_cast<StringLiteral*>(expr);
       const StringPoolAddress off = ctx.getStringPool().emplace(lit->value);
