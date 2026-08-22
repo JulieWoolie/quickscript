@@ -3,9 +3,11 @@
 
 #include "../common.h"
 #include "objects.h"
+#include "../types/ScriptType.h"
 
 class NativeCall {
   uint64* m_args = nullptr;
+  ScriptType** m_types = nullptr;
   uint32 m_argCount = 0;
 
   uint64 m_returnValue = 0;
@@ -28,13 +30,15 @@ class NativeCall {
     float32 getF32Argument(uint32 idx);
     float64 getF64Argument(uint32 idx) const;
 
-    QsString getStrArgument(uint32 idx);
-
     QsArray getArrayArgument(uint32 idx);
 
     QsObject getObjectArgument(uint32 idx);
 
-    QsString getScriptString(uint64 heapAddr);
+    QsArray getScriptString(uint64 heapAddr);
+
+    QsArray getScriptArray(uint64 heapAddr);
+
+    ScriptType* getArgumentType(uint32 idx);
 
     uint8* allocHeap(uint64 size);
 

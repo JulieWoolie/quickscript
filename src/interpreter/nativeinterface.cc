@@ -76,8 +76,19 @@ QsObject NativeCall::getObjectArgument(uint32 idx) {
   return castToQsObject(addr);
 }
 
-QsString NativeCall::getScriptString(uint64 heapAddr) {
-  return castToQsString(reinterpret_cast<void*>(heapAddr));
+QsArray NativeCall::getScriptString(uint64 heapAddr) {
+  return castToQsArray(reinterpret_cast<void*>(heapAddr));
+}
+
+QsArray NativeCall::getScriptArray(uint64 heapAddr) {
+  return castToQsArray(reinterpret_cast<void*>(heapAddr));
+}
+
+ScriptType* NativeCall::getArgumentType(uint32 idx) {
+  if (idx > m_argCount) {
+    return nullptr;
+  }
+  return m_types[idx];
 }
 
 uint8* NativeCall::allocHeap(uint64 size) {
