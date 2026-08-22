@@ -1366,28 +1366,28 @@ void Interpreter::run() {
       REG_AS(args[2], float64) = std::pow(REG_AS(args[0], float64), REG_AS(args[1], float64));
       break;
     case OP_EQ8:
-      m_registers[args[2]] = m_registers[args[0]] == m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint8) == REG_AS(args[1], uint8);
       break;
     case OP_EQ16:
-      m_registers[args[2]] = m_registers[args[0]] == m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint16) == REG_AS(args[1], uint16);
       break;
     case OP_EQ32:
-      m_registers[args[2]] = m_registers[args[0]] == m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint32) == REG_AS(args[1], uint32);
       break;
     case OP_EQ64:
-      m_registers[args[2]] = m_registers[args[0]] == m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint64) == REG_AS(args[1], uint64);
       break;
     case OP_NEQ8:
-      m_registers[args[2]] = m_registers[args[0]] != m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint8) != REG_AS(args[1], uint8);
       break;
     case OP_NEQ16:
-      m_registers[args[2]] = m_registers[args[0]] != m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint16) != REG_AS(args[1], uint16);
       break;
     case OP_NEQ32:
-      m_registers[args[2]] = m_registers[args[0]] != m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint32) != REG_AS(args[1], uint32);
       break;
     case OP_NEQ64:
-      m_registers[args[2]] = m_registers[args[0]] != m_registers[args[1]];
+      m_registers[args[2]] = REG_AS(args[0], uint64) != REG_AS(args[1], uint64);
       break;
     case OP_GTI8:
       m_registers[args[2]] = REG_AS(args[0], int8) > REG_AS(args[1], int8);

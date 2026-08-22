@@ -322,7 +322,7 @@ function comparisonOperators() {
   ]
   for (const eqOp of equalityOperators) {
     byteSizedOpCode(eqOp.name, BINARY_ARGS, [
-        `%REG:out% = %REG:lhs% ${eqOp.operator} %REG:rhs%;`
+        `%REG:out% = %REG:lhs,%UTYPE%% ${eqOp.operator} %REG:rhs,%UTYPE%%;`
     ])
 
     opCode(`${eqOp.name}ARR`, BINARY_ARGS)
