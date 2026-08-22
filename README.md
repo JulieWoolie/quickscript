@@ -38,6 +38,8 @@ interpret that IR.
 - [ ] `LTARR` OP Code functionality
 - [ ] `LTEARR` OP Code functionality
 - [ ] `STRCONCAT` OP Code functionality
+- [ ] Support for native bindings: structs, variables, constants and functions
+- [ ] Standard library
 
 ## Future goals
 
