@@ -4,16 +4,13 @@
 #include "../stringtable.h"
 #include "../analysis/SemanticContext.h"
 #include "../interpreter/opcodes.h"
+#include "../interpreter/registers.h"
 #include "../parse/syntaxtree.h"
 
 #define ALL_REGISTERS_USED 0xFFFFFFFFFFFFFFFF
 #define NO_REGISTER (-1)
 
-typedef uint8 registerid;
-typedef int8 registeridopt;
-
 typedef uint64 StringPoolAddress;
-
 
 class BytecodeWriter {
   uint8* m_buf = nullptr;
@@ -111,7 +108,7 @@ class CompilerContext {
 
   SemanticContext& m_semantics;
 
-  uint64* m_registersInUse;
+  RegisterBitSet* m_registersInUse;
 
   Scope* m_currentScope = nullptr;
   bool m_returned = false;
@@ -127,10 +124,10 @@ class CompilerContext {
 
     uint32 pushCompiledFunction(LocalFuncSymbol* lfs, uint32 start);
 
-    registeridopt acquireRegister() const;
-    bool registerInUse(registerid reg) const;
-    void useRegister(registerid reg) const;
-    void freeRegister(registerid reg) const;
+    RegisterIdOpt acquireRegister() const;
+    bool registerInUse(RegisterId reg) const;
+    void useRegister(RegisterId reg) const;
+    void freeRegister(RegisterId reg) const;
 
     BytecodeWriter& getWriter();
     ConstStringPoolWriter& getStringPool();

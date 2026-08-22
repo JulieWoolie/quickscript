@@ -1194,7 +1194,7 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
       CASTED_VAR(c, CallExpr, node)
       const FunctionSignature* sig = static_cast<FunctionSignature*>(c->target->resultType);
 
-      uint64 callArgsSize = sig->getReturnType()->stackSizeBytes();
+      uint64 callArgsSize = 0;
       const uint32 argsCount = sig->getArgumentsLength();
 
       for (uint32 i = 0; i < argsCount; i++) {
@@ -1366,11 +1366,6 @@ static void processFunctionScopes(SemanticContext& ctx, const LocalFunction* lf)
     .variableSpace = 0,
     .offsetStart = 0
   };
-
-  if (lf->getSignature()->getReturnType() != ConstTypes::VOID()) {
-    procContext.variableSpace += lf->getSignature()->getReturnType()->stackSizeBytes();
-    procContext.offsetStart = procContext.variableSpace;
-  }
 
   for (FunctionParam* arg : decl->arguments) {
     processScope(arg, procContext);

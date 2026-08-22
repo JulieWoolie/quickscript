@@ -232,11 +232,7 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " STRINGS[off=%llu] # %.*s", *reinterpret_cast<uint64*>(buf + 6), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 6)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 6)));
       fprintf(out, " %s", getRegistryName(*(buf + 14)));
       break;
-    case OP_INVOKEV:
-    case OP_INVOKE8:
-    case OP_INVOKE16:
-    case OP_INVOKE32:
-    case OP_INVOKE64:
+    case OP_INVOKE:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       break;
     case OP_I8TU8:

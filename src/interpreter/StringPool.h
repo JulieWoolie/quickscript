@@ -34,6 +34,8 @@ class StringPool {
     uint64 emplaceString(uint32 len, const uint8* data);
 
     PoolOffsetRewrite emplacePoolData(uint8* data, uint64 len);
+
+    uint8* getPointer(uint64 offset) const;
 };
 
 #endif //QUICKSCRIPT_STRINGPOOL_H

@@ -24,7 +24,7 @@ void InstructionBuf::insertInstructions(const uint8* instrBuf, const uint64 len)
   m_len = newLen;
 }
 
-void InstructionBuf::getInstruction(opcode* code, uint8** args, uint32 instrIndex) const {
+void InstructionBuf::getInstruction(opcode* code, uint8 args[], uint32 instrIndex) const {
   uint64 offset = instrIndex;
   offset *= LENGTH_INSTRUCTION;
 
@@ -33,7 +33,8 @@ void InstructionBuf::getInstruction(opcode* code, uint8** args, uint32 instrInde
     return;
   }
 
-  *args = m_buf + offset + LENGTH_OPCODE;
+  *code = *reinterpret_cast<opcode*>(m_buf + offset);
+  memcpy(args, m_buf + offset + LENGTH_OPCODE, LENGTH_ARGS);
 }
 
 uint64 InstructionBuf::length() const {
@@ -462,7 +463,7 @@ VirtualMachine& Interpreter::getVirtualMachine() const {
   return m_vm;
 }
 
-int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsArrayAddr) {
+void Interpreter::moveExecutionTo(const ScriptFunction& func) {
   const StringPool& strPool = m_vm.getStringPool();
   const uint32 nameLen = strPool.getLength(func.nameOffset);
   const int8* nameContent = strPool.getCharacterData(func.nameOffset);
@@ -474,16 +475,21 @@ int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsA
   frame->stackBase = stackFrame;
   frame->allocatedSize = func.stackSize;
 
-  // Write to offset 4, since offset 0..3 is the int32 return value
-  WRITE_U64(stackFrame, 4, argsArrayAddr);
+  m_registers[REGISTER_INSTR_COUNTER] = func.firstInstrIndex;
+}
 
-  m_instrCount = func.firstInstrIndex;
+int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsArrayAddr) {
+  moveExecutionTo(func);
+
+  const CallFrame* frame = getCallFrame();
+  uint8* stackFrame = frame->stackBase;
+
+  // Write the args array to the start of the stack frame
+  *reinterpret_cast<uint64*>(stackFrame) = argsArrayAddr;
 
   run();
 
-  const int32 retVal = READ_U32(stackFrame, 0);
-  popCallFrame();
-
+  const int32 retVal = m_registers[REGISTER_RETURN_VALUE];
   return retVal;
 }
 
@@ -502,7 +508,7 @@ static uint64 stringRepeat(void* strAddr, const uint32 repeats, HeapMemory& heap
 
 void Interpreter::run() {
   opcode code = OP_NOP;
-  uint8* args = nullptr;
+  uint8 args[LENGTH_ARGS];
 
   uint8* stack = nullptr;
   uint8* global = m_vm.getGlobalMemory().getData();
@@ -510,7 +516,7 @@ void Interpreter::run() {
   CallFrame* frame = nullptr;
 
   begin:
-  m_vm.getInstructions().getInstruction(&code, &args, m_instrCount);
+  m_vm.getInstructions().getInstruction(&code, args, m_registers[REGISTER_INSTR_COUNTER]);
   frame = getCallFrame();
 
   if (!frame) {
@@ -527,25 +533,13 @@ void Interpreter::run() {
      *   - X JMP
      *   - X JMPI0
      *   - X JMPN0
-     *   - _ LOADCONSTSTR
+     *   - X LOADCONSTSTR
      *   - _ HEAPALLOC
      *   - _ HEAPFREE
-     *   - _ READIDX8
-     *   - _ READIDX16
-     *   - _ READIDX32
-     *   - _ READIDX64
-     *   - _ WRITEIDX8
-     *   - _ WRITEIDX16
-     *   - _ WRITEIDX32
-     *   - _ WRITEIDX64
      *   - _ SETARGTYPE
-     *   - _ LFUNCLOOKUP
+     *   - X LFUNCLOOKUP
      *   - _ NFUNCLOOKUP
-     *   - _ INVOKEV
-     *   - _ INVOKE8
-     *   - _ INVOKE16
-     *   - _ INVOKE32
-     *   - _ INVOKE64
+     *   - X INVOKE
      *   - _ EQARR
      *   - _ EQSTRUCT
      *   - _ NEQARR
@@ -559,9 +553,10 @@ void Interpreter::run() {
 
     case OP_RET:
       if (frame->returnAddr == NO_RETURN_ADDR) {
+        popCallFrame();
         return;
       }
-      m_instrCount = frame->returnAddr;
+      m_registers[REGISTER_INSTR_COUNTER] = frame->returnAddr ;
       popCallFrame();
       goto begin;
 
@@ -569,28 +564,43 @@ void Interpreter::run() {
       frame->line = READ_U32ARG(0);
       break;
     case OP_JMP:
-      m_instrCount = READ_U32ARG(0);
+      m_registers[REGISTER_INSTR_COUNTER] = READ_U32ARG(0);
       goto begin;
     case OP_JMPI0:
       if (m_registers[args[4]]) {
         break;
       }
-      m_instrCount = READ_U32ARG(0);
+      m_registers[REGISTER_INSTR_COUNTER] = READ_U32ARG(0);
       goto begin;
     case OP_JMPN0:
       if (!m_registers[args[4]]) {
         break;
       }
-      m_instrCount = READ_U32ARG(0);
+      m_registers[REGISTER_INSTR_COUNTER] = READ_U32ARG(0);
       goto begin;
 
-    // region SIMPLE_INSTRUCTIONS
+    case OP_LFUNCLOOKUP:
+      m_registers[args[4]] = reinterpret_cast<uint64>(&m_vm.getFunctions()[REG_AS(args[0], uint32)]);
+      break;
+
+    case OP_INVOKE:
+      moveExecutionTo(*REG_AS(args[0], ScriptFunction*));
+      goto begin;
+
+    case OP_LOADCONSTSTR: {
+      const uint64 strOffset = READ_U64ARG(1);
+      uint8* strPtr = m_vm.getStringPool().getPointer(strOffset);
+      m_registers[args[0]] = reinterpret_cast<uint64>(strPtr);
+      break;
+    }
+
+    // region Generated instructions
 #include "evaluator.cc"
-    // endregion
+    // endregion Generated instructions
     default:
       break;
   }
 
-  m_instrCount++;
+  ++m_registers[REGISTER_INSTR_COUNTER];
   goto begin;
 }

@@ -11,8 +11,8 @@
 #include "StringPool.h"
 #include "../args.h"
 #include "../common.h"
+#include "registers.h"
 
-#define REGISTERS_COUNT 64
 #define MAX_ARGS 128
 #define MAX_CALL_DEPTH 1024
 #define NO_RETURN_ADDR 0xFFFFFFFF
@@ -40,7 +40,7 @@ class InstructionBuf {
 
     void insertInstructions(const uint8* instrBuf, uint64 len);
 
-    void getInstruction(opcode* code, uint8** args, uint32 instrIndex) const;
+    void getInstruction(opcode* code, uint8 args[], uint32 instrIndex) const;
 
     uint64 length() const;
 
@@ -103,13 +103,11 @@ class Interpreter {
 
   StackMemory m_stack;
 
-  uint64 m_registers[REGISTERS_COUNT] = {};
+  RegisterValue m_registers[REGISTER_COUNT] = {};
   uint64 m_argTypeIndexes[MAX_ARGS] = {};
 
   CallFrame m_callFrames[MAX_CALL_DEPTH];
   uint32 m_frameCount = 0;
-
-  uint64 m_instrCount;
 
   public:
     explicit Interpreter(VirtualMachine& vm);
@@ -120,6 +118,8 @@ class Interpreter {
     void popCallFrame();
 
     VirtualMachine& getVirtualMachine() const;
+
+    void moveExecutionTo(const ScriptFunction& func);
 
     int32 beginExecution(const ScriptFunction& func, uint64 argsArrayAddr);
 

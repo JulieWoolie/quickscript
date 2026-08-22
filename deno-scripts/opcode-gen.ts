@@ -165,8 +165,33 @@ function heapOperations() {
   byteSizedOpCode("WRITEOBJ", [reg("obj"), reg("val"), uint32("off")], [
       "*reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE) = %REG:val,%UTYPE%%;"
   ])
-  byteSizedOpCode("READIDX", [reg("obj"), reg("out"), reg("idx")])
-  byteSizedOpCode("WRITEIDX", [reg("obj"), reg("val"), reg("idx")])
+
+  byteSizedOpCode("READIDX", [reg("obj"), reg("out"), reg("idx")], [
+      "{",
+      "QsArray arr = castToQsArray(%REG:obj,void*%);",
+      "const uint32 idx = %REG:idx,uint32%",
+      "",
+      "if (idx >= arr.length) {",
+      `  throw std::runtime_error("Index out of bounds");`,
+      "}",
+      "",
+      "%REG:out,%UTYPE%% = arr.%LSHORTHAND%At(idx);",
+      "}"
+  ])
+
+  byteSizedOpCode("WRITEIDX", [reg("obj"), reg("val"), reg("idx")], [
+    "{",
+    "QsArray arr = castToQsArray(%REG:obj,void*%);",
+    "const uint32 idx = %REG:idx,uint32%",
+    "",
+    "if (idx >= arr.length) {",
+    `  throw std::runtime_error("Index out of bounds");`,
+    "}",
+    "",
+    "const %UTYPE% value = %REG:val,%UTYPE%%;",
+    "arr.%LSHORTHAND%At(idx) = value;",
+    "}"
+  ])
 }
 
 function functionCallOperations() {
@@ -381,6 +406,8 @@ function byteSizedOpCode(name: string, params: InstructionParam[], source?: stri
           .replaceAll("%TYPE%", `int${size}`)
           .replaceAll("%SIZE%", `${size}`)
           .replaceAll("%BYTES%", `${bsize}`)
+          .replaceAll("%SHORTHAND%", `U${size}`)
+          .replaceAll("%LSHORTHAND%", `u${size}`)
       })
     }
 

@@ -149,6 +149,98 @@
     case OP_WRITEOBJ64:
       *reinterpret_cast<uint64*>(m_registers[args[0]] + READ_U32ARG(2) + REFCOUNT_PREFIX_SIZE) = REG_AS(args[1], uint64);
       break;
+    case OP_READIDX8: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      REG_AS(args[1], uint8) = arr.u8At(idx);
+      break;
+    }
+    case OP_READIDX16: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      REG_AS(args[1], uint16) = arr.u16At(idx);
+      break;
+    }
+    case OP_READIDX32: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      REG_AS(args[1], uint32) = arr.u32At(idx);
+      break;
+    }
+    case OP_READIDX64: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      REG_AS(args[1], uint64) = arr.u64At(idx);
+      break;
+    }
+    case OP_WRITEIDX8: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      const uint8 value = REG_AS(args[1], uint8);
+      arr.u8At(idx) = value;
+      break;
+    }
+    case OP_WRITEIDX16: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      const uint16 value = REG_AS(args[1], uint16);
+      arr.u16At(idx) = value;
+      break;
+    }
+    case OP_WRITEIDX32: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      const uint32 value = REG_AS(args[1], uint32);
+      arr.u32At(idx) = value;
+      break;
+    }
+    case OP_WRITEIDX64: {
+      QsArray arr = castToQsArray(REG_AS(args[0], void*));
+      const uint32 idx = REG_AS(args[2], uint32);
+      
+      if (idx >= arr.length) {;
+        throw std::runtime_error("Index out of bounds");
+      };
+      
+      const uint64 value = REG_AS(args[1], uint64);
+      arr.u64At(idx) = value;
+      break;
+    }
     case OP_I8TU8:
       REG_AS(args[1], uint8) = static_cast<uint8>(REG_AS(args[0], int8));
       break;

@@ -5,14 +5,17 @@
 #include "ScriptType.h"
 
 struct StructProperty {
-  std::string name;
-  ScriptType* type;
+  std::string name = "";
+  ScriptType* type = nullptr;
+  uint64 offset = 0;
 };
 
 class ScriptStructType: public ScriptType {
   const std::string m_name;
   const uint32 m_propertyCount;
   StructProperty* const m_properties;
+
+  uint64 m_heapSize = 0;
 
   public:
     ScriptStructType(std::string name, StructProperty* properties, uint32 propCount);

@@ -245,7 +245,7 @@ uint32 CompilerContext::pushCompiledFunction(LocalFuncSymbol* lfs, uint32 start)
   return idx;
 }
 
-registeridopt CompilerContext::acquireRegister() const {
+RegisterIdOpt CompilerContext::acquireRegister() const {
   uint64 used = *m_registersInUse;
 
   if (used == ALL_REGISTERS_USED) {
@@ -266,16 +266,16 @@ registeridopt CompilerContext::acquireRegister() const {
   return NO_REGISTER;
 }
 
-bool CompilerContext::registerInUse(const registerid reg) const {
+bool CompilerContext::registerInUse(const RegisterId reg) const {
   const uint64 m = 1L << reg;
   return *m_registersInUse & m;
 }
 
-void CompilerContext::useRegister(const registerid reg) const {
+void CompilerContext::useRegister(const RegisterId reg) const {
   *m_registersInUse |= (1L << reg);
 }
 
-void CompilerContext::freeRegister(const registerid reg) const {
+void CompilerContext::freeRegister(const RegisterId reg) const {
   *m_registersInUse &= ~(1L << reg);
 }
 

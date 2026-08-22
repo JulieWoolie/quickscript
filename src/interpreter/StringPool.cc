@@ -145,3 +145,7 @@ PoolOffsetRewrite StringPool::emplacePoolData(uint8* data, uint64 len) {
 
   return PoolOffsetRewrite(replacedOffsets, replacedOffsetsWith, rewritten);
 }
+
+uint8* StringPool::getPointer(const uint64 offset) const {
+  return m_data + offset;
+}

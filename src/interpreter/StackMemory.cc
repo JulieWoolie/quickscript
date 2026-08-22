@@ -1,6 +1,7 @@
 #include "StackMemory.h"
 
 #include <cstdlib>
+#include <cstring>
 
 #define KB 1024
 
@@ -40,6 +41,8 @@ uint8* StackMemory::allocateFrame(const uint64 bytes) {
 
   uint8* ptr = m_buf + m_usedLen;
   m_usedLen = newLen;
+
+  memset(ptr, 0, bytes);
 
   return ptr;
 }

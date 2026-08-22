@@ -73,8 +73,8 @@
 
 struct AddrOutput {
   uint8 outptype = OUTP_NIL;
-  registeridopt objectRegister = NO_REGISTER;
-  registeridopt indexRegister = NO_REGISTER;
+  RegisterIdOpt objectRegister = NO_REGISTER;
+  RegisterIdOpt indexRegister = NO_REGISTER;
   uint32 memoffset = 0;
   int64 stackoffset = 0;
 };
@@ -85,7 +85,7 @@ static void compileWriteOperation(
   const AddrOutput* addrout,
   const uint32 stackSize,
   CompilerContext& ctx,
-  const registerid valueRegister
+  const RegisterId valueRegister
 ) {
   BytecodeWriter& writer = ctx.getWriter();
 
@@ -128,16 +128,16 @@ static void compileWriteOperation(
   }
 }
 
-static void compileExpr(Expr* expr, registerid out, AddrOutput* addr, CompilerContext& ctx);
+static void compileExpr(Expr* expr, RegisterId out, AddrOutput* addr, CompilerContext& ctx);
 
 static void compileIndexAccessExpr(
   const IndexAccessExpr* access,
-  const registeridopt out,
+  const RegisterIdOpt out,
   AddrOutput* addr,
   CompilerContext& ctx
 ) {
-  const registerid targetReg = ctx.acquireRegister();
-  const registerid idxReg = ctx.acquireRegister();
+  const RegisterId targetReg = ctx.acquireRegister();
+  const RegisterId idxReg = ctx.acquireRegister();
 
   compileExpr(access->target, targetReg, nullptr, ctx);
   uint32 stackSize = access->resultType->stackSizeBytes();
@@ -163,14 +163,14 @@ static void compileIndexAccessExpr(
 
 static void compilePropertyAccess(
   const PropertyAccessExpr* prop,
-  const registeridopt out,
+  const RegisterIdOpt out,
   AddrOutput* addr,
   CompilerContext& ctx
 ) {
   ScriptType* type = prop->target->resultType;
 
   const typekind targetKind = type->kind();
-  const registerid targetReg = ctx.acquireRegister();
+  const RegisterId targetReg = ctx.acquireRegister();
 
   compileExpr(prop->target, targetReg, nullptr, ctx);
 
@@ -215,7 +215,7 @@ static void compilePropertyAccess(
   }
 }
 
-static void compileFuncLookup(CompilerContext& ctx, LocalFuncSymbol* lfs, const registerid out) {
+static void compileFuncLookup(CompilerContext& ctx, LocalFuncSymbol* lfs, const RegisterId out) {
   BytecodeWriter& writer = ctx.getWriter();
   writer.startInstr(OP_LFUNCLOOKUP);
 
@@ -235,7 +235,7 @@ static void compileFuncLookup(CompilerContext& ctx, LocalFuncSymbol* lfs, const 
 
 static void compileIdentifier(
   Identifier* id,
-  const registeridopt out,
+  const RegisterIdOpt out,
   AddrOutput* addr,
   CompilerContext& ctx
 ) {
@@ -296,7 +296,7 @@ static void compileNonReadingExpr(Expr* expr, AddrOutput* addr, CompilerContext&
 
 static void compileBinaryExpr(
   const BinaryExpr* bin,
-  const registerid r1,
+  const RegisterId r1,
   CompilerContext& ctx
 ) {
   BytecodeWriter& writer = ctx.getWriter();
@@ -400,7 +400,7 @@ static void compileBinaryExpr(
   ScriptType* ltype = lhs->resultType;
   ScriptType* rtype = rhs->resultType;
 
-  const registerid r2 = ctx.acquireRegister();
+  const RegisterId r2 = ctx.acquireRegister();
 
   compileExpr(lhs, r2, &out, ctx);
   compileExpr(rhs, r1, nullptr, ctx);
@@ -494,9 +494,22 @@ static void compileBinaryExpr(
   }
 }
 
-static void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid out);
+static void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out);
 
-static void compileCallExpr(const CallExpr* call, const registerid out, CompilerContext& ctx) {
+static void compileFuncCall(BytecodeWriter& writer, const RegisterId funcReg, const RegisterId out) {
+  writer.startInstr(OP_INVOKE);
+  writer.appendU8(funcReg);
+  writer.endInstr();
+
+  if (out != REGISTER_RETURN_VALUE) {
+    writer.startInstr(OP_MOV);
+    writer.appendU8(REGISTER_RETURN_VALUE);
+    writer.appendU8(out);
+    writer.endInstr();
+  }
+}
+
+static void compileCallExpr(const CallExpr* call, const RegisterId out, CompilerContext& ctx) {
   Scope* scope = ctx.getCurrentScope();
   BytecodeWriter& writer = ctx.getWriter();
 
@@ -505,7 +518,7 @@ static void compileCallExpr(const CallExpr* call, const registerid out, Compiler
     offsetStart -= arg->resultType->stackSizeBytes();
   }
 
-  registerid funcReg = ctx.acquireRegister();
+  const RegisterId funcReg = ctx.acquireRegister();
   compileExpr(call->target, funcReg, nullptr, ctx);
 
   for (Expr* arg : call->arguments) {
@@ -515,20 +528,11 @@ static void compileCallExpr(const CallExpr* call, const registerid out, Compiler
     offsetStart += size;
   }
 
-  if (call->resultType == ConstTypes::VOID()) {
-    writer.startInstr(OP_INVOKEV);
-  } else {
-    BYTEWIDTH_OPCODE(call->resultType->stackSizeBytes(), writer, OP_INVOKE)
-  }
-
-  writer.appendU8(funcReg);
-  writer.appendU8(out);
-  writer.endInstr();
-
+  compileFuncCall(writer, funcReg, out);
   ctx.freeRegister(funcReg);
 }
 
-static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, CompilerContext& ctx) {
+static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, CompilerContext& ctx) {
   const astnodetype kind = expr->nodeKind();
   BytecodeWriter& writer = ctx.getWriter();
 
@@ -647,8 +651,8 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       writer.appendU64(memSize);
       writer.endInstr();
 
-      const registerid valueReg = ctx.acquireRegister();
-      const registerid indexReg = ctx.acquireRegister();
+      const RegisterId valueReg = ctx.acquireRegister();
+      const RegisterId indexReg = ctx.acquireRegister();
 
       for (uint32 i = 0; i < count; i++) {
         Expr* value = lit->values[i];
@@ -696,7 +700,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       const ObjectLiteral* lit = static_cast<ObjectLiteral*>(expr);
       const ScriptStructType* stype = static_cast<ScriptStructType*>(lit->resultType);
 
-      const registerid propertyReg = ctx.acquireRegister();
+      const RegisterId propertyReg = ctx.acquireRegister();
 
       for (const ObjectLiteralProperty* prop : lit->properties) {
         const std::string_view propName = prop->propertyName->value->view();
@@ -793,7 +797,7 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
       //
 
       AddrOutput addrOut;
-      registerid targetRegister;
+      RegisterId targetRegister;
 
       const bool isPostOp = uop == UOP_POSTINC || uop == UOP_POSTDEC;
 
@@ -955,17 +959,13 @@ static void compileExpr(Expr* expr, const registerid out, AddrOutput* addr, Comp
 }
 
 
-static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, const registerid out) {
+static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, const RegisterId out) {
   SemanticContext& semantics = ctx.getSemantics();
   BytecodeWriter& writer = ctx.getWriter();
 
   LocalFuncSymbol* lfc = semantics.getConstructors()[type];
   compileFuncLookup(ctx, lfc, out);
-
-  writer.startInstr(OP_INVOKE64);
-  writer.appendU8(out);
-  writer.appendU8(out);
-  writer.endInstr();
+  compileFuncCall(writer, out, out);
 }
 
 static void compileStatement(Statement* stat, CompilerContext& ctx);
@@ -984,7 +984,7 @@ static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
 }
 
 static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
-  const registerid reg = ctx.acquireRegister();
+  const RegisterId reg = ctx.acquireRegister();
   BytecodeWriter& writer = ctx.getWriter();
 
   compileExpr(stat->condition, reg, nullptr, ctx);
@@ -1069,8 +1069,8 @@ static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
 
   compileLexDecl(loop->first, ctx);
 
-  const registerid conditionReg = ctx.acquireRegister();
-  const registerid thirdReg = ctx.acquireRegister();
+  const RegisterId conditionReg = ctx.acquireRegister();
+  const RegisterId thirdReg = ctx.acquireRegister();
 
   const uint64 conditionInstr = writer.getInstructionCounter();
 
@@ -1096,7 +1096,7 @@ static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
 }
 
 static void compileWhileLoop(WhileStatement* loop, CompilerContext& ctx) {
-  registerid conditionRegister = ctx.acquireRegister();
+  RegisterId conditionRegister = ctx.acquireRegister();
   uint64 endWriteAddr = 0;
   BytecodeWriter& writer = ctx.getWriter();
 
@@ -1151,7 +1151,7 @@ static void compileReturn(const ReturnStatement* ret, CompilerContext& ctx) {
   BytecodeWriter& writer = ctx.getWriter();
 
   if (ret->value) {
-    compileStoredExpr(ret->value->resultType, ret->value, ctx, 0, true);
+    compileRValue(ret->value->resultType, ret->value, ctx, REGISTER_RETURN_VALUE);
   }
 
   writer.startInstr(OP_RET);
@@ -1191,7 +1191,7 @@ static void compileStatement(Statement* stat, CompilerContext& ctx) {
       compileReturn(static_cast<ReturnStatement*>(stat), ctx);
       return;
     case AST_ExprStatement: {
-      const registerid resultRegister = ctx.acquireRegister();
+      const RegisterId resultRegister = ctx.acquireRegister();
       compileExpr(static_cast<ExprStatement*>(stat)->expression, resultRegister, nullptr, ctx);
       ctx.freeRegister(resultRegister);
       return;
@@ -1201,7 +1201,7 @@ static void compileStatement(Statement* stat, CompilerContext& ctx) {
   }
 }
 
-void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, registerid out) {
+void compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out) {
   if (type->kind() == TK_STRUCT && (!val || val->nodeKind() == AST_ObjectLiteral)) {
     compileStructInitCall(static_cast<ScriptStructType*>(type), ctx, out);
   }
@@ -1274,7 +1274,7 @@ static void compileStoredExpr(ScriptType* type, Expr* expr, CompilerContext& ctx
     return;
   }
 
-  const registerid valueReg = ctx.acquireRegister();
+  const RegisterId valueReg = ctx.acquireRegister();
   compileRValue(type, expr, ctx, valueReg);
 
   if (local) {
@@ -1422,15 +1422,21 @@ static void setEntryPointIndex(BytecodeFile& file, CompilerContext& cctx) {
 }
 
 BytecodeFile compile(SemanticContext& ctx) {
-  uint64 registerBitSet = 0;
+  RegisterBitSet registerBitSet = 0;
   CompilerContext cctx = CompilerContext(ctx, &registerBitSet);
 
-  constexpr uint64 initcap = LENGTH_INSTRUCTION * 1024;
-  cctx.getWriter().reserveSpace(initcap);
+  constexpr uint64 initialCap = LENGTH_INSTRUCTION * 1024;
+  cctx.getWriter().reserveSpace(initialCap);
 
-  for (LocalFunction* lf : ctx.getLocalFunctions()) {
+  cctx.useRegister(REGISTER_RETURN_VALUE);
+  cctx.useRegister(REGISTER_INSTR_COUNTER);
+
+  for (const LocalFunction* lf : ctx.getLocalFunctions()) {
     compileLocalFunction(lf, cctx);
   }
+
+  cctx.freeRegister(REGISTER_RETURN_VALUE);
+  cctx.freeRegister(REGISTER_INSTR_COUNTER);
 
 #ifdef RUNTIME_CHECKS
   if (registerBitSet != 0) {

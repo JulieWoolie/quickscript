@@ -62,15 +62,31 @@ ${FILE_HEADER}
 
     out += `\n    case OP_${code.opcode}:`
 
-    for (const line of code.cSourceCode) {
+    let start = 0
+    let acLen = code.cSourceCode.length
+    let braced = false
+
+    if (code.cSourceCode.length > 0 && code.cSourceCode[start] == "{") {
+      out += ` {`
+      start++
+      acLen -= 1
+      braced = true
+    }
+
+    for (let i = start; i < acLen; i++) {
+      const line = code.cSourceCode[i]
       const formattedLine = replacePlaceholders(line, res.opcodeSize, code)
+
       out += `\n      ${formattedLine}`
-      if (!formattedLine.endsWith(";")) {
+      if (formattedLine.length != 0 && !formattedLine.endsWith(";")) {
         out += ";"
       }
     }
 
     out += `\n      break;`
+    if (braced) {
+      out += `\n    }`
+    }
   }
 
   await writeToFile(out, "../src/interpreter/evaluator.cc")

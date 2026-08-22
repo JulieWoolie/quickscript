@@ -72,11 +72,7 @@ conststring opcode_name(opcode code) {
     case OP_SETARGTYPE: return "SETARGTYPE";
     case OP_LFUNCLOOKUP: return "LFUNCLOOKUP";
     case OP_NFUNCLOOKUP: return "NFUNCLOOKUP";
-    case OP_INVOKEV: return "INVOKEV";
-    case OP_INVOKE8: return "INVOKE8";
-    case OP_INVOKE16: return "INVOKE16";
-    case OP_INVOKE32: return "INVOKE32";
-    case OP_INVOKE64: return "INVOKE64";
+    case OP_INVOKE: return "INVOKE";
     case OP_I8TU8: return "I8TU8";
     case OP_I8TI16: return "I8TI16";
     case OP_I8TU16: return "I8TU16";
