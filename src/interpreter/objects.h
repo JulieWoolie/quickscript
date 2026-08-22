@@ -10,6 +10,7 @@
 #define EMPTY_QS_STRING QsString(0, nullptr)
 
 static_assert(sizeof(uint32) == LENGTH_PREFIX_SIZE);
+static_assert(sizeof(uint32) == REFCOUNT_PREFIX_SIZE);
 
 struct QsArray {
   const uint32 length = 0;
@@ -61,5 +62,7 @@ struct QsObject {
 QsArray castToQsArray(void* ptr);
 
 QsObject castToQsObject(void* ptr);
+
+uint32 readQsArrayLength(void* ptr);
 
 #endif //QUICKSCRIPT_OBJECTS_H

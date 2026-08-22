@@ -223,6 +223,10 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
       break;
+    case OP_ARRLEN:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      break;
     case OP_SETARGTYPE:
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 6));

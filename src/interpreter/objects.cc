@@ -78,3 +78,18 @@ QsArray castToQsArray(void* ptr) {
 QsObject castToQsObject(void* ptr) {
   return {static_cast<uint8*>(ptr)};
 }
+
+uint32 readQsArrayLength(void* ptr) {
+  if (!ptr) {
+    return 0;
+  }
+
+  const uint32* intPtr = static_cast<uint32*>(ptr);
+  const uint32 first = *intPtr;
+
+  if (first & REFCOUNT_MASK) {
+    return intPtr[1];
+  }
+
+  return first;
+}

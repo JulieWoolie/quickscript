@@ -70,6 +70,7 @@ conststring opcode_name(opcode code) {
     case OP_WRITEIDX16: return "WRITEIDX16";
     case OP_WRITEIDX32: return "WRITEIDX32";
     case OP_WRITEIDX64: return "WRITEIDX64";
+    case OP_ARRLEN: return "ARRLEN";
     case OP_SETARGTYPE: return "SETARGTYPE";
     case OP_LFUNCLOOKUP: return "LFUNCLOOKUP";
     case OP_NFUNCLOOKUP: return "NFUNCLOOKUP";

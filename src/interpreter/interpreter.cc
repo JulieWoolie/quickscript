@@ -870,6 +870,9 @@ void Interpreter::run() {
       arr.u64At(idx) = value;
       break;
     }
+    case OP_ARRLEN:
+      m_registers[args[1]] = readQsArrayLength(REG_AS(args[0], void*));
+      break;
     case OP_I8TU8:
       REG_AS(args[1], uint8) = static_cast<uint8>(REG_AS(args[0], int8));
       break;

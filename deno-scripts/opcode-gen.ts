@@ -193,6 +193,10 @@ function heapOperations() {
     "arr.%LSHORTHAND%At(idx) = value;",
     "}"
   ])
+  
+  opCode("ARRLEN", [reg("obj"), reg("out")], [
+      "%REG:out% = readQsArrayLength(%REG:obj,void*%);"
+  ])
 }
 
 function functionCallOperations() {
