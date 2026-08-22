@@ -10,6 +10,9 @@
 #include "errors.h"
 #include "analysis/analyzer.h"
 #include "analysis/transformer.h"
+#include "codegen/compiler.h"
+#include "interpreter/interpreter.h"
+#include "interpreter/ir_file.h"
 #include "parse/JsonPrinter.h"
 #include "parse/lexer.h"
 #include "parse/parser.h"
@@ -417,11 +420,23 @@ bool runTestCase(const std::filesystem::path& filePath, const ProgramSettings& s
     SemanticContext ctx = SemanticContext(lookup, table, errors, allocator);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
 
-    if (errors.getErrorCount() != 0) {
-      return checkErrors(tcase, errors, result);
+    if (!checkErrors(tcase, errors, result)) {
+      return false;
+    }
+
+    if (tcase.mode != TESTMODE_RUN) {
+      return true;
     }
 
     runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
+    BytecodeFile bfile = compile(ctx);
+
+    VirtualMachine vm = VirtualMachine();
+
+    uint32 entryPoint = vm.addBytecodeFile(bfile);
+    vm.beginExecution(entryPoint, settings.runArgs);
+
+    return true;
   }
 
   if (settings.printAst & PRINTAST_AFTER_TRANSFORM) {
