@@ -17,6 +17,7 @@ void showHelpMessage() {
   printf("    --text-compile -tc            Compile to a text based IR instead of binary.\n");
   printf("    --omit-ok-tests -oot          Do not log tests that passed.\n");
   printf("    --ignore-asserts -ia          Do not compile or execute assert statements.\n");
+  printf("    --test-dump-dir=<dir>         Directory to dump random test-related debug info to.\n");
   printf("\n");
   printf("COMMANDS\n");
   printf("    help                                Display this help message.\n");
@@ -128,6 +129,11 @@ static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 
       out.printAst |= PRINTAST_AFTER_ANALYSIS;
       return true;
     }
+  }
+
+  if (stringEquals("--test-dump-dir", pair.name)) {
+    out.testDumpDirectory = pair.value;
+    return true;
   }
 
   if (stringEquals("--loglevel", pair.name)) {

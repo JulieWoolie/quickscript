@@ -32,6 +32,10 @@ struct ProgramSettings {
   //    or the directory to read tests from for the tests command
   std::string_view inputFile;
 
+  // Directory random json, ir and txt files are dumped
+  // to for more debug info on test cases
+  std::string_view testDumpDirectory;
+
   // Used for 'compile' command, it's the file the compiled IR is written
   std::string_view outputFile;
 
