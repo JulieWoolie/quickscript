@@ -115,12 +115,129 @@ static void writeInstructions(const BytecodeFile& file, BinaryWriter& writer) {
   }
 }
 
+TypeTableArray* TypeTableArray::create() {
+  return new TypeTableArray();
+}
+
+void TypeTableArray::destroy(const TypeTableArray* tt) {
+  delete tt;
+}
+
+TypeTableFuncSign* TypeTableFuncSign::create(const uint32 argCount) {
+  constexpr uint64 signSize = sizeof(TypeTableFuncSign);
+  const uint64 argsSize = sizeof(typeindex) * argCount;
+  const uint64 memSize = signSize + argsSize;
+
+  TypeTableFuncSign* sign = static_cast<TypeTableFuncSign*>(malloc(memSize));
+  new (sign) TypeTableFuncSign();
+
+  if (argCount != 0) {
+    sign->argumentCount = argCount;
+    sign->argTypes = reinterpret_cast<typeindex*>(sign + 1);
+  }
+
+  return sign;
+}
+
+void TypeTableFuncSign::destroy(TypeTableFuncSign* sign) {
+  free(sign);
+}
+
+TypeTableStruct* TypeTableStruct::create(const uint32 propertyCount) {
+  constexpr uint64 ttSize = sizeof(TypeTableStruct);
+  const uint64 propsMemSize = propertyCount * sizeof(TypeTableStructProperty);
+  const uint64 memSize = ttSize + propsMemSize;
+
+  TypeTableStruct* data = static_cast<TypeTableStruct*>(malloc(memSize));
+  new (data) TypeTableStruct();
+
+  if (propertyCount != 0) {
+    data->propertyCount = propertyCount;
+    data->properties = reinterpret_cast<TypeTableStructProperty*>(data + 1);
+  }
+
+  return data;
+}
+
+void TypeTableStruct::destroy(TypeTableStruct* tt) {
+  free(tt);
+}
+
 BytecodeFile::BytecodeFile() {
 
 }
 
 BytecodeFile::~BytecodeFile() {
+  if (constStringPool) {
+    free(constStringPool);
+    constStringPool = nullptr;
+    stringPoolSize = 0;
+  }
 
+  if (typeTable) {
+    for (uint32 i = 0; i < typeTableSize; i++) {
+      TypeTableEntry* e = typeTable[i];
+      if (e->type == TYPE_TABLE_ARRAY) {
+        TypeTableArray::destroy(static_cast<const TypeTableArray*>(e));
+      } else if (e->type == TYPE_TABLE_SIGNATURE) {
+        TypeTableFuncSign::destroy(static_cast<TypeTableFuncSign*>(e));
+      } else if (e->type == TYPE_TABLE_STRUCT) {
+        TypeTableStruct::destroy(static_cast<TypeTableStruct*>(e));
+      }
+    }
+
+    freeTypeTable(typeTable);
+    typeTable = nullptr;
+    typeTableSize = 0;
+  }
+
+  if (funcTable) {
+    freeFunctionTableArray(funcTable);
+    funcTable = nullptr;
+    funcTableEntries = 0;
+  }
+
+  if (instructionBuf) {
+    free(instructionBuf);
+  }
+
+  instructionBuf = nullptr;
+  instructionsSize = 0;
+  instructionCount = 0;
+
+  globalScopeSize = 0;
+}
+
+
+BytecodeFile& BytecodeFile::create() {
+  BytecodeFile* bfile = new BytecodeFile();
+  return *bfile;
+}
+
+void BytecodeFile::destroy(const BytecodeFile& bfile) {
+  delete &bfile;
+}
+
+FunctionTableEntry* createFunctionTableArray(const uint32 entries) {
+  if (entries == 0) {
+    return nullptr;
+  }
+  return static_cast<FunctionTableEntry*>(malloc(sizeof(FunctionTableEntry) * entries));
+}
+
+void freeFunctionTableArray(FunctionTableEntry* arr) {
+  free(arr);
+}
+
+TypeTableEntry** createTypeTable(const uint32 entries) {
+  if (entries == 0) {
+    return nullptr;
+  }
+  return static_cast<TypeTableEntry**>(malloc(sizeof(TypeTableEntry*) * entries));
+}
+
+void freeTypeTable(TypeTableEntry** table) {
+  free(table);
 }
 
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
@@ -219,7 +336,6 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   fprintf(printFile, "\nCONST_STRING_POOL = {");
   while (strPoolOff < stringPoolSize) {
     const uint32 strSize = *reinterpret_cast<uint32*>(stringPool + strPoolOff);
-    conststring stringAddr = reinterpret_cast<conststring>(stringPool + strPoolOff);
     fprintf(printFile, "\n  [off=%llu size=%d]: ", strPoolOff, strSize);
     writePooledString(printFile, strPoolOff, stringPool);
     strPoolOff += strSize + sizeof(uint32);

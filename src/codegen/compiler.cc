@@ -1371,7 +1371,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
     return;
   }
 
-  TypeTableEntry** entries = static_cast<TypeTableEntry**>(malloc(size * sizeof(TypeTableEntry*)));
+  TypeTableEntry** entries = createTypeTable(size);
   ConstStringPoolWriter& stringPool = ctx.getStringPool();
 
   for (uint32 i = 0; i < size; i++) {
@@ -1384,7 +1384,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         const std::string& name = structType->getNameString();
         const uint32 propCount = structType->getPropertyCount();
 
-        TypeTableStruct* ttStruct = new TypeTableStruct();
+        TypeTableStruct* ttStruct = TypeTableStruct::create(propCount);
         ttStruct->type = TYPE_TABLE_STRUCT;
         ttStruct->index = typeIdx;
         ttStruct->nameOffset = stringPool.emplaceString(name.data(), name.length());
@@ -1394,7 +1394,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         const uint32 fIdx = ctx.findFunctionIndex(lfs);
         ttStruct->constructorFuncIndex = fIdx;
 
-        TypeTableStructProperty* props = new TypeTableStructProperty[propCount];
+        TypeTableStructProperty* props = ttStruct->properties;
         uint64 off = 0;
 
         for (uint32 j = 0; j < propCount; j++) {
@@ -1417,7 +1417,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         const ScriptType* componentType = arrType->getComponentType();
         const typeindex cTypeIdx = types.findIndex(componentType);
 
-        TypeTableArray* arr = new TypeTableArray();
+        TypeTableArray* arr = TypeTableArray::create();
         arr->type = TYPE_TABLE_ARRAY;
         arr->index = typeIdx;
         arr->componentType = cTypeIdx;
@@ -1427,14 +1427,14 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
       }
       case TK_FUNC: {
         FunctionSignature* sign = static_cast<FunctionSignature*>(type);
-        TypeTableFuncSign* tableSign = new TypeTableFuncSign();
+        const uint32 argCount = sign->getArgumentsLength();
+
+        TypeTableFuncSign* tableSign = TypeTableFuncSign::create(argCount);
         tableSign->type = TYPE_TABLE_SIGNATURE;
         tableSign->index = typeIdx;
 
         const typeindex retType = types.findIndex(sign->getReturnType());
-        const uint32 argCount = sign->getArgumentsLength();
-
-        typeindex* argIndexes = new typeindex[argCount];
+        typeindex* argIndexes = tableSign->argTypes;
         for (uint32 j = 0; j < argCount; j++) {
           const typeindex argIndex = types.findIndex(sign->getArgumentType(j));
           argIndexes[j] = argIndex;
@@ -1462,7 +1462,7 @@ static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
   std::vector<CompiledFunction>& compiledFuncs = ctx.getCompiledFunctions();
   const TypeTable& types = ctx.getSemantics().getTypes();
 
-  FunctionTableEntry* table = static_cast<FunctionTableEntry*>(malloc(sizeof(FunctionTableEntry) * compiledFuncs.size()));
+  FunctionTableEntry* table = createFunctionTableArray(compiledFuncs.size());
 
   for (uint32 i = 0; i < compiledFuncs.size(); i++) {
     CompiledFunction& cfunc = compiledFuncs[i];
@@ -1492,7 +1492,7 @@ static void setEntryPointIndex(BytecodeFile& file, CompilerContext& cctx) {
   }
 }
 
-BytecodeFile compile(SemanticContext& ctx) {
+BytecodeFile& compile(SemanticContext& ctx) {
   RegisterBitSet registerBitSet = 0;
   CompilerContext cctx = CompilerContext(ctx, &registerBitSet);
 
@@ -1515,7 +1515,7 @@ BytecodeFile compile(SemanticContext& ctx) {
   }
 #endif
 
-  BytecodeFile file;
+  BytecodeFile& file = BytecodeFile::create();
 
   createTypeTable(file, cctx);
   createFunctionTable(file, cctx);

@@ -443,7 +443,7 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const P
     }
 
     runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
-    BytecodeFile bfile = compile(ctx);
+    BytecodeFile& bfile = compile(ctx);
 
     if (!tcase.dumpDirectory.empty()) {
       std::filesystem::path binaryIrFile = tcase.dumpDirectory / "bytecode.qscr-bin";
@@ -469,6 +469,7 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const P
     VirtualMachine vm = VirtualMachine();
 
     uint32 entryPoint = vm.addBytecodeFile(bfile);
+    BytecodeFile::destroy(bfile);
 
     try {
       vm.beginExecution(entryPoint, settings.runArgs);

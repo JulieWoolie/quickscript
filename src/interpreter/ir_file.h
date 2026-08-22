@@ -44,6 +44,10 @@ struct TypeTableEntry {
 
 struct TypeTableArray: TypeTableEntry {
   typeindex componentType = 0;
+
+  static TypeTableArray* create();
+
+  static void destroy(const TypeTableArray* tt);
 };
 
 struct TypeTableFuncSign: TypeTableEntry {
@@ -51,6 +55,10 @@ struct TypeTableFuncSign: TypeTableEntry {
   bool varargs = false;
   typeindex* argTypes = nullptr;
   uint32 argumentCount = 0;
+
+  static TypeTableFuncSign* create(uint32 argCount);
+
+  static void destroy(TypeTableFuncSign* sign);
 };
 
 struct TypeTableStructProperty {
@@ -64,6 +72,10 @@ struct TypeTableStruct: TypeTableEntry {
   uint32 constructorFuncIndex = 0;
   uint32 propertyCount = 0;
   TypeTableStructProperty* properties = nullptr;
+
+  static TypeTableStruct* create(uint32 propertyCount);
+
+  static void destroy(TypeTableStruct* tt);
 };
 
 struct BytecodeFile {
@@ -85,7 +97,19 @@ struct BytecodeFile {
 
   BytecodeFile();
   ~BytecodeFile();
+
+  static BytecodeFile& create();
+
+  static void destroy(const BytecodeFile& bfile);
 };
+
+FunctionTableEntry* createFunctionTableArray(uint32 entries);
+
+void freeFunctionTableArray(FunctionTableEntry* arr);
+
+TypeTableEntry** createTypeTable(uint32 entries);
+
+void freeTypeTable(TypeTableEntry** table);
 
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut);
 

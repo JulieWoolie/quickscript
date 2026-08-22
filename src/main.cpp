@@ -17,7 +17,7 @@
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
 
-static bool compileBytecode(const ProgramSettings& settings, BytecodeFile* out) {
+static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out) {
   std::string fname = std::string(settings.inputFile);
   std::ifstream file(fname);
 
@@ -71,7 +71,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile* out) 
     pv.acceptScriptFileStatement(sfs);
   }
 
-  *out = compile(ctx);
+  *out = &compile(ctx);
   return true;
 }
 
@@ -88,6 +88,7 @@ static void compileSource(const BytecodeFile& bfile, const ProgramSettings& sett
     printBytecodeFile(bfile, openFile);
   }
 
+  BytecodeFile::destroy(bfile);
   fclose(openFile);
 
   printf("Saved compiled output to '%s'\n", outFile.c_str());
@@ -96,6 +97,9 @@ static void compileSource(const BytecodeFile& bfile, const ProgramSettings& sett
 static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& settings) {
   VirtualMachine vm;
   const uint32 entryPoint = vm.addBytecodeFile(bfile);
+
+  BytecodeFile::destroy(bfile);
+
   int32 retVal = vm.beginExecution(entryPoint, settings.runArgs);
 
   printf("Finished with return code %d\n", retVal);
@@ -116,7 +120,7 @@ int32 main(int32 argc, cstring argv[]) {
     return EXIT_SUCCESS;
   }
 
-  BytecodeFile bfile;
+  BytecodeFile* bfile;
   const bool successfullyCompiled = compileBytecode(settings, &bfile);
 
   if (!successfullyCompiled) {
@@ -124,10 +128,10 @@ int32 main(int32 argc, cstring argv[]) {
   }
 
   if (settings.command == CMD_COMPILE) {
-    compileSource(bfile, settings);
+    compileSource(*bfile, settings);
     return EXIT_SUCCESS;
   }
 
-  return runCompiledFile(bfile, settings);
+  return runCompiledFile(*bfile, settings);
 }
 
