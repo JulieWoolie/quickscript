@@ -827,3 +827,15 @@
     case OP_LTEF64:
       m_registers[args[2]] = REG_AS(args[0], float64) <= REG_AS(args[1], float64);
       break;
+    case OP_STRREP8:
+      m_registers[args[2]] = stringRepeat(REG_AS(args[0], void*), REG_AS(args[1], uint8), m_vm.getHeap());
+      break;
+    case OP_STRREP16:
+      m_registers[args[2]] = stringRepeat(REG_AS(args[0], void*), REG_AS(args[1], uint16), m_vm.getHeap());
+      break;
+    case OP_STRREP32:
+      m_registers[args[2]] = stringRepeat(REG_AS(args[0], void*), REG_AS(args[1], uint32), m_vm.getHeap());
+      break;
+    case OP_STRREP64:
+      m_registers[args[2]] = stringRepeat(REG_AS(args[0], void*), REG_AS(args[1], uint64), m_vm.getHeap());
+      break;

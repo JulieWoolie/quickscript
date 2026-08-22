@@ -487,6 +487,19 @@ int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsA
   return retVal;
 }
 
+static uint64 stringRepeat(void* strAddr, const uint32 repeats, HeapMemory& heap) {
+  const QsArray baseString = castToQsArray(strAddr);
+  const uint32 len = baseString.length;
+  const uint32 newLen = len * repeats;
+
+  const QsArray newArr = heap.allocString(newLen);
+  for (uint32 i = 0; i < repeats; i++) {
+    memcpy(newArr.data + (len * i), baseString.data, len);
+  }
+
+  return newArr.address();
+}
+
 void Interpreter::run() {
   opcode code = OP_NOP;
   uint8* args = nullptr;
@@ -510,19 +523,11 @@ void Interpreter::run() {
     /*
      * TODO:
      *   - X PUSHLINE
-     *   - _ RET
+     *   - X RET
      *   - X JMP
      *   - X JMPI0
      *   - X JMPN0
      *   - _ LOADCONSTSTR
-     *   - _ CREAD8
-     *   - _ CREAD16
-     *   - _ CREAD32
-     *   - _ CREAD64
-     *   - _ CWRITE8
-     *   - _ CWRITE16
-     *   - _ CWRITE32
-     *   - _ CWRITE64
      *   - _ HEAPALLOC
      *   - _ HEAPFREE
      *   - _ READIDX8
