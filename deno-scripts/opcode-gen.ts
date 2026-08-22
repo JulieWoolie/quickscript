@@ -159,6 +159,8 @@ function heapOperations() {
   opCode("HEAPALLOC", [reg("out"), uint64("bytes")])
   opCode("HEAPFREE", [reg("addr"), uint64("bytes")])
 
+  opCode("ARRAYALLOC", [reg("out"), uint32("count"), uint32("typeindex")])
+
   byteSizedOpCode("READOBJ", [reg("obj"), reg("out"), uint32("off")], [
       "%REG:out% = *reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE);"
   ])
@@ -176,7 +178,7 @@ function heapOperations() {
       `  throw std::runtime_error("Index out of bounds");`,
       "}",
       "",
-      "%REG:out,%UTYPE%% = arr.%LSHORTHAND%At(idx);",
+      "%REG:out% = arr.get%SHORTHAND%(idx);",
       "}"
   ])
 
@@ -190,10 +192,10 @@ function heapOperations() {
     "}",
     "",
     "const %UTYPE% value = %REG:val,%UTYPE%%;",
-    "arr.%LSHORTHAND%At(idx) = value;",
+    "arr.set%SHORTHAND%(idx, value);",
     "}"
   ])
-  
+
   opCode("ARRLEN", [reg("obj"), reg("out")], [
       "%REG:out% = readQsArrayLength(%REG:obj,void*%);"
   ])

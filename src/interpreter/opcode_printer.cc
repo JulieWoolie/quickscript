@@ -191,6 +191,11 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
       break;
+    case OP_ARRAYALLOC:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 3));
+      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 7));
+      break;
     case OP_READOBJ8:
     case OP_READOBJ16:
     case OP_READOBJ32:

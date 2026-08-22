@@ -1,8 +1,11 @@
 #include "objects.h"
 
 #define ARRAY_INDEX_METHOD(type, shorthand) \
-  type& QsArray::shorthand##At(const uint32 idx) {\
+  type QsArray::get##shorthand(const uint32 idx) const {\
     return reinterpret_cast<type*>(data)[idx];\
+  }\
+  void QsArray::set##shorthand(const uint32 idx, const type value) const {\
+    reinterpret_cast<type*>(data)[idx] = value;\
   }
 
 #define OBJ_PROP_METHOD(type, shorthand) \
@@ -13,16 +16,16 @@
     *reinterpret_cast<type*>(data + offset + REFCOUNT_PREFIX_SIZE) = value;\
   }
 
-ARRAY_INDEX_METHOD(int8, i8)
-ARRAY_INDEX_METHOD(uint8, u8)
-ARRAY_INDEX_METHOD(int16, i16)
-ARRAY_INDEX_METHOD(uint16, u16)
-ARRAY_INDEX_METHOD(int32, i32)
-ARRAY_INDEX_METHOD(uint32, u32)
-ARRAY_INDEX_METHOD(int64, i64)
-ARRAY_INDEX_METHOD(uint64, u64)
-ARRAY_INDEX_METHOD(float32, f32)
-ARRAY_INDEX_METHOD(float64, f64)
+ARRAY_INDEX_METHOD(int8, I8)
+ARRAY_INDEX_METHOD(uint8, U8)
+ARRAY_INDEX_METHOD(int16, I16)
+ARRAY_INDEX_METHOD(uint16, U16)
+ARRAY_INDEX_METHOD(int32, I32)
+ARRAY_INDEX_METHOD(uint32, U32)
+ARRAY_INDEX_METHOD(int64, I64)
+ARRAY_INDEX_METHOD(uint64, U64)
+ARRAY_INDEX_METHOD(float32, F32)
+ARRAY_INDEX_METHOD(float64, F64)
 
 OBJ_PROP_METHOD(int8, I8)
 OBJ_PROP_METHOD(uint8, U8)
@@ -44,6 +47,20 @@ uint64 QsArray::address() const {
     return reinterpret_cast<uint64>(refCount);
   }
   return reinterpret_cast<uint64>(data - LENGTH_PREFIX_SIZE);
+}
+
+uint32 QsArray::getRefCount() const {
+  if (!refCount) {
+    return NO_REFCOUNT;
+  }
+  return *refCount & ~REFCOUNT_MASK;
+}
+
+void QsArray::setRefCount(const uint32 count) const {
+  if (!refCount) {
+    return;
+  }
+  *refCount = count | REFCOUNT_MASK;
 }
 
 QsArray castToQsArray(void* ptr) {

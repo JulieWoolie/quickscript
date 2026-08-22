@@ -54,6 +54,7 @@ conststring opcode_name(opcode code) {
     case OP_CWRITE64: return "CWRITE64";
     case OP_HEAPALLOC: return "HEAPALLOC";
     case OP_HEAPFREE: return "HEAPFREE";
+    case OP_ARRAYALLOC: return "ARRAYALLOC";
     case OP_READOBJ8: return "READOBJ8";
     case OP_READOBJ16: return "READOBJ16";
     case OP_READOBJ32: return "READOBJ32";

@@ -6,6 +6,7 @@
 #define LENGTH_PREFIX_SIZE 4
 #define REFCOUNT_PREFIX_SIZE 4
 #define REFCOUNT_MASK (1 << 31)
+#define NO_REFCOUNT 0xFFFFFFFF
 #define EMPTY_QS_ARRAY QsArray(0, nullptr)
 #define EMPTY_QS_STRING QsString(0, nullptr)
 
@@ -19,16 +20,30 @@ struct QsArray {
 
   uint64 address() const;
 
-  int8& i8At(uint32 idx);
-  uint8& u8At(uint32 idx);
-  int16& i16At(uint32 idx);
-  uint16& u16At(uint32 idx);
-  int32& i32At(uint32 idx);
-  uint32& u32At(uint32 idx);
-  int64& i64At(uint32 idx);
-  uint64& u64At(uint32 idx);
-  float32& f32At(uint32 idx);
-  float64& f64At(uint32 idx);
+  uint32 getRefCount() const;
+  void setRefCount(uint32 count) const;
+
+  int8 getI8(uint32 idx) const;
+  uint8 getU8(uint32 idx) const;
+  int16 getI16(uint32 idx) const;
+  uint16 getU16(uint32 idx) const;
+  int32 getI32(uint32 idx) const;
+  uint32 getU32(uint32 idx) const;
+  int64 getI64(uint32 idx) const;
+  uint64 getU64(uint32 idx) const;
+  float32 getF32(uint32 idx) const;
+  float64 getF64(uint32 idx) const;
+
+  void setI8(uint32 idx, int8 value) const;
+  void setU8(uint32 idx, uint8 value) const;
+  void setI16(uint32 idx, int16 value) const;
+  void setU16(uint32 idx, uint16 value) const;
+  void setI32(uint32 idx, int32 value) const;
+  void setU32(uint32 idx, uint32 value) const;
+  void setI64(uint32 idx, int64 value) const;
+  void setU64(uint32 idx, uint64 value) const;
+  void setF32(uint32 idx, float32 value) const;
+  void setF64(uint32 idx, float64 value) const;
 };
 
 struct QsObject {
