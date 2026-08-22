@@ -572,31 +572,6 @@ void Interpreter::run() {
   stack = frame->stackBase;
 
   switch (code) {
-    /*
-     * TODO Add code for these instructions (auto generated are not in the list)
-     *   - X PUSHLINE
-     *   - X RET
-     *   - X JMP
-     *   - X JMPI0
-     *   - X JMPN0
-     *   - X LOADCONSTSTR
-     *   - _ HEAPALLOC
-     *   - _ HEAPFREE
-     *   - _ SETARGTYPE
-     *   - X LFUNCLOOKUP
-     *   - _ NFUNCLOOKUP
-     *   - X INVOKE
-     *   - _ EQARR
-     *   - _ EQSTRUCT
-     *   - _ NEQARR
-     *   - _ NEQSTRUCT
-     *   - _ GTARR
-     *   - _ GTEARR
-     *   - _ LTARR
-     *   - _ LTEARR
-     *   - _ STRCONCAT
-     */
-
     case OP_RET:
       if (frame->returnAddr == NO_RETURN_ADDR) {
         popCallFrame();
