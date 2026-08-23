@@ -1,6 +1,6 @@
 clang -O3 fib.c -o fib.exe
 
-Copy-Item "../cmake-build-llvm-mingw-debug/quickscript.exe" -Destination "./qs.exe"
+Copy-Item "../cmake-build-debug/quickscript.exe" -Destination "./qs.exe"
 
 $loops = 100
 
