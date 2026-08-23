@@ -39,7 +39,7 @@ SemanticContext::SemanticContext(
   StringTable& strings,
   CompilerErrors& errors,
   NoFreeAllocator& allocator,
-  CompilationOptions& options
+  const CompilationOptions& options
 )
   : m_types(types),
     m_strings(strings),

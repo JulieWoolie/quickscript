@@ -26,7 +26,7 @@ class SemanticContext {
   StringTable& m_strings;
   CompilerErrors& m_errors;
   NoFreeAllocator& m_allocator;
-  CompilationOptions& m_options;
+  const CompilationOptions& m_options;
 
   std::vector<ScriptType*> m_expectedTypes;
   std::vector<Statement*> m_statementStack;
@@ -64,7 +64,7 @@ class SemanticContext {
       StringTable& strings,
       CompilerErrors& errors,
       NoFreeAllocator& allocator,
-      CompilationOptions& options
+      const CompilationOptions& options
     );
 
     void pushLocalFunction(LocalFunction* func);
