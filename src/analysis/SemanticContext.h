@@ -115,7 +115,7 @@ class SemanticContext {
 
     NoFreeAllocator& getAllocator();
 
-    CompilationOptions& getOptions() const;
+    const CompilationOptions& getOptions() const;
 
     std::unordered_map<Node*, Symbol*>& getSymbolLookup();
 

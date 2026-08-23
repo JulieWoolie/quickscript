@@ -179,7 +179,7 @@ NoFreeAllocator& SemanticContext::getAllocator() {
   return m_allocator;
 }
 
-CompilationOptions& SemanticContext::getOptions() const {
+const CompilationOptions& SemanticContext::getOptions() const {
   return m_options;
 }
 
