@@ -536,7 +536,7 @@ static bool isPointlessStandalone(Expr* expr) {
 }
 
 Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool emptyBlocksAsNull) {
-  CompilationOptions& opts = ctx.getOptions();
+  const CompilationOptions& opts = ctx.getOptions();
 
   switch (stat->nodeKind()) {
     case AST_Block: {
@@ -655,7 +655,10 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       }
 
       assert->condition = optimizeExpr(assert->condition);
-      assert->message = optimizeExpr(assert->message);
+
+      if (assert->message) {
+        assert->message = optimizeExpr(assert->message);
+      }
 
       if (!isBooleanAssignableLiteral(assert->condition) || !opts.statOptimizing) {
         return stat;
