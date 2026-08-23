@@ -1,6 +1,7 @@
 # MODE run
 
 void main() {
+  # Regular test
   string s = "Hello"
   assert s.length == 5 : "String 'Hello' is not 5 chars"
   assert s[0] == 'H' : "s[0] != 'H'"
@@ -8,4 +9,31 @@ void main() {
   assert s[2] == 'l' : "s[2] != 'l'"
   assert s[3] == 'l' : "s[3] != 'l'"
   assert s[4] == 'o' : "s[4] != 'o'"
+
+  # String repeat test
+  string s2 = s * 2
+  assert s2.length == 10
+  assert s2[0] == 'H' : "s2[0] != 'H'"
+  assert s2[1] == 'e' : "s2[1] != 'e'"
+  assert s2[2] == 'l' : "s2[2] != 'l'"
+  assert s2[3] == 'l' : "s2[3] != 'l'"
+  assert s2[4] == 'o' : "s2[4] != 'o'"
+  assert s2[5] == 'H' : "s2[5] != 'H'"
+  assert s2[6] == 'e' : "s2[6] != 'e'"
+  assert s2[7] == 'l' : "s2[7] != 'l'"
+  assert s2[8] == 'l' : "s2[8] != 'l'"
+  assert s2[9] == 'o' : "s2[9] != 'o'"
+
+  # String concat test
+  string c1 = "foo"
+  string c2 = "bar"
+  string c3 = c1 + c2
+
+  assert c3.length == 6 : "Combined strings have invalid length"
+  assert c3[0] == 'f' : "c3[0] != 'f'"
+  assert c3[1] == 'o' : "c3[1] != 'o'"
+  assert c3[2] == 'o' : "c3[2] != 'o'"
+  assert c3[3] == 'b' : "c3[3] != 'b'"
+  assert c3[4] == 'a' : "c3[4] != 'a'"
+  assert c3[5] == 'r' : "c3[5] != 'r'"
 }
