@@ -465,9 +465,16 @@ static void compileBinaryExpr(
     case BOP_ADD:
       if (lkind == TK_STRING) {
         writer.startInstr(OP_STRCONCAT);
-      } else {
-        NUMTYPE_OPCODE(lpk, writer, OP_ADD)
+        writer.appendU8(r1);
+        writer.appendU8(r2);
+        const typeindex idx = ctx.getSemantics().getTypes().findIndex(rtype);
+        writer.appendU32(idx);
+        writer.appendU8(outReg);
+        writer.endInstr();
+        break;
       }
+
+      NUMTYPE_OPCODE(lpk, writer, OP_ADD)
       BIN_APPEND
       break;
     case BOP_MUL:
