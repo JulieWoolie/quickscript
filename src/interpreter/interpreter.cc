@@ -190,8 +190,20 @@ static void rewriteInstructions(uint8* buf, const uint64 len, const InstructionR
         break;
       }
       case OP_LFUNCLOOKUP: {
-        uint32* funcIdxPtr = reinterpret_cast<uint32*>(buf + LENGTH_OPCODE);
+        uint32* funcIdxPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE);
         *funcIdxPtr += rewrite.funcIdxOffset;
+        break;
+      }
+
+      case OP_STRCONCAT: {
+        uint32* typeIdxPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE + 2);
+        *typeIdxPtr = rewrite.typeRewrites.findRewritten(*typeIdxPtr);
+        break;
+      }
+
+      case OP_ARRAYALLOC: {
+        uint32* typeIdxPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE + 5);
+        *typeIdxPtr = rewrite.typeRewrites.findRewritten(*typeIdxPtr);
         break;
       }
 
