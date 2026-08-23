@@ -50,7 +50,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out)
 
   TypeTable lookup = TypeTable();
 
-  SemanticContext ctx = SemanticContext(lookup, table, errors, pool);
+  SemanticContext ctx = SemanticContext(lookup, table, errors, pool, settings.compilationOptions);
   runSemanticAnalysis(sfs, ctx);
 
   if (settings.printAst & PRINTAST_AFTER_ANALYSIS) {
@@ -110,7 +110,12 @@ int32 main(int32 argc, cstring argv[]) {
   ProgramSettings settings;
   const ParseResult res = parseSettings(settings, argc, argv);
 
-  if (res == RES_FAILED || settings.command == CMD_HELP) {
+  if (res == RES_FAILED) {
+    fprintf(stderr, "Use 'quickscript help' for usage info\n");
+    return EXIT_FAILURE;
+  }
+
+  if (settings.command == CMD_HELP) {
     showHelpMessage();
     return EXIT_SUCCESS;
   }
