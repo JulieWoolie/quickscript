@@ -47,6 +47,10 @@ struct AssertStatement;
 struct ObjectAllocExpr;
 struct GetStackPointer;
 
+#define DECLFLAG_NATIVE 0x1
+#define DECLFLAG_EXPORTED 0x2
+typedef uint32 declflags;
+
 #define AST_NIL 0
 
 // Type expressions
@@ -376,6 +380,7 @@ AST_TYPE(LexicalDeclaration, Statement,
   Identifier* variableName = nullptr;
   Expr* value = nullptr;
   bool isConstDeclaration = false;
+  declflags flags = 0;
 )
 
 AST_TYPE(WhileStatement, Statement,
@@ -418,6 +423,7 @@ AST_TYPE(FunctionDeclStatement, Statement,
   Block* functionBody = nullptr;
   TypeExpr* returnType = nullptr;
   FunctionSignature* signature = nullptr;
+  declflags flags = 0;
 )
 
 AST_TYPE(StructPropertyDecl, Statement,
@@ -431,6 +437,7 @@ AST_TYPE(StructDecl, Statement,
   Identifier* name = nullptr;
   std::vector<StructPropertyDecl*> properties;
   ScriptStructType* type = nullptr;
+  declflags flags = 0;
 )
 
 AST_TYPE(ExprStatement, Statement,
