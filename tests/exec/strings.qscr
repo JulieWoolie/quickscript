@@ -1,5 +1,10 @@
 # MODE run
 
+#
+# What an amazing way to do string equality testing since I don't have
+# support for the ARREQ opcode yet xd
+#
+
 void regularStringTests() {
   string s = "Hello"
   assert s.length == 5 : "String 'Hello' is not 5 chars"
