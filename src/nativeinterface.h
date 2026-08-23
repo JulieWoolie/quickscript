@@ -1,9 +1,9 @@
 #ifndef QUICKSCRIPT_NATIVEINTERFACE_H
 #define QUICKSCRIPT_NATIVEINTERFACE_H
 
-#include "../common.h"
+#include "common.h"
 #include "objects.h"
-#include "../types/ScriptType.h"
+#include "types/ScriptType.h"
 
 class NativeCall {
   uint64* m_args = nullptr;

@@ -1,7 +1,7 @@
 #ifndef QUICKSCRIPT_OBJECTS_H
 #define QUICKSCRIPT_OBJECTS_H
 
-#include "../common.h"
+#include "common.h"
 
 #define LENGTH_PREFIX_SIZE 4
 #define REFCOUNT_PREFIX_SIZE 4

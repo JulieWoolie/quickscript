@@ -27,8 +27,8 @@ add_executable(quickscript src/main.cpp
         src/types/types.cc
         src/analysis/analyzer.cc
         src/analysis/analyzer.h
-        src/interpreter/nativeinterface.h
-        src/interpreter/nativeinterface.cc
+        src/nativeinterface.h
+        src/nativeinterface.cc
         src/interpreter/interpreter.h
         src/tester.h
         src/tester.cc
@@ -82,7 +82,7 @@ add_executable(quickscript src/main.cpp
         src/interpreter/heap_mem.h
         src/interpreter/interpreter.cc
         src/interpreter/heap_mem.cc
-        src/interpreter/objects.h
-        src/interpreter/objects.cc
+        src/objects.h
+        src/objects.cc
         src/interpreter/registers.h
         src/compiler_opts.h)

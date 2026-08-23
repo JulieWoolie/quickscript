@@ -1,7 +1,7 @@
 #ifndef QUICKSCRIPT_HEAP_MEM_H
 #define QUICKSCRIPT_HEAP_MEM_H
 
-#include "objects.h"
+#include "../objects.h"
 #include "../common.h"
 
 class HeapMemory {

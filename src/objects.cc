@@ -1,4 +1,4 @@
-#include "objects.h"
+#include "interpreter/objects.h"
 
 #define ARRAY_INDEX_METHOD(type, shorthand) \
   type QsArray::get##shorthand(const uint32 idx) const {\
