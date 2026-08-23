@@ -21,96 +21,141 @@
 
 #define PRINT_FULL_ERRORS
 
+#define TDIR_INVALID 0
+#define TDIR_EXPECT_ERROR 1
+#define TDIR_MODE 2
+#define TDIR_EXPECT_AST 3
+#define TDIR_DISABLE_STAT_INLINING 4
+#define TDIR_DISABLE_EXPR_INLINING 5
+#define TDIR_DROP_ASSERTS 6
+#define TDIR_PROG_ARGUMENT 7
+#define TDIR_BREAKPOINT 8
+typedef uint8 TestDirective;
+
+struct TestDirectiveDef {
+  TestDirective directive;
+  conststring value;
+};
+
+struct RunModeDef {
+  testmode mode;
+  conststring value;
+};
+
+static const TestDirectiveDef DIRECTIVES[] = {
+  {.directive = TDIR_EXPECT_ERROR, .value = "ERROR"},
+  {.directive = TDIR_MODE, .value = "MODE"},
+  {.directive = TDIR_EXPECT_AST, .value = "EXPECT-AST"},
+  {.directive = TDIR_DISABLE_STAT_INLINING, .value = "DISABLE-STAT-INLINING"},
+  {.directive = TDIR_DISABLE_EXPR_INLINING, .value = "DISABLE-EXPR-INLINING"},
+  {.directive = TDIR_DROP_ASSERTS, .value = "DROP-ASSERTS"},
+  {.directive = TDIR_PROG_ARGUMENT, .value = "PROGRAM-ARG"},
+  {.directive = TDIR_BREAKPOINT, .value = "BREAKPOINT"},
+};
+
+static const RunModeDef RUNMODES[] = {
+  {.mode = TESTMODE_EXPR, .value = "expr"},
+  {.mode = TESTMODE_RUN, .value = "run"},
+  {.mode = TESTMODE_VALIDATE, .value = "validate"},
+};
+
+#define DIRECTIVE_COUNT (sizeof(DIRECTIVES) / sizeof(TestDirectiveDef))
+#define RUNMODE_COUNT (sizeof(RUNMODES) / sizeof(RunModeDef))
+
 struct KeyValuePair {
   std::string_view key;
   std::string_view value;
   uint32 end = 0;
 };
 
-static uint32 findTokenEnd(conststring str, uint32 start, uint32 len) {
-  if (str[start] == '"' || str[start] == '\'') {
-    const int8 q = str[start];
+static uint32 findTokenEnd(const std::string_view& view, const uint32 start) {
+  if (view[start] == '"' || view[start] == '\'') {
+    const int8 q = view[start];
 
-    for (uint32 i = start + 1; i < len; i++) {
-      if (str[i] != q) {
+    for (uint32 i = start + 1; i < view.length(); i++) {
+      if (view[i] != q) {
         continue;
       }
       return i + 1;
     }
 
-    return len;
+    return view.length();
   }
 
-  for (uint32 i = start; i < len; i++) {
-    if (str[i] != ' ' && str[i] != '=') {
+  for (uint32 i = start; i < view.length(); i++) {
+    if (view[i] != ' ' && view[i] != '=') {
       continue;
     }
     return i;
   }
 
-  return len;
+  return view.length();
 }
 
-static bool parsePair(conststring str, uint32 len, uint32 off, KeyValuePair* out) {
-  uint32 readidx = off;
-  while (str[readidx] == ' ' && readidx < len) {
-    readidx++;
+static void skipWhitespace(const std::string_view& view, uint32& readIdx) {
+  while (readIdx < view.length() && view[readIdx] == ' ') {
+    readIdx++;
   }
+}
 
-  uint32 keystart = readidx;
-  uint32 keyend = findTokenEnd(str, keystart, len);
+static bool parsePair(const std::string_view& str, const uint32 off, KeyValuePair* out) {
+  uint32 readIdx = off;
+  skipWhitespace(str, readIdx);
 
-  if (keystart == keyend) {
+  const uint32 keyStart = readIdx;
+  const uint32 keyEnd = findTokenEnd(str, keyStart);
+
+  if (keyStart == keyEnd) {
     return false;
   }
 
-  readidx = keyend;
+  readIdx = keyEnd;
 
-  if (str[keyend] == '=') {
-    readidx++;
+  if (str[keyEnd] == '=') {
+    readIdx++;
   } else {
     return false;
   }
 
-  uint32 valstart = readidx;
-  uint32 valend = findTokenEnd(str, valstart, len);
+  const uint32 valStart = readIdx;
+  const uint32 valEnd = findTokenEnd(str, valStart);
 
-  if (valstart == valend) {
+  if (valStart == valEnd) {
     return false;
   }
 
-  readidx = valend;
+  readIdx = valEnd;
 
-  uint32 keylen = keyend - keystart;
-  uint32 vallen = valend - valstart;
+  const uint32 keyLen = keyEnd - keyStart;
+  const uint32 valLen = valEnd - valStart;
 
-  if (str[valstart] == '"' || str[valstart] == '\'') {
-    out->value = std::string_view(str + valstart + 1, vallen - 2);
+  if (str[valStart] == '"' || str[valStart] == '\'') {
+    out->value = std::string_view(str.data() + valStart + 1, valLen - 2);
   } else {
-    out->value = std::string_view(str + valstart, vallen);
+    out->value = std::string_view(str.data() + valStart, valLen);
   }
 
-  if (str[keystart] == '"' || str[keystart] == '\'') {
-    out->key = std::string_view(str + keylen + 1, keylen - 2);
+  if (str[keyStart] == '"' || str[keyStart] == '\'') {
+    out->key = std::string_view(str.data() + keyLen + 1, keyLen - 2);
   } else {
-    out->key = std::string_view(str + keystart, keylen);
+    out->key = std::string_view(str.data() + keyStart, keyLen);
   }
 
-  out->end = readidx;
+  out->end = readIdx;
   return true;
 }
 
-static bool startsWith(conststring str, uint32 off, uint32 len, conststring prefix) {
-  uint32 remlen = len - off;
-  uint32 prefixlen = strlen(prefix);
+static bool startsWith(const std::string_view& view, const uint32 off, const conststring prefix) {
+  const uint32 remLen = view.length() - off;
+  const uint32 prefixLen = strlen(prefix);
 
-  if (remlen < prefixlen) {
+  if (remLen < prefixLen) {
     return false;
   }
 
-  conststring start = str + off;
+  const conststring start = view.data() + off;
 
-  for (uint32 i = 0; i < prefixlen; i++) {
+  for (uint32 i = 0; i < prefixLen; i++) {
     if (start[i] == prefix[i]) {
       continue;
     }
@@ -120,8 +165,8 @@ static bool startsWith(conststring str, uint32 off, uint32 len, conststring pref
   return true;
 }
 
-static int32 parseViewToInt(std::string_view sv) {
-  uint32 len = sv.length();
+static int32 parseViewToInt(const std::string_view& sv) {
+  const uint32 len = sv.length();
 
   char buf[len + 1];
   memcpy(buf, sv.data(), len);
@@ -130,26 +175,18 @@ static int32 parseViewToInt(std::string_view sv) {
   return atoi(buf);
 }
 
-static void parseExpectedAst(TestCase& out, const stringid comment) {
-  uint32 readIdx = 0;
+static void parseExpectedAst(
+  TestCase& out,
+  const std::string_view& view,
+  const uint32 start
+) {
+  const uint32 len = view.length();
+  const conststring data = view.data();
 
-  const uint32 len = comment->len;
-  conststring data = comment->data;
-
-  while (data[readIdx] == ' ') {
-    readIdx++;
-  }
-
-  conststring prefix = "EXPECT-AST:";
-
-  if (!startsWith(data, readIdx, len, prefix)) {
-    return;
-  }
-
-  readIdx += strlen(prefix);
   std::string& jsonString = out.expectedAst;
-
+  uint32 readIdx = start;
   bool inString = false;
+
   while (readIdx < len) {
     const char ch = data[readIdx++];
 
@@ -165,18 +202,122 @@ static void parseExpectedAst(TestCase& out, const stringid comment) {
   }
 }
 
+static testmode parseMode(const std::string_view& view, const uint32 readIdx) {
+  for (uint32 i = 0; i < RUNMODE_COUNT; i++) {
+    const RunModeDef def = RUNMODES[i];
+    if (startsWith(view, readIdx, def.value)) {
+      return def.mode;
+    }
+  }
+  return TDIR_INVALID;
+}
+
+static TestDirective parseDirectivePrefix(const std::string_view& view, uint32& readIdx) {
+  for (uint32 i = 0; i < DIRECTIVE_COUNT; i++) {
+    TestDirectiveDef def = DIRECTIVES[i];
+    if (startsWith(view, readIdx, def.value)) {
+      readIdx += strlen(def.value);
+      return def.directive;
+    }
+  }
+  return TDIR_INVALID;
+}
+
+static void skipValueDelimiter(const std::string_view& view, uint32& cursor) {
+  skipWhitespace(view, cursor);
+  if (cursor < view.length() && (view[cursor] == ':' || view[cursor] == '=')) {
+    cursor++;
+    skipWhitespace(view, cursor);
+  }
+}
+
+static bool parseBool(const std::string_view& view, uint32& cursor, const bool fallback) {
+  skipValueDelimiter(view, cursor);
+
+  if (startsWith(view, cursor, "true")) {
+    return true;
+  }
+  if (startsWith(view, cursor, "false")) {
+    return false;
+  }
+
+  return fallback;
+}
+
+static bool parseTestCommand(
+  TestCase& out,
+  const std::string_view& view,
+  ExpectedError& err,
+  const Token* t
+) {
+  uint32 readIdx = 0;
+  skipWhitespace(view, readIdx);
+
+  const TestDirective directive = parseDirectivePrefix(view, readIdx);
+  if (directive == TDIR_INVALID) {
+    return false;
+  }
+
+  switch (directive) {
+    case TDIR_BREAKPOINT:
+      out.breakpoint = true;
+      return false;
+    case TDIR_DISABLE_STAT_INLINING:
+      out.compilerOpts.statOptimizing = parseBool(view, readIdx, false);
+      return false;
+    case TDIR_DISABLE_EXPR_INLINING:
+      out.compilerOpts.exprOptimizing = parseBool(view, readIdx, false);
+      return false;
+    case TDIR_DROP_ASSERTS:
+      out.compilerOpts.includeAsserts = parseBool(view, readIdx, true);
+      return false;
+    case TDIR_MODE: {
+      skipValueDelimiter(view, readIdx);
+      const testmode mode = parseMode(view, readIdx);
+      if (mode != TESTMODE_INVALID) {
+        out.mode = mode;
+      }
+      return false;
+    }
+    case TDIR_EXPECT_AST: {
+      skipValueDelimiter(view, readIdx);
+      parseExpectedAst(out, view, readIdx);
+      return false;
+    }
+    default:
+      break;
+  }
+
+  if (directive != TDIR_EXPECT_ERROR) {
+    return false;
+  }
+
+  KeyValuePair p;
+  while (parsePair(view, readIdx, &p)) {
+    if (p.key == "name") {
+      err.name = std::string(p.value);
+    } else if (p.key == "message") {
+      err.message = std::string(p.value);
+    } else if (p.key == "line") {
+      if (p.value == "next") {
+        err.line = t->start.line + 1;
+      } else {
+        err.line = parseViewToInt(p.value);
+      }
+    }
+    readIdx = p.end;
+  }
+
+  return true;
+}
+
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
   const uint32 size = list.size();
 
   for (uint32 idx = 0; idx < size; idx++) {
     const Token* t = list.get(idx);
 
-    if (t->ttype == TT_BCOMMENT) {
-      parseExpectedAst(out, t->valueId);
-      continue;
-    }
-
-    if (t->ttype != TT_LCOMMENT) {
+    if (t->ttype != TT_LCOMMENT && t->ttype != TT_BCOMMENT) {
       continue;
     }
 
@@ -185,66 +326,11 @@ void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
       continue;
     }
 
-    const conststring data = content.data();
-    const uint32 clen = content.length();
     ExpectedError err;
     err.line = t->start.line + 1;
 
-    bool skip = false;
-    uint32 readIdx = 0;
-
-    while (readIdx < clen) {
-      if (data[readIdx] == ' ') {
-        readIdx++;
-        continue;
-      }
-
-      if (startsWith(data, readIdx, clen, "BREAKPOINT")) {
-        out.breakpoint = true;
-        skip = true;
-        break;
-      }
-
-      if (startsWith(data, readIdx, clen, "MODE ")) {
-        readIdx += 5;
-
-        if (startsWith(data, readIdx, clen, "run")) {
-          out.mode = TESTMODE_RUN;
-        } else if (startsWith(data, readIdx, clen, "expr")) {
-          out.mode = TESTMODE_EXPR;
-        } else {
-          out.mode = TESTMODE_VALIDATE;
-        }
-
-        skip = true;
-        break;
-      }
-
-      if (!startsWith(data, readIdx, clen, "ERROR ")) {
-        skip = true;
-        break;
-      }
-
-      readIdx += 5;
-
-      KeyValuePair p;
-      while (parsePair(data, clen, readIdx, &p)) {
-        if (p.key == "name") {
-          err.name = std::string(p.value);
-        } else if (p.key == "message") {
-          err.message = std::string(p.value);
-        } else if (p.key == "line") {
-          if (p.value == "next") {
-            err.line = t->start.line + 1;
-          } else {
-            err.line = parseViewToInt(p.value);
-          }
-        }
-        readIdx = p.end;
-      }
-    }
-
-    if (skip) {
+    bool errorParsed = parseTestCommand(out, content, err, t);
+    if (!errorParsed) {
       continue;
     }
 
@@ -340,7 +426,10 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors, Node* a
     const std::string& expectedAst = tcase.expectedAst;
 
     if (jsonAst != expectedAst) {
-      fprintf(stderr, "Expected AST did not match, printing parsed AST:\n%s\n", jsonAst.c_str());
+      fprintf(stderr, "Expected AST did not match\nEXPECTED:\n%s\nFOUND:\n%s\n",
+        expectedAst.c_str(),
+        jsonAst.c_str()
+      );
       return false;
     }
   }
@@ -349,11 +438,76 @@ static bool checkErrors(TestCase& tcase, CompilerErrors& compilerErrors, Node* a
   return !comparisonsFailed;
 }
 
-#define RUN_ERROR_CHECKS return checkErrors(&expectedErrors, &errors);
-
 static void breakpoint() {}
 
-bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const ProgramSettings& settings) {
+#define BOOL_STR(e) (e ? "true" : "false")
+
+static void dumpTestCaseToJson(TestCase& tcase) {
+  if (tcase.dumpDirectory.empty()) {
+    return;
+  }
+
+  std::filesystem::create_directories(tcase.dumpDirectory);
+
+  const std::filesystem::path caseJsonPath = tcase.dumpDirectory / "testcase.json";
+  const std::string pathString = caseJsonPath.string();
+
+  FILE* file = fopen(pathString.c_str(), "w");
+
+  fprintf(file, "{");
+  fprintf(file, "\n  \"mode\": \"");
+
+  for (uint32 i = 0; i < RUNMODE_COUNT; i++) {
+    RunModeDef def = RUNMODES[i];
+    if (def.mode == tcase.mode) {
+      fprintf(file, "%s", def.value);
+      break;
+    }
+  }
+  fprintf(file, "\",");
+
+  fprintf(file, "\n  \"breakpoint\": %s,", BOOL_STR(tcase.breakpoint));
+  fprintf(file, "\n  \"expected_errors\": [");
+
+  if (tcase.expectedErrors.empty()) {
+    fprintf(file, "],");
+  } else {
+    bool first = true;
+    for (const ExpectedError& err: tcase.expectedErrors) {
+      if (!first) {
+        fprintf(file, ",");
+      }
+
+      fprintf(file, "\n    {");
+      fprintf(file, "\n      \"line\": %d,", err.line);
+      fprintf(file, "\n      \"message\": \"%s\",", err.message.c_str());
+      fprintf(file, "\n      \"name\": \"%s\"", err.name.c_str());
+      fprintf(file, "\n    }");
+
+      first = false;
+    }
+    fprintf(file, "\n  ],");
+  }
+
+  if (!tcase.expectedAst.empty()) {
+    fprintf(file, "\n  \"expected_ast\": %s,", tcase.expectedAst.c_str());
+  }
+
+  fprintf(file, "\n  \"compiler_options\": {");
+  fprintf(file, "\n    \"stat_inlining\": %s,", BOOL_STR(tcase.compilerOpts.statOptimizing));
+  fprintf(file, "\n    \"expr_inlining\": %s,", BOOL_STR(tcase.compilerOpts.exprOptimizing));
+  fprintf(file, "\n    \"include_asserts\": %s", BOOL_STR(tcase.compilerOpts.includeAsserts));
+  fprintf(file, "\n  }");
+  fprintf(file, "\n}");
+
+  fclose(file);
+}
+
+bool runTestCase(
+  TestCase& tcase,
+  const std::filesystem::path& filePath,
+  const ProgramSettings& settings
+) {
   std::ifstream instream(filePath);
 
   if (!instream.is_open()) {
@@ -384,6 +538,8 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const P
     parseTestCase(tcase, tlist, table);
     stepFailed = true;
   }
+
+  dumpTestCaseToJson(tcase);
 
   if (tcase.breakpoint) {
     breakpoint();
@@ -431,7 +587,7 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const P
   TypeTable lookup = TypeTable();
 
   if (result->nodeKind() == AST_ScriptFileStatement) {
-    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator);
+    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tcase.compilerOpts);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
 
     if (!checkErrors(tcase, errors, result)) {
@@ -503,15 +659,15 @@ void runTests(const ProgramSettings& settings) {
       }
 
       const std::filesystem::path& path = entry.path();
-      TestCase tcase;
+      TestCase testCase;
 
       if (!settings.testDumpDirectory.empty()) {
         std::filesystem::path dumpDir = settings.testDumpDirectory;
         dumpDir /= std::filesystem::relative(path, dirpath);
-        tcase.dumpDirectory = dumpDir;
+        testCase.dumpDirectory = dumpDir;
       }
 
-      bool success = runTestCase(tcase, path, settings);
+      bool success = runTestCase(testCase, path, settings);
 
       total++;
 

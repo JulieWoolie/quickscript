@@ -8,9 +8,10 @@
 #include "common.h"
 #include "parse/token.h"
 
-#define TESTMODE_RUN 0
-#define TESTMODE_EXPR 1
-#define TESTMODE_VALIDATE 2
+#define TESTMODE_INVALID 0
+#define TESTMODE_RUN 1
+#define TESTMODE_EXPR 2
+#define TESTMODE_VALIDATE 3
 typedef uint8 testmode;
 
 struct ExpectedError {
@@ -25,6 +26,7 @@ struct TestCase {
   std::vector<ExpectedError> expectedErrors;
   std::string expectedAst;
   std::filesystem::path dumpDirectory;
+  CompilationOptions compilerOpts;
 };
 
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table);
