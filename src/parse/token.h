@@ -97,22 +97,24 @@
 #define TT_KEYW_STRUCT          5011
 #define TT_KEYW_MODULE          5012
 #define TT_KEYW_IMPORT          5013
-#define TT_KEYW_DO              5014
-#define TT_KEYW_BOOL            5015
-#define TT_KEYW_UINT8           5016
-#define TT_KEYW_INT8            5018
-#define TT_KEYW_UINT16          5019
-#define TT_KEYW_INT16           5020
-#define TT_KEYW_UINT32          5021
-#define TT_KEYW_INT32           5022
-#define TT_KEYW_UINT64          5023
-#define TT_KEYW_INT64           5024
-#define TT_KEYW_FLOAT32         5025
-#define TT_KEYW_FLOAT64         5026
-#define TT_KEYW_STRING          5027
-#define TT_KEYW_CONST           5028
-#define TT_KEYW_VOID            5029
-#define TT_KEYW_ASSERT          5030
+#define TT_KEYW_EXPORT          5014
+#define TT_KEYW_DO              5015
+#define TT_KEYW_BOOL            5016
+#define TT_KEYW_UINT8           5017
+#define TT_KEYW_INT8            5019
+#define TT_KEYW_UINT16          5020
+#define TT_KEYW_INT16           5021
+#define TT_KEYW_UINT32          5022
+#define TT_KEYW_INT32           5023
+#define TT_KEYW_UINT64          5024
+#define TT_KEYW_INT64           5025
+#define TT_KEYW_FLOAT32         5026
+#define TT_KEYW_FLOAT64         5027
+#define TT_KEYW_STRING          5028
+#define TT_KEYW_CONST           5029
+#define TT_KEYW_VOID            5030
+#define TT_KEYW_ASSERT          5031
+#define TT_KEYW_NATIVE          5032
 
 // =====================
 

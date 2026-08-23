@@ -41,12 +41,12 @@ struct keyword {
 #line 11 "qs-keywords.gperf"
 struct keyword;
 
-#define TOTAL_KEYWORDS 43
+#define TOTAL_KEYWORDS 45
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 8
 #define MIN_HASH_VALUE 4
-#define MAX_HASH_VALUE 65
-/* maximum key range = 62, duplicates = 0 */
+#define MAX_HASH_VALUE 71
+/* maximum key range = 68, duplicates = 0 */
 
 #ifdef __GNUC__
 __inline
@@ -60,32 +60,32 @@ hash (conststring str, uint32 len)
 {
   static const unsigned char asso_values[] =
     {
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      45, 66, 30, 66, 50, 66, 40, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 40, 35,  0,
-       5,  5,  5, 30, 66,  5, 66, 25,  0, 30,
-       5,  0, 66, 66,  0, 10, 15,  0, 20, 40,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
-      66, 66, 66, 66, 66, 66
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      40, 72, 35, 72, 50, 72, 50, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 55, 15, 25,
+      10, 10,  5, 35, 72,  5, 72, 50,  0, 35,
+       5,  5, 72, 72, 20, 30,  0,  0, 20, 50,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
+      72, 72, 72, 72, 72, 72
     };
   return len + asso_values[(unsigned char)str[len - 1]] + asso_values[(unsigned char)str[0]];
 }
@@ -95,112 +95,119 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
 {
   static const unsigned char lengthtable[] =
     {
-       0,  0,  0,  0,  4,  5,  0,  2,  3,  4,  5,  6,  2,  8,
-       4,  5,  6,  0,  8,  4,  5,  6,  0,  3,  4,  5,  6,  0,
-       0,  4,  5,  6,  0,  0,  4,  5,  6,  0,  0,  4,  5,  6,
-       7,  0,  4,  5,  6,  7,  0,  4,  5,  6,  0,  0,  0,  5,
-       6,  7,  0,  0,  5,  6,  0,  0,  0,  5
+       0,  0,  0,  0,  4,  0,  6,  0,  3,  4,  5,  6,  2,  0,
+       4,  5,  6,  2,  8,  4,  5,  6,  0,  0,  4,  5,  6,  7,
+       3,  4,  5,  6,  0,  0,  4,  5,  6,  0,  0,  4,  5,  6,
+       0,  8,  0,  5,  6,  7,  0,  4,  5,  6,  7,  0,  0,  5,
+       6,  0,  0,  4,  5,  6,  0,  0,  0,  5,  0,  0,  0,  0,
+       5,  6
     };
   static const struct keyword wordlist[] =
     {
       {""}, {""}, {""}, {""},
-#line 39 "qs-keywords.gperf"
-      {"char", TT_KEYW_UINT8},
-#line 40 "qs-keywords.gperf"
-      {"uchar", TT_KEYW_UINT8},
-      {""},
-#line 34 "qs-keywords.gperf"
-      {"do", TT_KEYW_DO},
-#line 29 "qs-keywords.gperf"
-      {"for", TT_KEYW_FOR},
-#line 22 "qs-keywords.gperf"
-      {"null", TT_KEYW_NULL},
-#line 38 "qs-keywords.gperf"
-      {"ubyte", TT_KEYW_UINT8},
-#line 27 "qs-keywords.gperf"
-      {"return", TT_KEYW_RETURN},
-#line 23 "qs-keywords.gperf"
-      {"if", TT_KEYW_IF},
-#line 26 "qs-keywords.gperf"
-      {"continue", TT_KEYW_CONTINUE},
-#line 24 "qs-keywords.gperf"
-      {"else", TT_KEYW_ELSE},
-#line 21 "qs-keywords.gperf"
-      {"false", TT_KEYW_FALSE},
-#line 48 "qs-keywords.gperf"
-      {"double", TT_KEYW_FLOAT64},
-      {""},
-#line 30 "qs-keywords.gperf"
-      {"function", TT_KEYW_FUNCTION},
-#line 44 "qs-keywords.gperf"
+#line 45 "qs-keywords.gperf"
       {"uint", TT_KEYW_UINT32},
-#line 60 "qs-keywords.gperf"
-      {"const", TT_KEYW_CONST},
-#line 42 "qs-keywords.gperf"
-      {"ushort", TT_KEYW_UINT16},
       {""},
 #line 43 "qs-keywords.gperf"
+      {"ushort", TT_KEYW_UINT16},
+      {""},
+#line 44 "qs-keywords.gperf"
       {"int", TT_KEYW_INT32},
-#line 20 "qs-keywords.gperf"
-      {"true", TT_KEYW_TRUE},
-#line 47 "qs-keywords.gperf"
+#line 22 "qs-keywords.gperf"
+      {"null", TT_KEYW_NULL},
+#line 48 "qs-keywords.gperf"
       {"float", TT_KEYW_FLOAT32},
 #line 33 "qs-keywords.gperf"
       {"import", TT_KEYW_IMPORT},
+#line 23 "qs-keywords.gperf"
+      {"if", TT_KEYW_IF},
+      {""},
+#line 20 "qs-keywords.gperf"
+      {"true", TT_KEYW_TRUE},
+#line 39 "qs-keywords.gperf"
+      {"ubyte", TT_KEYW_UINT8},
+#line 34 "qs-keywords.gperf"
+      {"export", TT_KEYW_EXPORT},
+#line 35 "qs-keywords.gperf"
+      {"do", TT_KEYW_DO},
+#line 30 "qs-keywords.gperf"
+      {"function", TT_KEYW_FUNCTION},
+#line 36 "qs-keywords.gperf"
+      {"bool", TT_KEYW_BOOL},
+#line 21 "qs-keywords.gperf"
+      {"false", TT_KEYW_FALSE},
+#line 64 "qs-keywords.gperf"
+      {"native", TT_KEYW_NATIVE},
       {""}, {""},
-#line 61 "qs-keywords.gperf"
-      {"void", TT_KEYW_VOID},
+#line 24 "qs-keywords.gperf"
+      {"else", TT_KEYW_ELSE},
 #line 41 "qs-keywords.gperf"
+      {"uchar", TT_KEYW_UINT8},
+#line 49 "qs-keywords.gperf"
+      {"double", TT_KEYW_FLOAT64},
+#line 37 "qs-keywords.gperf"
+      {"boolean", TT_KEYW_BOOL},
+#line 29 "qs-keywords.gperf"
+      {"for", TT_KEYW_FOR},
+#line 38 "qs-keywords.gperf"
+      {"byte", TT_KEYW_INT8},
+#line 61 "qs-keywords.gperf"
+      {"const", TT_KEYW_CONST},
+#line 27 "qs-keywords.gperf"
+      {"return", TT_KEYW_RETURN},
+      {""}, {""},
+#line 62 "qs-keywords.gperf"
+      {"void", TT_KEYW_VOID},
+#line 42 "qs-keywords.gperf"
       {"short", TT_KEYW_INT16},
 #line 31 "qs-keywords.gperf"
       {"struct", TT_KEYW_STRUCT},
       {""}, {""},
-#line 45 "qs-keywords.gperf"
-      {"long", TT_KEYW_INT64},
 #line 46 "qs-keywords.gperf"
+      {"long", TT_KEYW_INT64},
+#line 47 "qs-keywords.gperf"
       {"ulong", TT_KEYW_UINT64},
-#line 55 "qs-keywords.gperf"
-      {"uint64", TT_KEYW_UINT64},
-      {""}, {""},
-#line 35 "qs-keywords.gperf"
-      {"bool", TT_KEYW_BOOL},
 #line 56 "qs-keywords.gperf"
+      {"uint64", TT_KEYW_UINT64},
+      {""},
+#line 26 "qs-keywords.gperf"
+      {"continue", TT_KEYW_CONTINUE},
+      {""},
+#line 57 "qs-keywords.gperf"
       {"int64", TT_KEYW_INT64},
+#line 54 "qs-keywords.gperf"
+      {"uint32", TT_KEYW_UINT32},
+#line 59 "qs-keywords.gperf"
+      {"float64", TT_KEYW_FLOAT64},
+      {""},
+#line 40 "qs-keywords.gperf"
+      {"char", TT_KEYW_UINT8},
+#line 55 "qs-keywords.gperf"
+      {"int32", TT_KEYW_INT32},
 #line 32 "qs-keywords.gperf"
       {"module", TT_KEYW_MODULE},
 #line 58 "qs-keywords.gperf"
-      {"float64", TT_KEYW_FLOAT64},
-      {""},
-#line 37 "qs-keywords.gperf"
-      {"byte", TT_KEYW_INT8},
-#line 49 "qs-keywords.gperf"
-      {"uint8", TT_KEYW_UINT8},
-#line 59 "qs-keywords.gperf"
-      {"string", TT_KEYW_STRING},
-#line 36 "qs-keywords.gperf"
-      {"boolean", TT_KEYW_BOOL},
-      {""},
-#line 50 "qs-keywords.gperf"
-      {"int8", TT_KEYW_INT8},
-#line 28 "qs-keywords.gperf"
-      {"while", TT_KEYW_WHILE},
-#line 53 "qs-keywords.gperf"
-      {"uint32", TT_KEYW_UINT32},
-      {""}, {""}, {""},
-#line 54 "qs-keywords.gperf"
-      {"int32", TT_KEYW_INT32},
-#line 51 "qs-keywords.gperf"
-      {"uint16", TT_KEYW_UINT16},
-#line 57 "qs-keywords.gperf"
       {"float32", TT_KEYW_FLOAT32},
       {""}, {""},
+#line 50 "qs-keywords.gperf"
+      {"uint8", TT_KEYW_UINT8},
 #line 52 "qs-keywords.gperf"
+      {"uint16", TT_KEYW_UINT16},
+      {""}, {""},
+#line 51 "qs-keywords.gperf"
+      {"int8", TT_KEYW_INT8},
+#line 53 "qs-keywords.gperf"
       {"int16", TT_KEYW_INT16},
-#line 62 "qs-keywords.gperf"
+#line 63 "qs-keywords.gperf"
       {"assert", TT_KEYW_ASSERT},
       {""}, {""}, {""},
+#line 28 "qs-keywords.gperf"
+      {"while", TT_KEYW_WHILE},
+      {""}, {""}, {""}, {""},
 #line 25 "qs-keywords.gperf"
-      {"break", TT_KEYW_BREAK}
+      {"break", TT_KEYW_BREAK},
+#line 60 "qs-keywords.gperf"
+      {"string", TT_KEYW_STRING}
     };
 
   if (len <= MAX_WORD_LENGTH && len >= MIN_WORD_LENGTH)

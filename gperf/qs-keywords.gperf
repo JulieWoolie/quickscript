@@ -31,6 +31,7 @@ function, TT_KEYW_FUNCTION
 struct, TT_KEYW_STRUCT
 module, TT_KEYW_MODULE
 import, TT_KEYW_IMPORT
+export, TT_KEYW_EXPORT
 do, TT_KEYW_DO
 bool, TT_KEYW_BOOL
 boolean, TT_KEYW_BOOL
@@ -60,4 +61,5 @@ string, TT_KEYW_STRING
 const, TT_KEYW_CONST
 void, TT_KEYW_VOID
 assert, TT_KEYW_ASSERT
+native, TT_KEYW_NATIVE
 %%
