@@ -1,0 +1,619 @@
+#
+# quickscript Standard Library
+# Version 0
+#
+
+/**
+ * Not-A-Number
+ */
+export native const float64 NaN
+
+/**
+ * Square root of one divided by two
+ */
+export native const float64 SQRT1_2
+
+/**
+ * Square root of two
+ */
+export native const float64 SQRT2
+
+/**
+ * Positive infinity
+ */
+export native const float64 POSITIVE_INFINITY
+
+/**
+ * Negative infinity
+ */
+export native const float64 NEGATIVE_INFINITY
+
+/**
+ * Ratio of the circumference of a circle to its diameter
+ */
+export native const float64 PI
+
+/**
+ * Euler's number
+ * Base of the natural logarithm
+ */
+export native const float64 E
+
+/**
+ * Ratio of the circumference of a circle to its radius
+ */
+export native const float64 TAU
+
+/**
+ * Natural logarithm of 10
+ */
+export native const float64 LN10
+
+/**
+ * Natural logarithm of 2
+ */
+export native const float64 LN2
+
+/**
+ * Base-10 logarithm of E
+ */
+export native const float64 LOG10E
+
+/**
+ * Base-2 logarithm of E
+ */
+export native const float64 LOG2E
+
+/**
+ * Print a formatted message to the standard output
+ * 
+ * FORMAT CODES:
+ * - '%d' Decimal number
+ * - '%x' Hexadecimal number
+ * - '%X' Uppercase hexadecimal number
+ * - '%o' Base 8 (octal) number
+ * - '%O' Upper case base 8 (octal) number
+ * - '%b' Binary base 2 number
+ * - '%s' Convert the argument to string
+ * - '%c' Convert the argument to a UTF-32 unicode character
+ * - '%e' Convert the argument to scientific notation
+ * - '%t' Treat the argument as a UNIX timestamp and print the date time
+ * 
+ * FLAGS:
+ * - <number>  Pad the string with spaces to the left or right
+ *             (depending on if the number is negative or not)
+ *             Example: '%3s'
+ * - 0<number> Pad the string with '0' characters to the left or right
+ *             (depending on if the number is negative or not)
+ *             Example: '%03s'
+ * - .<number> Number precision flag
+ *             Example: '%.2d'
+ * - $<number> Argument index
+ *             Example: '%$2s'
+ * 
+ * EXAMPLES:
+ * - printf("Hello world!\n") Prints hello world with a newline character at the end
+ * - printf("number: %d", 23) Prints the number
+ * 
+ */
+export native void printf(string format, ... args)
+
+/**
+ * Print a message to the standard output
+ */
+export native void println(string message)
+
+/**
+ * Format a string
+ * 
+ * FORMAT CODES:
+ * - '%d' Decimal number
+ * - '%x' Hexadecimal number
+ * - '%X' Uppercase hexadecimal number
+ * - '%o' Base 8 (octal) number
+ * - '%O' Upper case base 8 (octal) number
+ * - '%b' Binary base 2 number
+ * - '%s' Convert the argument to string
+ * - '%c' Convert the argument to a UTF-32 unicode character
+ * - '%e' Convert the argument to scientific notation
+ * - '%t' Treat the argument as a UNIX timestamp and print the date time
+ * 
+ * FLAGS:
+ * - <number>  Pad the string with spaces to the left or right
+ *             (depending on if the number is negative or not)
+ *             Example: '%3s'
+ * - 0<number> Pad the string with '0' characters to the left or right
+ *             (depending on if the number is negative or not)
+ *             Example: '%03s'
+ * - .<number> Number precision flag
+ *             Example: '%.2d'
+ * - $<number> Argument index
+ *             Example: '%$2s'
+ * 
+ * EXAMPLES:
+ * - printf("Hello world!\n") Prints hello world with a newline character at the end
+ * - printf("number: %d", 23) Prints the number
+ * 
+ */
+export native string sformat(string format, ... args)
+
+/**
+ * Get the current time as a UNIX timestamp
+ */
+export native uint64 currentTimeMillis()
+
+/**
+ * Get the absolute value of a number
+ * 
+ * If the argument is non-negative, the argument is returned
+ * Otherwise the argument is negated and returned.
+ */
+export native int8 abs(int8 x)
+
+/**
+ * Get the absolute value of a number
+ * 
+ * If the argument is non-negative, the argument is returned
+ * Otherwise the argument is negated and returned.
+ */
+export native int16 abs(int16 x)
+
+/**
+ * Get the absolute value of a number
+ * 
+ * If the argument is non-negative, the argument is returned
+ * Otherwise the argument is negated and returned.
+ */
+export native int32 abs(int32 x)
+
+/**
+ * Get the absolute value of a number
+ * 
+ * If the argument is non-negative, the argument is returned
+ * Otherwise the argument is negated and returned.
+ */
+export native int64 abs(int64 x)
+
+/**
+ * Get the absolute value of a number
+ * 
+ * If the argument is non-negative, the argument is returned
+ * Otherwise the argument is negated and returned.
+ */
+export native float32 abs(float32 x)
+
+/**
+ * Get the absolute value of a number
+ * 
+ * If the argument is non-negative, the argument is returned
+ * Otherwise the argument is negated and returned.
+ */
+export native float64 abs(float64 x)
+
+/**
+ * Get the smallest value
+ */
+export native int8 min(int8... values)
+
+/**
+ * Get the smallest value
+ */
+export native uint8 min(uint8... values)
+
+/**
+ * Get the smallest value
+ */
+export native int16 min(int16... values)
+
+/**
+ * Get the smallest value
+ */
+export native uint16 min(uint16... values)
+
+/**
+ * Get the smallest value
+ */
+export native int32 min(int32... values)
+
+/**
+ * Get the smallest value
+ */
+export native uint32 min(uint32... values)
+
+/**
+ * Get the smallest value
+ */
+export native int64 min(int64... values)
+
+/**
+ * Get the smallest value
+ */
+export native uint64 min(uint64... values)
+
+/**
+ * Get the smallest value
+ */
+export native float32 min(float32... values)
+
+/**
+ * Get the smallest value
+ */
+export native float64 min(float64... values)
+
+/**
+ * Get the largest value
+ */
+export native int8 max(int8... values)
+
+/**
+ * Get the largest value
+ */
+export native uint8 max(uint8... values)
+
+/**
+ * Get the largest value
+ */
+export native int16 max(int16... values)
+
+/**
+ * Get the largest value
+ */
+export native uint16 max(uint16... values)
+
+/**
+ * Get the largest value
+ */
+export native int32 max(int32... values)
+
+/**
+ * Get the largest value
+ */
+export native uint32 max(uint32... values)
+
+/**
+ * Get the largest value
+ */
+export native int64 max(int64... values)
+
+/**
+ * Get the largest value
+ */
+export native uint64 max(uint64... values)
+
+/**
+ * Get the largest value
+ */
+export native float32 max(float32... values)
+
+/**
+ * Get the largest value
+ */
+export native float64 max(float64... values)
+
+/**
+ * Get the sign of a number
+ * If the argument is 0, 0 is returned
+ * If the argument is negative, -1 is returned
+ * If the argument is positive, 1 is returned
+ */
+export native int8 sign(int8 x)
+
+/**
+ * Get the sign of a number
+ * If the argument is 0, 0 is returned
+ * If the argument is negative, -1 is returned
+ * If the argument is positive, 1 is returned
+ */
+export native int8 sign(int16 x)
+
+/**
+ * Get the sign of a number
+ * If the argument is 0, 0 is returned
+ * If the argument is negative, -1 is returned
+ * If the argument is positive, 1 is returned
+ */
+export native int8 sign(int32 x)
+
+/**
+ * Get the sign of a number
+ * If the argument is 0, 0 is returned
+ * If the argument is negative, -1 is returned
+ * If the argument is positive, 1 is returned
+ */
+export native int8 sign(int64 x)
+
+/**
+ * Get the sign of a number
+ * If the argument is 0, 0 is returned
+ * If the argument is negative, -1 is returned
+ * If the argument is positive, 1 is returned
+ */
+export native int8 sign(float32 x)
+
+/**
+ * Get the sign of a number
+ * If the argument is 0, 0 is returned
+ * If the argument is negative, -1 is returned
+ * If the argument is positive, 1 is returned
+ */
+export native int8 sign(float64 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native int8 clz(int8 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native uint8 clz(uint8 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native int16 clz(int16 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native uint16 clz(uint16 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native int32 clz(int32 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native uint32 clz(uint32 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native int64 clz(int64 x)
+
+/**
+ * Get the number of leading zeros
+ */
+export native uint64 clz(uint64 x)
+
+/**
+ * Test if a value is Not-A-Number
+ */
+export native bool isNaN(float32 x)
+
+/**
+ * Test if a value is Not-A-Number
+ */
+export native bool isNaN(float64 x)
+
+/**
+ * Square root function
+ */
+export native float32 sqrt(float32 x)
+
+/**
+ * Square root function
+ */
+export native float64 sqrt(float64 x)
+
+/**
+ * Cube root function
+ */
+export native float32 cbrt(float32 x)
+
+/**
+ * Cube root function
+ */
+export native float64 cbrt(float64 x)
+
+/**
+ * Get the arc cosine of a value
+ */
+export native float32 acos(float32 x)
+
+/**
+ * Get the arc cosine of a value
+ */
+export native float64 acos(float64 x)
+
+/**
+ * Get the inverse hyperbolic cosine of a value
+ */
+export native float32 acosh(float32 x)
+
+/**
+ * Get the inverse hyperbolic cosine of a value
+ */
+export native float64 acosh(float64 x)
+
+/**
+ * Get the arc sine of a value
+ */
+export native float32 asin(float32 x)
+
+/**
+ * Get the arc sine of a value
+ */
+export native float64 asin(float64 x)
+
+/**
+ * Get the inverse hyperbolic sine of a value
+ */
+export native float32 asinh(float32 x)
+
+/**
+ * Get the inverse hyperbolic sine of a value
+ */
+export native float64 asinh(float64 x)
+
+/**
+ * Get the arc tangent of a value
+ */
+export native float32 atan(float32 x)
+
+/**
+ * Get the arc tangent of a value
+ */
+export native float64 atan(float64 x)
+
+/**
+ * Get the arctangent of the quotient of x and y
+ */
+export native float32 atan2(float32 x, float32 y)
+
+/**
+ * Get the arctangent of the quotient of x and y
+ */
+export native float64 atan2(float64 x, float64 y)
+
+/**
+ * Get the hyperbolic arc tangent of a value
+ */
+export native float32 atanh(float32 x)
+
+/**
+ * Get the hyperbolic arc tangent of a value
+ */
+export native float64 atanh(float64 x)
+
+/**
+ * Round up
+ */
+export native float32 ceil(float32 x)
+
+/**
+ * Round up
+ */
+export native float64 ceil(float64 x)
+
+/**
+ * Round down
+ */
+export native float32 floor(float32 x)
+
+/**
+ * Round down
+ */
+export native float64 floor(float64 x)
+
+/**
+ * Get the cosine of a value
+ */
+export native float32 cos(float32 x)
+
+/**
+ * Get the cosine of a value
+ */
+export native float64 cos(float64 x)
+
+/**
+ * Get the inverse hyperbolic cosine of a value
+ */
+export native float32 cosh(float32 x)
+
+/**
+ * Get the inverse hyperbolic cosine of a value
+ */
+export native float64 cosh(float64 x)
+
+/**
+ * Get the square root of the sum of the squares of the arguments
+ */
+export native float32 hypot(float32... values)
+
+/**
+ * Get the square root of the sum of the squares of the arguments
+ */
+export native float64 hypot(float64... values)
+
+/**
+ * Get the natural logarithm of a value
+ */
+export native float32 log(float32 x)
+
+/**
+ * Get the natural logarithm of a value
+ */
+export native float64 log(float64 x)
+
+/**
+ * Get the Base-10 logarithm of a value
+ */
+export native float32 log10(float32 x)
+
+/**
+ * Get the natural logarithm of a value + 1.0
+ */
+export native float32 log1p(float32 x)
+
+/**
+ * Get the Base-10 logarithm of a value
+ */
+export native float64 log10(float64 x)
+
+/**
+ * Get the natural logarithm of a value + 1.0
+ */
+export native float64 log1p(float64 x)
+
+/**
+ * Get the Base-2 logarithm of a value
+ */
+export native float32 log2(float32 x)
+
+/**
+ * Get the Base-2 logarithm of a value
+ */
+export native float64 log2(float64 x)
+
+/**
+ * Round a floating point value
+ */
+export native float32 round(float32 x)
+
+/**
+ * Round a floating point value
+ */
+export native float64 round(float64 x)
+
+/**
+ * Round a floating point value to a specific precision
+ */
+export native float32 round(float32 x, uint32 precision)
+
+/**
+ * Round a floating point value to a specific precision
+ */
+export native float64 round(float64 x, uint32 precision)
+
+/**
+ * Get the sine of a value
+ */
+export native float32 sin(float32 x)
+
+/**
+ * Get the sine of a value
+ */
+export native float64 sin(float64 x)
+
+/**
+ * Get the hyperbolic sine of a value
+ */
+export native float32 sinh(float32 x)
+
+/**
+ * Get the hyperbolic sine of a value
+ */
+export native float64 sinh(float64 x)
+
+/**
+ * Get the tangent of a value
+ */
+export native float32 tan(float32 x)
+
+/**
+ * Get the tangent of a value
+ */
+export native float64 tan(float64 x)

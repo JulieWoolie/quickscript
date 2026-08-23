@@ -10,6 +10,7 @@ import {generateOpCodes} from "./opcode-gen";
 import {generateEvaluatorSwitchStatement} from "./evaluator-gen";
 import {generateDocs} from "./docs";
 import {generatePrinterFunction} from "./printer-gen";
+import {generateStdLibDeclFile} from "./stdlib-gen";
 
 async function createOpCodesHeader(res: OpCodeGenResult): Promise<void> {
   const opcodes = res.codes
@@ -197,6 +198,8 @@ async function main(): Promise<void> {
   await generateEvaluatorSwitchStatement(res)
   await generatePrinterFunction(res)
   await writeOpCodeTxt(codes)
+
+  await generateStdLibDeclFile()
 }
 
 // @ts-ignore
