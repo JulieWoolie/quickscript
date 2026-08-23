@@ -294,7 +294,7 @@ ParseResult parseSettings(ProgramSettings& out, int32 argc, cstring argv[]) {
 
       if (pair.name == FLAG_INVALID) {
         fprintf(stderr, "Unknown flag '%.*s'\n", nameLen, nameData);
-        return false;
+        return RES_FAILED;
       }
 
       if (parseFlag(pair, out)) {
