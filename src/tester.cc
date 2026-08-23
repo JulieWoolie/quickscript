@@ -263,13 +263,13 @@ static bool parseTestCommand(
       out.breakpoint = true;
       return false;
     case TDIR_DISABLE_STAT_INLINING:
-      out.compilerOpts.statOptimizing = parseBool(view, readIdx, false);
+      out.compilerOpts.statOptimizing = !parseBool(view, readIdx, true);
       return false;
     case TDIR_DISABLE_EXPR_INLINING:
-      out.compilerOpts.exprOptimizing = parseBool(view, readIdx, false);
+      out.compilerOpts.exprOptimizing = !parseBool(view, readIdx, true);
       return false;
     case TDIR_DROP_ASSERTS:
-      out.compilerOpts.includeAsserts = parseBool(view, readIdx, true);
+      out.compilerOpts.includeAsserts = !parseBool(view, readIdx, true);
       return false;
     case TDIR_MODE: {
       skipValueDelimiter(view, readIdx);
