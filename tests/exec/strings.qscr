@@ -1,7 +1,6 @@
 # MODE run
 
-void main() {
-  # Regular test
+void regularStringTests() {
   string s = "Hello"
   assert s.length == 5 : "String 'Hello' is not 5 chars"
   assert s[0] == 'H' : "s[0] != 'H'"
@@ -9,8 +8,10 @@ void main() {
   assert s[2] == 'l' : "s[2] != 'l'"
   assert s[3] == 'l' : "s[3] != 'l'"
   assert s[4] == 'o' : "s[4] != 'o'"
+}
 
-  # String repeat test
+void stringRepeatTests() {
+  string s = "Hello"
   string s2 = s * 2
   assert s2.length == 10
   assert s2[0] == 'H' : "s2[0] != 'H'"
@@ -23,8 +24,9 @@ void main() {
   assert s2[7] == 'l' : "s2[7] != 'l'"
   assert s2[8] == 'l' : "s2[8] != 'l'"
   assert s2[9] == 'o' : "s2[9] != 'o'"
+}
 
-  # String concat test
+void stringStringConcatTests() {
   string c1 = "foo"
   string c2 = "bar"
   string c3 = c1 + c2
@@ -36,4 +38,22 @@ void main() {
   assert c3[3] == 'b' : "c3[3] != 'b'"
   assert c3[4] == 'a' : "c3[4] != 'a'"
   assert c3[5] == 'r' : "c3[5] != 'r'"
+}
+
+void stringAndOtherConcatTests() {
+  string l = "f:"
+  string r = l + 32
+
+  assert r.length == 4 : "string + int length != 4"
+  assert r[0] == 'f' : "r[0] != 'f'"
+  assert r[1] == ':' : "r[1] != ':'"
+  assert r[2] == '3' : "r[2] != '3'"
+  assert r[3] == '2' : "r[3] != '2'"
+}
+
+void main() {
+  regularStringTests()
+  stringRepeatTests()
+  stringStringConcatTests()
+  stringAndOtherConcatTests()
 }
