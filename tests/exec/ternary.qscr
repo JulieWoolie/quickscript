@@ -1,0 +1,12 @@
+# MODE run
+
+void main() {
+  const bool t = true
+  const bool f = false
+
+  uint32 x = t ? 1 : 2
+  uint32 y = f ? 1 : 2
+
+  assert x == 1 : "x != 1, it is: " + x
+  assert y == 2 : "x != 2, it is: " + y
+}
