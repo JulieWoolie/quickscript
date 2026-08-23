@@ -1,4 +1,4 @@
-#include "interpreter/nativeinterface.h"
+#include "nativeinterface.h"
 
 #include <bit>
 
