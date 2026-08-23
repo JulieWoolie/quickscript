@@ -387,7 +387,7 @@ Expr* SemanticTransformer::optimizeUnary(UnaryExpr* u) const {
 Expr* SemanticTransformer::optimizeTernary(TernaryExpr* t) const {
   Expr* cond = t->condition = optimizeExpr(t->condition);
   Expr* left = t->left = optimizeExpr(t->left);
-  Expr* right = t->left = optimizeExpr(t->right);
+  Expr* right = t->right = optimizeExpr(t->right);
 
   switch (cond->nodeKind()) {
     case AST_BooleanLiteral: {
