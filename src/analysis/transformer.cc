@@ -594,6 +594,15 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       forStat->second = optimizeExpr(forStat->second);
       forStat->third = optimizeExpr(forStat->third);
 
+      if (forStat->third->nodeKind() == AST_UnaryExpr) {
+        UnaryExpr* un = static_cast<UnaryExpr*>(forStat->third);
+        if (un->op == UOP_POSTDEC) {
+          un->op = UOP_PREDEC;
+        } else if (un->op == UOP_POSTINC) {
+          un->op = UOP_PREINC;
+        }
+      }
+
       forStat->loopBody = optimizeStatement(forStat->loopBody, true);
       if (!forStat->loopBody) {
         return nullptr;
