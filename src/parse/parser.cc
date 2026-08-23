@@ -141,12 +141,32 @@ ScriptFileStatement * Parser::parse() {
   return res;
 }
 
+declflags Parser::parseDeclFlags() {
+  declflags flags = 0;
+  if (is(TT_KEYW_EXPORT)) {
+    flags |= DECLFLAG_EXPORTED;
+    next();
+  }
+  if (is(TT_KEYW_NATIVE)) {
+    flags |= DECLFLAG_NATIVE;
+    next();
+  }
+  return flags;
+}
+
 uint8 Parser::isLexOrFuncDecl() {
   SAVECURSOR
 
   tokentype tt = peek()->ttype;
   bool canBeLabelled = true;
   uint32 line = peek()->start.line;
+
+  while (tt == TT_KEYW_EXPORT || tt == TT_KEYW_NATIVE) {
+    next();
+    tt = peek()->ttype;
+    line = peek()->start.line;
+    canBeLabelled = false;
+  }
 
   switch (tt) {
     case TT_KEYW_BOOL:
@@ -281,6 +301,8 @@ FunctionParam * Parser::funcParam() {
 }
 
 FunctionDeclStatement * Parser::funcDecl() {
+  const declflags flags = parseDeclFlags();
+
   TypeExpr* retType = typeExpr();
   Identifier* funcName = id();
 
@@ -288,6 +310,7 @@ FunctionDeclStatement * Parser::funcDecl() {
   decl.location = retType->location;
   decl.name = funcName;
   decl.returnType = retType;
+  decl.flags = flags;
 
   expect(TT_LBRACKET);
 
@@ -476,7 +499,9 @@ WhileStatement* Parser::whileStatement(Identifier* label) {
 }
 
 LexicalDeclaration * Parser::lexDecl() {
-  bool isConst = is(TT_KEYW_CONST);
+  const declflags flags = parseDeclFlags();
+  const bool isConst = is(TT_KEYW_CONST);
+
   Location loc;
 
   if (isConst) {
@@ -500,6 +525,7 @@ LexicalDeclaration * Parser::lexDecl() {
   lex.variableName = name;
   lex.value = val;
   lex.isConstDeclaration = isConst;
+  lex.flags = flags;
 
   return EMPLACE(lex);
 }
@@ -523,10 +549,13 @@ ReturnStatement* Parser::returnStatement() {
 }
 
 StructDecl* Parser::structDecl() {
+  const declflags flags = parseDeclFlags();
+
   Token* t = expect(TT_KEYW_STRUCT);
   StructDecl decl;
   decl.location = t->start;
   decl.name = id();
+  decl.flags = flags;
 
   expect(TT_LCURL);
 

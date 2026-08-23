@@ -39,6 +39,8 @@ class Parser {
 
     ScriptFileStatement* parse();
 
+    declflags parseDeclFlags();
+
     // statements
 
     uint8 isLexOrFuncDecl();
