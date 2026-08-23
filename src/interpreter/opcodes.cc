@@ -52,9 +52,10 @@ conststring opcode_name(opcode code) {
     case OP_CWRITE16: return "CWRITE16";
     case OP_CWRITE32: return "CWRITE32";
     case OP_CWRITE64: return "CWRITE64";
-    case OP_HEAPALLOC: return "HEAPALLOC";
-    case OP_HEAPFREE: return "HEAPFREE";
+    case OP_OBJALLOC: return "OBJALLOC";
     case OP_ARRAYALLOC: return "ARRAYALLOC";
+    case OP_INCREFC: return "INCREFC";
+    case OP_DECREFC: return "DECREFC";
     case OP_READOBJ8: return "READOBJ8";
     case OP_READOBJ16: return "READOBJ16";
     case OP_READOBJ32: return "READOBJ32";
@@ -325,6 +326,8 @@ uint8 getInstructionLength(const opcode code) {
     case OP_RET:
       return LENGTH_OPCODE;
     case OP_GETSTACKPTR:
+    case OP_INCREFC:
+    case OP_DECREFC:
     case OP_INVOKE:
       return 1 + LENGTH_OPCODE;
     case OP_ASSERT:
@@ -588,6 +591,7 @@ uint8 getInstructionLength(const opcode code) {
     case OP_LOADCONST32:
     case OP_STORECONST8:
     case OP_GSTORECONST8:
+    case OP_OBJALLOC:
     case OP_LFUNCLOOKUP:
       return 5 + LENGTH_OPCODE;
     case OP_STORECONST16:
@@ -625,8 +629,6 @@ uint8 getInstructionLength(const opcode code) {
     case OP_GWRITE16:
     case OP_GWRITE32:
     case OP_GWRITE64:
-    case OP_HEAPALLOC:
-    case OP_HEAPFREE:
     case OP_ARRAYALLOC:
       return 9 + LENGTH_OPCODE;
     case OP_STORECONST64:

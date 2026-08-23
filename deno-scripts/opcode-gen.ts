@@ -156,10 +156,11 @@ function closureOperations() {
 function heapOperations() {
   currentCategory = "2.4.5 Heap Memory OP Codes"
 
-  opCode("HEAPALLOC", [reg("out"), uint64("bytes")])
-  opCode("HEAPFREE", [reg("addr"), uint64("bytes")])
-
+  opCode("OBJALLOC", [reg("out"), uint32("typeindex")])
   opCode("ARRAYALLOC", [reg("out"), uint32("count"), uint32("typeindex")])
+
+  opCode("INCREFC", [reg("obj")])
+  opCode("DECREFC", [reg("obj")])
 
   byteSizedOpCode("READOBJ", [reg("obj"), reg("out"), uint32("off")], [
       "%REG:out% = *reinterpret_cast<%UTYPE%*>(%REG:obj% + %CONST:off,32% + REFCOUNT_PREFIX_SIZE);"
