@@ -84,4 +84,5 @@ add_executable(quickscript src/main.cpp
         src/interpreter/heap_mem.cc
         src/interpreter/objects.h
         src/interpreter/objects.cc
-        src/interpreter/registers.h)
+        src/interpreter/registers.h
+        src/compiler_opts.h)
