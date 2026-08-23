@@ -328,7 +328,12 @@ FunctionDeclStatement * Parser::funcDecl() {
 
   expect(TT_RBRACKET);
 
-  decl.functionBody = block();
+  if (!(flags & DECLFLAG_NATIVE)) {
+    decl.functionBody = block();
+  } else if (is(TT_LCURL)) {
+    ERROR(peek()->start, "Native functions cannot have a body");
+    block();
+  }
 
   FunctionDeclStatement* res = EMPLACE(decl);
   res->functionBody->parentStatement = res;
@@ -516,7 +521,13 @@ LexicalDeclaration * Parser::lexDecl() {
 
   if (is(TT_ASSIGN)) {
     next();
-    val = expr();
+
+    if (flags & DECLFLAG_NATIVE) {
+      ERROR(loc, "Native variables cannot have values");
+      expr();
+    } else {
+      val = expr();
+    }
   }
 
   LexicalDeclaration lex;
