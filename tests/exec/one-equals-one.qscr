@@ -1,4 +1,6 @@
 # MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
 
 void main() {
   assert 1 == 1 : "One does not equal one"

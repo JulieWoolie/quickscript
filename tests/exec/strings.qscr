@@ -1,4 +1,6 @@
 # MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
 
 #
 # What an amazing way to do string equality testing since I don't have

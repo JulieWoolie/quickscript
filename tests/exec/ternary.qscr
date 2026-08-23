@@ -1,4 +1,6 @@
 # MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
 
 void main() {
   const bool t = true

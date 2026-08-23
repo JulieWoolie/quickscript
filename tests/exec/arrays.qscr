@@ -1,4 +1,6 @@
 # MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
 
 void main() {
   uint32[] arr = [3, 4, 5]
