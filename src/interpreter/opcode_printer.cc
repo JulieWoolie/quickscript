@@ -485,7 +485,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_LTEF32:
     case OP_LTEF64:
     case OP_LTEARR:
-    case OP_STRCONCAT:
     case OP_STRREP8:
     case OP_STRREP16:
     case OP_STRREP32:
@@ -493,6 +492,12 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
+      break;
+    case OP_STRCONCAT:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 4));
+      fprintf(out, " %s", getRegistryName(*(buf + 8)));
       break;
     default:
       break;

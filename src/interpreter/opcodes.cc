@@ -575,7 +575,6 @@ uint8 getInstructionLength(const opcode code) {
     case OP_LTEF32:
     case OP_LTEF64:
     case OP_LTEARR:
-    case OP_STRCONCAT:
     case OP_STRREP8:
     case OP_STRREP16:
     case OP_STRREP32:
@@ -603,6 +602,7 @@ uint8 getInstructionLength(const opcode code) {
     case OP_WRITEOBJ64:
       return 6 + LENGTH_OPCODE;
     case OP_LOADCONST64:
+    case OP_STRCONCAT:
       return 7 + LENGTH_OPCODE;
     case OP_STORECONST32:
     case OP_GSTORECONST32:

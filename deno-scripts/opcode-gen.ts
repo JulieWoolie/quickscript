@@ -357,7 +357,7 @@ function comparisonOperators() {
 function stringArrayOperations() {
   currentCategory = "2.4.9.5 String/Array Operations"
 
-  opCode("STRCONCAT", BINARY_ARGS)
+  opCode("STRCONCAT", [reg("lhs"), reg("rhs"), uint32("typeindex"), reg("out")])
   byteSizedOpCode("STRREP", BINARY_ARGS, [
       "%REG:out% = stringRepeat(%REG:lhs,void*%, %REG:rhs,%UTYPE%%, m_vm.getHeap());"
   ])
