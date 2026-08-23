@@ -40,6 +40,7 @@ interpret that IR.
 - [X] `STRCONCAT` OP Code functionality
 - [ ] Support for native bindings: structs, variables, constants and functions
 - [ ] Standard library
+- [ ] Proper Unicode support
 
 ## Future goals
 
