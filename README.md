@@ -17,15 +17,14 @@ interpret that IR.
 - [ ] Calling errors (Function stores something in a register, calls a function, function overwrites that register, data is lost)
 - [ ] Correct closure handling in semantic transformer
 - [ ] Casting and assigning literals correct types
+- [ ] Proper reference counting which is added in compiler or semantic transformer.
 - [x] `PUSHLINE` OP Code functionality
 - [X] `RET` OP Code functionality
 - [X] `JMP` OP Code functionality
 - [X] `JMPI0` OP Code functionality
 - [X] `JMPN0` OP Code functionality
 - [X] `LOADCONSTSTR` OP Code functionality
-- [ ] `HEAPALLOC` OP Code functionality
-- [ ] `HEAPFREE` OP Code functionality
-- [ ] `SETARGTYPE` OP Code functionality
+- [ ] `SETARGTYPE` OP Code functionality AND USE
 - [X] `LFUNCLOOKUP` OP Code functionality
 - [ ] `NFUNCLOOKUP` OP Code functionality
 - [X] `INVOKE` OP Code functionality
@@ -37,7 +36,7 @@ interpret that IR.
 - [ ] `GTEARR` OP Code functionality
 - [ ] `LTARR` OP Code functionality
 - [ ] `LTEARR` OP Code functionality
-- [ ] `STRCONCAT` OP Code functionality
+- [X] `STRCONCAT` OP Code functionality
 - [ ] Support for native bindings: structs, variables, constants and functions
 - [ ] Standard library
 
