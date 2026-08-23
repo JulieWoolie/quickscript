@@ -114,7 +114,7 @@ class CompilerContext {
   bool m_returned = false;
 
   public:
-    CompilerContext(SemanticContext& ctx, uint64* registryBitset);
+    CompilerContext(SemanticContext& ctx, RegisterBitSet* registryBitset);
 
     void enqueueFunction(FunctionDeclStatement* stat);
     FunctionDeclStatement* pollQueuedFunction();

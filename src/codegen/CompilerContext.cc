@@ -189,7 +189,7 @@ uint8* ConstStringPoolWriter::getData() const {
   return m_data;
 }
 
-CompilerContext::CompilerContext(SemanticContext& ctx, uint64* registryBitset)
+CompilerContext::CompilerContext(SemanticContext& ctx, RegisterBitSet* registryBitset)
   : m_stringPool(ctx.getStrings()), m_semantics(ctx), m_registersInUse(registryBitset)
 {
 
