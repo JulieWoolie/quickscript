@@ -4,6 +4,50 @@
 
 #define IS_LAST_ARG (i == argc - 1)
 
+#define FLAG_INVALID 0
+#define FLAG_PRINT_AST 1
+#define FLAG_LOGLEVEL 2
+#define FLAG_TEXT_COMPILE 3
+#define FLAG_OMIT_OK_TESTS 4
+#define FLAG_IGNORE_ASSERTS 5
+#define FLAG_TEST_DUMP_DIR 6
+#define FLAG_NO_STAT_INLINING 7
+#define FLAG_NO_EXPR_INLINING 8
+typedef uint8 FlagType;
+
+struct FlagDef {
+  FlagType type;
+  conststring value;
+};
+
+static const FlagDef FLAG_DEFS[] = {
+  {.type = FLAG_PRINT_AST, .value = "--print-ast"},
+  {.type = FLAG_PRINT_AST, .value = "-p"},
+  {.type = FLAG_LOGLEVEL, .value = "--loglevel"},
+  {.type = FLAG_TEXT_COMPILE, .value = "--text-compile"},
+  {.type = FLAG_TEXT_COMPILE, .value = "-tc"},
+  {.type = FLAG_OMIT_OK_TESTS, .value = "--omit-ok-tests"},
+  {.type = FLAG_OMIT_OK_TESTS, .value = "-oot"},
+  {.type = FLAG_IGNORE_ASSERTS, .value = "--ignore-asserts"},
+  {.type = FLAG_IGNORE_ASSERTS, .value = "-ia"},
+  {.type = FLAG_TEST_DUMP_DIR, .value = "--test-dump-dir"},
+  {.type = FLAG_NO_STAT_INLINING, .value = "--no-stat-inlining"},
+  {.type = FLAG_NO_EXPR_INLINING, .value = "--no-expr-inlining"}
+};
+
+struct CommandDef {
+  programcommand cmd;
+  conststring value;
+};
+
+static const CommandDef COMMANDS[] = {
+  {.cmd = CMD_COMPILE, .value = "compile"},
+  {.cmd = CMD_HELP, .value = "help"},
+  {.cmd = CMD_HELP, .value = "?"},
+  {.cmd = CMD_RUN, .value = "run"},
+  {.cmd = CMD_TESTS, .value = "test"}
+};
+
 void showHelpMessage() {
   printf("Quickscript Interpreter\n");
   printf("\n");
@@ -12,12 +56,16 @@ void showHelpMessage() {
   printf("\n");
   printf("OPTIONS\n");
   printf("    --print-ast -p                Print the AST of parsed source files after semantic transformation.\n");
-  printf("    --print-ast=<when> -p=<when>  Set a flag to print the AST after a certain compilation step (One of: after-parse, after-analysis, after-transform.)\n");
-  printf("    --loglevel=<level>            Set the logger level. (One of: error, warn, info)\n");
+  printf("    --print-ast=<when> -p=<when>  Set a flag to print the AST after a certain compilation step\n");
+  printf("                                  (One of: after-parse, after-analysis, after-transform.)\n");
+  printf("    --loglevel=<level>            Set the logger level.\n");
+  printf("                                  (One of: error, warn, info)\n");
   printf("    --text-compile -tc            Compile to a text based IR instead of binary.\n");
   printf("    --omit-ok-tests -oot          Do not log tests that passed.\n");
-  printf("    --ignore-asserts -ia          Do not compile or execute assert statements.\n");
   printf("    --test-dump-dir=<dir>         Directory to dump random test-related debug info to.\n");
+  printf("    --ignore-asserts -ia          Do not compile or assert statements.\n");
+  printf("    --no-stat-inlining            Do not inline statements.\n");
+  printf("    --no-expr-inlining            Do not inline expressions.\n");
   printf("\n");
   printf("COMMANDS\n");
   printf("    help                                Display this help message.\n");
@@ -37,22 +85,10 @@ static int32 indexOf(conststring str, uint32 len, int8 ch) {
 }
 
 struct ArgPair {
-  std::string_view name;
+  FlagType name;
+  std::string_view nameView;
   std::string_view value;
 };
-
-static void parseFlagPair(const conststring arg, const uint32 len, ArgPair& out) {
-  int32 idx = indexOf(arg, len, '=');
-
-  if (idx == -1) {
-    out.name = arg;
-    out.value = {};
-    return;
-  }
-
-  out.name = std::string_view(arg, idx);
-  out.value = std::string_view(arg + idx + 1, len - idx - 1);
-}
 
 static bool stringEquals(const conststring a, const std::string_view& b) {
   const uint32 aLen = strlen(a);
@@ -72,84 +108,93 @@ static bool stringEquals(const conststring a, const std::string_view& b) {
   return true;
 }
 
-static bool parseFlag(ProgramSettings& out, const conststring arg, const uint32 len) {
-  ArgPair pair;
-  parseFlagPair(arg, len, pair);
+static FlagType parseName(std::string_view nameView) {
+  constexpr uint32 defs = sizeof(FLAG_DEFS) / sizeof(FlagDef);
+  for (uint32 i = 0; i < defs; i++) {
+    FlagDef def = FLAG_DEFS[i];
+    if (stringEquals(def.value, nameView)) {
+      return def.type;
+    }
+  }
+  return FLAG_INVALID;
+}
 
+static void parseFlagPair(const conststring arg, const uint32 len, ArgPair& out) {
+  const int32 idx = indexOf(arg, len, '=');
+
+  if (idx == -1) {
+    out.nameView = arg;
+    out.name = parseName(arg);
+    out.value = {};
+  } else {
+    out.value = std::string_view(arg + idx + 1, len - idx - 1);
+    out.nameView = std::string_view(arg, idx);
+  }
+
+  out.name = parseName(out.nameView);
+}
+
+static bool parseFlag(const ArgPair& pair, ProgramSettings& out) {
   if (pair.value.empty()) {
-    if (stringEquals("--print-ast", pair.name)) {
-      out.printAst |= PRINTAST_AFTER_TRANSFORM;
-      return true;
+    switch (pair.name) {
+      case FLAG_PRINT_AST:
+        out.printAst |= PRINTAST_AFTER_TRANSFORM;
+        break;
+      case FLAG_TEXT_COMPILE:
+        out.compileToBinary = false;
+        break;
+      case FLAG_OMIT_OK_TESTS:
+        out.omitPassedTests = true;
+        break;
+      case FLAG_IGNORE_ASSERTS:
+        out.compilationOptions.includeAsserts = false;
+        break;
+      case FLAG_NO_EXPR_INLINING:
+        out.compilationOptions.exprOptimizing = false;
+        break;
+      case FLAG_NO_STAT_INLINING:
+        out.compilationOptions.statOptimizing = false;
+        break;
+      default:
+        return false;
     }
-    if (stringEquals("-p", pair.name)) {
-      out.printAst = true;
-      return true;
-    }
-
-    if (stringEquals("--text-compile", pair.name)) {
-      out.compileToBinary = false;
-      return true;
-    }
-    if (stringEquals("-tc", pair.name)) {
-      out.compileToBinary = false;
-      return true;
-    }
-
-    if (stringEquals("--omit-ok-tests", pair.name)) {
-      out.omitPassedTests = true;
-      return true;
-    }
-    if (stringEquals("-oot", pair.name)) {
-      out.omitPassedTests = true;
-      return true;
-    }
-
-    if (stringEquals("--ignore-asserts", pair.name)) {
-      out.ignoreAsserts = true;
-      return true;
-    }
-    if (stringEquals("-ia", pair.name)) {
-      out.ignoreAsserts = true;
-      return true;
-    }
-
-    return false;
-  }
-
-  if (stringEquals("--print-ast", pair.name) || stringEquals("-p", pair.name)) {
-    if (stringEquals("after-transform", pair.value)) {
-      out.printAst |= PRINTAST_AFTER_TRANSFORM;
-      return true;
-    }
-    if (stringEquals("after-parse", pair.value)) {
-      out.printAst |= PRINTAST_AFTER_PARSE;
-      return true;
-    }
-    if (stringEquals("after-analysis", pair.value)) {
-      out.printAst |= PRINTAST_AFTER_ANALYSIS;
-      return true;
-    }
-  }
-
-  if (stringEquals("--test-dump-dir", pair.name)) {
-    out.testDumpDirectory = pair.value;
     return true;
   }
 
-  if (stringEquals("--loglevel", pair.name)) {
-    if (stringEquals("error", pair.value)) {
-      out.loggerLevel = LOGL_ERROR;
+  switch (pair.name) {
+    case FLAG_PRINT_AST:
+      if (stringEquals("after-transform", pair.value)) {
+        out.printAst |= PRINTAST_AFTER_TRANSFORM;
+        return true;
+      }
+      if (stringEquals("after-parse", pair.value)) {
+        out.printAst |= PRINTAST_AFTER_PARSE;
+        return true;
+      }
+      if (stringEquals("after-analysis", pair.value)) {
+        out.printAst |= PRINTAST_AFTER_ANALYSIS;
+        return true;
+      }
+      break;
+    case FLAG_TEST_DUMP_DIR:
+      out.testDumpDirectory = pair.value;
       return true;
-    }
-    if (stringEquals("warn", pair.value)) {
-      out.loggerLevel = LOGL_WARN;
-      return true;
-    }
-    if (stringEquals("info", pair.value)) {
-      out.loggerLevel = LOGL_INFO;
-      return true;
-    }
-    return false;
+    case FLAG_LOGLEVEL:
+      if (stringEquals("error", pair.value)) {
+        out.loggerLevel = LOGL_ERROR;
+        return true;
+      }
+      if (stringEquals("warn", pair.value)) {
+        out.loggerLevel = LOGL_WARN;
+        return true;
+      }
+      if (stringEquals("info", pair.value)) {
+        out.loggerLevel = LOGL_INFO;
+        return true;
+      }
+      break;
+    default:
+      break;
   }
 
   return false;
@@ -197,59 +242,66 @@ static void collectFollowingArgsForProgram(ProgramSettings& out, const int32 arg
 }
 
 static programcommand parseCommand(std::string_view view) {
-  switch (view.length()) {
-    case 3:
-      if (view[0] == 'r'
-       && view[1] == 'u'
-       && view[2] == 'n'
-      ) {
-        return CMD_RUN;
-      }
-      return CMD_NIL;
-    case 4:
-      if (view[0] == 'h'
-       && view[1] == 'e'
-       && view[2] == 'l'
-       && view[3] == 'p'
-      ) {
-        return CMD_HELP;
-      }
-      if (view[0] == 't'
-       && view[1] == 'e'
-       && view[2] == 's'
-       && view[3] == 't'
-      ) {
-        return CMD_TESTS;
-      }
-      return CMD_NIL;
-    case 7:
-      if (view[0] == 'c'
-       && view[1] == 'o'
-       && view[2] == 'm'
-       && view[3] == 'p'
-       && view[4] == 'i'
-       && view[5] == 'l'
-       && view[6] == 'e'
-      ) {
-        return CMD_COMPILE;
-      }
-      return CMD_NIL;
-    default:
-      return CMD_NIL;
+  constexpr uint32 commands = sizeof(COMMANDS) / sizeof(CommandDef);
+  for (uint32 i = 0; i < commands; i++) {
+    CommandDef def = COMMANDS[i];
+    if (stringEquals(def.value, view)) {
+      return def.cmd;
+    }
   }
+  return CMD_NIL;
+}
+
+static void printUsage(const programcommand cmd) {
+  fprintf(stderr, "USAGE:\n  quickscript ");
+
+  if (cmd == CMD_HELP) {
+    fprintf(stderr, "help");
+  } else {
+    fprintf(stderr, "[OPTIONS] ");
+
+    switch (cmd) {
+      case CMD_RUN:
+        fprintf(stderr, "run <INPUT FILE> [PROGRAM ARGUMENTS]");
+        break;
+      case CMD_COMPILE:
+        fprintf(stderr, "compile <INPUT FILE> <OUTPUT FILE>");
+        break;
+      case CMD_TESTS:
+        fprintf(stderr, "test <TEST DIRECTORY>");
+        break;
+      default:
+        break;
+    }
+  }
+
+  fprintf(stderr, "\n\n");
 }
 
 ParseResult parseSettings(ProgramSettings& out, int32 argc, cstring argv[]) {
   bool commandSet = false;
+  ArgPair pair;
 
   for (uint32 i = 1; i < argc; i++) {
     const conststring arg = argv[i];
     const uint32 len = strlen(arg);
 
     if (arg[0] == '-') {
-      if (parseFlag(out, arg, len)) {
+      parseFlagPair(arg, len, pair);
+
+      const int32 nameLen = pair.nameView.length();
+      const conststring nameData = pair.nameView.data();
+
+      if (pair.name == FLAG_INVALID) {
+        fprintf(stderr, "Unknown flag '%.*s'\n", nameLen, nameData);
+        return false;
+      }
+
+      if (parseFlag(pair, out)) {
         continue;
       }
+
+      fprintf(stderr, "Invalid use of flag '%.*s'\n", nameLen, nameData);
       return RES_FAILED;
     }
 
@@ -260,7 +312,8 @@ ParseResult parseSettings(ProgramSettings& out, int32 argc, cstring argv[]) {
     const std::string_view view = std::string_view(arg, len);
     const programcommand cmd = parseCommand(view);
 
-    if (!cmd) {
+    if (cmd == CMD_NIL) {
+      fprintf(stderr, "Invalid command '%s'\n", arg);
       return RES_FAILED;
     }
 
@@ -270,6 +323,8 @@ ParseResult parseSettings(ProgramSettings& out, int32 argc, cstring argv[]) {
       return RES_OK;
     }
     if (IS_LAST_ARG) {
+      fprintf(stderr, "Input file name not specified\n");
+      printUsage(cmd);
       return RES_FAILED;
     }
 
@@ -278,6 +333,8 @@ ParseResult parseSettings(ProgramSettings& out, int32 argc, cstring argv[]) {
 
     if (cmd == CMD_COMPILE) {
       if (IS_LAST_ARG) {
+        fprintf(stderr, "Output file not specified\n");
+        printUsage(CMD_COMPILE);
         return RES_FAILED;
       }
       out.outputFile = argv[++i];

@@ -1,6 +1,7 @@
 #ifndef QUICKSCRIPT_ARGS_H
 #define QUICKSCRIPT_ARGS_H
 
+#include "compiler_opts.h"
 #include "errors.h"
 
 #define CMD_NIL 0
@@ -40,11 +41,10 @@ struct ProgramSettings {
   std::string_view outputFile;
 
   bool compileToBinary = true;
+  bool omitPassedTests = false;
 
   ProgramArgs runArgs;
-
-  bool omitPassedTests = false;
-  bool ignoreAsserts = true;
+  CompilationOptions compilationOptions;
 };
 
 #define RES_OK 0
