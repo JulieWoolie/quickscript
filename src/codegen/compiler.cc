@@ -520,12 +520,17 @@ static void compileBinaryExpr(
 
 static bool compileRValue(ScriptType* type, Expr* val, CompilerContext& ctx, RegisterId out);
 
-static void compileFuncCall(BytecodeWriter& writer, const RegisterId funcReg, const RegisterId out) {
+static void compileFuncCall(
+  BytecodeWriter& writer,
+  const RegisterId funcReg,
+  const RegisterId out,
+  const bool ignoreReturn
+) {
   writer.startInstr(OP_INVOKE);
   writer.appendU8(funcReg);
   writer.endInstr();
 
-  if (out != REGISTER_RETURN_VALUE) {
+  if (out != REGISTER_RETURN_VALUE && !ignoreReturn) {
     writer.startInstr(OP_MOV);
     writer.appendU8(REGISTER_RETURN_VALUE);
     writer.appendU8(out);
@@ -559,7 +564,9 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
     compileStoredExpr(arg->resultType, arg, ctx, argOffset, true);
   }
 
-  compileFuncCall(writer, funcReg, out);
+  const bool ignoreReturn = targetSign->getReturnType() == ConstTypes::VOID();
+
+  compileFuncCall(writer, funcReg, out, ignoreReturn);
   ctx.freeRegister(funcReg);
 }
 
@@ -646,9 +653,9 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
         memSize += forType->getProperty(i)->type->stackSizeBytes();
       }
 
-      writer.startInstr(OP_HEAPALLOC);
+      writer.startInstr(OP_OBJALLOC);
       writer.appendU8(out);
-      writer.appendU64(memSize);
+      writer.appendU32(ctx.getSemantics().getTypes().findIndex(forType));
       writer.endInstr();
 
       return;
@@ -663,10 +670,12 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
       const TernaryExpr* ternary = static_cast<TernaryExpr*>(expr);
 
       // How it should work:
-      //   - Evaluate condition:
+      //   - Evaluate condition
       //   - Depending on result:
-      //     - Jump to left if true
-      //     - Jump to right otherwise
+      //     - result 0 => jump to right
+      //     - execute left
+      //     - jump over right
+      //     - execute right
 
       compileExpr(ternary->condition, out, nullptr, ctx);
 
@@ -1008,7 +1017,7 @@ static void compileStructInitCall(ScriptStructType* type, CompilerContext& ctx, 
 
   LocalFuncSymbol* lfc = semantics.getConstructors()[type];
   compileFuncLookup(ctx, lfc, out);
-  compileFuncCall(writer, out, out);
+  compileFuncCall(writer, out, out, false);
 }
 
 static void compileStatement(Statement* stat, CompilerContext& ctx);
