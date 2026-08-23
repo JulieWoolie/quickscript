@@ -38,12 +38,14 @@ SemanticContext::SemanticContext(
   TypeTable& types,
   StringTable& strings,
   CompilerErrors& errors,
-  NoFreeAllocator& allocator
+  NoFreeAllocator& allocator,
+  CompilationOptions& options
 )
   : m_types(types),
     m_strings(strings),
     m_errors(errors),
-    m_allocator(allocator)
+    m_allocator(allocator),
+    m_options(options)
 {
 
 }
@@ -175,6 +177,10 @@ CompilerErrors& SemanticContext::getErrors() const {
 
 NoFreeAllocator& SemanticContext::getAllocator() {
   return m_allocator;
+}
+
+CompilationOptions& SemanticContext::getOptions() const {
+  return m_options;
 }
 
 std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolLookup() {

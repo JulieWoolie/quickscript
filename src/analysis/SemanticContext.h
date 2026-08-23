@@ -2,6 +2,7 @@
 #define QUICKSCRIPT_SEMANTICCONTEXT_H
 #include "semantictree.h"
 #include "../allocator.h"
+#include "../compiler_opts.h"
 #include "../errors.h"
 #include "../stringtable.h"
 #include "../parse/syntaxtree.h"
@@ -25,6 +26,7 @@ class SemanticContext {
   StringTable& m_strings;
   CompilerErrors& m_errors;
   NoFreeAllocator& m_allocator;
+  CompilationOptions& m_options;
 
   std::vector<ScriptType*> m_expectedTypes;
   std::vector<Statement*> m_statementStack;
@@ -61,7 +63,8 @@ class SemanticContext {
       TypeTable& types,
       StringTable& strings,
       CompilerErrors& errors,
-      NoFreeAllocator& allocator
+      NoFreeAllocator& allocator,
+      CompilationOptions& options
     );
 
     void pushLocalFunction(LocalFunction* func);
@@ -111,6 +114,8 @@ class SemanticContext {
     CompilerErrors& getErrors() const;
 
     NoFreeAllocator& getAllocator();
+
+    CompilationOptions& getOptions() const;
 
     std::unordered_map<Node*, Symbol*>& getSymbolLookup();
 
