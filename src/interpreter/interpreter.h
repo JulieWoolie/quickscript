@@ -90,6 +90,8 @@ class VirtualMachine {
 
     int32 beginExecution(uint32 funcEntryIdx, const ProgramArgs& args);
 
+    void toString(std::string& out, typeindex type, uint64 value);
+
     TypeTable& getTypes();
     StringPool& getStringPool();
     HeapMemory& getHeap();
@@ -118,6 +120,8 @@ class Interpreter {
     void popCallFrame();
 
     VirtualMachine& getVirtualMachine() const;
+
+    uint64 strConcat(QsArray& lString, uint64 rightObj, typeindex rType);
 
     void moveExecutionTo(const ScriptFunction& func);
 

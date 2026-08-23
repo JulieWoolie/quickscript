@@ -2,6 +2,8 @@
 
 #include <format>
 
+#include "../types/ConstTypes.h"
+
 InstructionBuf::InstructionBuf() {
 
 }
@@ -363,6 +365,160 @@ int32 VirtualMachine::beginExecution(const uint32 funcEntryIdx, const ProgramArg
   return interp.beginExecution(func, argsAddr);
 }
 
+void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
+  switch (type) {
+    case TI_STRING: {
+      QsArray rString = castToQsArray(reinterpret_cast<void*>(value));
+      out.append(reinterpret_cast<int8*>(rString.data), rString.length);
+      return;
+    }
+
+    case TI_BOOL:
+      out.append(value ? "true" : "false");
+      return;
+
+    case TI_UINT8:
+    case TI_UINT16:
+    case TI_UINT32:
+    case TI_UINT64:
+      out.append(std::to_string(value));
+      return;
+
+    case TI_INT8:
+      out.append(std::to_string(*reinterpret_cast<int8*>(&value)));
+      return;
+    case TI_INT16:
+      out.append(std::to_string(*reinterpret_cast<int16*>(&value)));
+      return;
+    case TI_INT32:
+      out.append(std::to_string(*reinterpret_cast<int32*>(&value)));
+      return;
+    case TI_INT64:
+      out.append(std::to_string(std::bit_cast<int64>(value)));
+      return;
+
+    case TI_FLOAT32:
+      out.append(std::to_string(*reinterpret_cast<float32*>(&value)));
+      return;
+    case TI_FLOAT64:
+      out.append(std::to_string(std::bit_cast<float64>(value)));
+      return;
+
+    case TI_VOID:
+      // ???
+      out.append("void");
+      return;
+    case TI_CLOSURE:
+      out.append("#closure");
+      return;
+
+    default:
+      break;
+  }
+
+  ScriptType* scriptType = m_types.lookupByIndex(type);
+  if (!scriptType) {
+    // Should be impossible
+    out.append("NIL");
+    return;
+  }
+
+  const typekind tk = scriptType->kind();
+  switch (tk) {
+    case TK_FUNC:
+      out.append(scriptType->getTypeName());
+      return;
+
+    case TK_STRUCT: {
+      ScriptStructType* structType = static_cast<ScriptStructType*>(scriptType);
+      out.append(structType->getTypeName());
+      out.append("{");
+
+      QsObject obj = castToQsObject(reinterpret_cast<void*>(value));
+
+      uint64 off = 0;
+      const uint32 propCount = structType->getPropertyCount();
+
+      for (uint32 i = 0; i < propCount; i++) {
+        if (i != 0) {
+          out.append(", ");
+        }
+
+        StructProperty* prop = structType->getProperty(i);
+        out.append(prop->name);
+        out.append(": ");
+
+        ScriptType* propType = prop->type;
+        typeindex propTypeIndex = m_types.findIndex(propType);
+
+        uint64 value;
+        switch (propType->stackSizeBytes()) {
+          case 1:
+            value = obj.getU8Property(off);
+            break;
+          case 2:
+            value = obj.getU16Property(off);
+            break;
+          case 4:
+            value = obj.getU32Property(off);
+            break;
+          default:
+            value = obj.getU64Property(off);
+            break;
+        }
+
+        toString(out, propTypeIndex, value);
+      }
+
+      out.append("}");
+    }
+
+    case TK_ARRAY: {
+      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(scriptType);
+      ScriptType* compType = arrType->getComponentType();
+
+      typeindex compIndex = m_types.findIndex(compType);
+
+      out.append("[");
+
+      if (value) {
+        QsArray arr = castToQsArray(reinterpret_cast<void*>(value));
+        const uint32 len = arr.length;
+
+        for (uint32 i = 0; i < len; i++) {
+          uint64 value;
+          switch (compType->stackSizeBytes()) {
+            case 1:
+              value = arr.getU8(i);
+              break;
+            case 2:
+              value = arr.getU16(i);
+              break;
+            case 4:
+              value = arr.getU32(i);
+              break;
+            default:
+              value = arr.getU64(i);
+              break;
+          }
+
+          if (i != 0) {
+            out.append(", ");
+          }
+
+          toString(out, compIndex, value);
+        }
+      }
+
+      out.append("]");
+      return;
+    }
+
+    default:
+      return;
+  }
+}
+
 TypeTable& VirtualMachine::getTypes() {
   return m_types;
 }
@@ -552,6 +708,28 @@ static uint64 stringRepeat(void* strAddr, const uint32 repeats, HeapMemory& heap
   return newArr.address();
 }
 
+uint64 Interpreter::strConcat(QsArray& lString, const uint64 rightObj, typeindex rType) {
+  if (rType == TI_STRING) {
+    QsArray rString = castToQsArray(reinterpret_cast<void*>(rightObj));
+    uint32 newSize = lString.length + rString.length;
+
+    QsArray result = m_vm.getHeap().allocString(newSize);
+    memcpy(result.data, lString.data, lString.length);
+    memcpy(result.data + lString.length, rString.data, rString.length);
+
+    return result.address();
+  }
+
+  std::string str = "";
+  str.append(reinterpret_cast<int8*>(lString.data), lString.length);
+  m_vm.toString(str, rType, rightObj);
+
+  const QsArray result = m_vm.getHeap().allocString(str.length());
+  memcpy(result.data, str.data(), str.length());
+
+  return result.address();
+}
+
 void Interpreter::run() {
   opcode code = OP_NOP;
   uint8 args[LENGTH_ARGS];
@@ -646,6 +824,12 @@ void Interpreter::run() {
 
       array.setRefCount(1);
 
+      break;
+    }
+
+    case OP_STRCONCAT: {
+      QsArray lString = castToQsArray(REG_AS(args[0], void*));
+      m_registers[args[6]] = strConcat(lString, m_registers[args[1]], READ_U32ARG(2));
       break;
     }
 
