@@ -408,6 +408,10 @@ Expr* SemanticTransformer::optimizeTernary(TernaryExpr* t) const {
 }
 
 Expr* SemanticTransformer::optimizeExpr(Expr* expr) const {
+  if (!ctx.getOptions().exprOptimizing) {
+    return expr;
+  }
+
   switch (expr->nodeKind()) {
     case AST_BinaryExpr:
       return optimizeBinary(static_cast<BinaryExpr*>(expr));
@@ -532,6 +536,8 @@ static bool isPointlessStandalone(Expr* expr) {
 }
 
 Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool emptyBlocksAsNull) {
+  CompilationOptions& opts = ctx.getOptions();
+
   switch (stat->nodeKind()) {
     case AST_Block: {
       Block* b = static_cast<Block*>(stat);
@@ -554,7 +560,7 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
         return stats[0];
       }
 
-      if (emptyBlocksAsNull && stats.empty()) {
+      if (emptyBlocksAsNull && stats.empty() && opts.statOptimizing) {
         return nullptr;
       }
       return b;
@@ -568,17 +574,13 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
         ifStatement->elseBody = optimizeStatement(ifStatement->elseBody, true);
       }
 
-      if (!isBooleanAssignableLiteral(cond)) {
+      if (!isBooleanAssignableLiteral(cond) || !opts.statOptimizing) {
         return ifStatement;
       }
 
       bool condResult = literalToBoolean(cond);
       if (condResult) {
         return ifStatement->body;
-      }
-
-      if (!ifStatement->elseBody) {
-        return nullptr;
       }
 
       return ifStatement->elseBody;
@@ -625,6 +627,10 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       ExprStatement* exprStat = static_cast<ExprStatement*>(stat);
       Expr* expr = exprStat->expression = optimizeExpr(exprStat->expression);
 
+      if (!opts.statOptimizing) {
+        return exprStat;
+      }
+
       if (isPointlessStandalone(expr)) {
         return nullptr;
       }
@@ -640,6 +646,27 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       }
 
       return exprStat;
+    }
+
+    case AST_AssertStatement: {
+      AssertStatement* assert = static_cast<AssertStatement*>(stat);
+      if (!opts.includeAsserts) {
+        return nullptr;
+      }
+
+      assert->condition = optimizeExpr(assert->condition);
+      assert->message = optimizeExpr(assert->message);
+
+      if (!isBooleanAssignableLiteral(assert->condition) || !opts.statOptimizing) {
+        return stat;
+      }
+
+      const bool cond = literalToBoolean(assert->condition);
+      if (!cond) {
+        return nullptr;
+      }
+
+      return stat;
     }
 
     case AST_ReturnStatement: {
@@ -722,6 +749,13 @@ void SemanticTransformer::removeZeroValues() {
 }
 
 void SemanticTransformer::runOptimizer() {
+  const CompilationOptions& opts = ctx.getOptions();
+
+  // Don't run optimizer if we've explicitly been told not to change anything
+  if (!opts.statOptimizing && !opts.exprOptimizing && opts.includeAsserts) {
+    return;
+  }
+
   for (Statement* statement : sfs->statements) {
     optimizeStatement(statement, false);
   }
