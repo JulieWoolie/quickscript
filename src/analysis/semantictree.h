@@ -10,34 +10,6 @@
 
 #define PRINTVIEW(x) static_cast<int>(x.length()), x.data()
 
-/*
-Source code
-   V Given to
-Parser
-   V Parses into
-Syntax Tree
-   V Given to
-Semantic Analyzer
-   V Creates
-Semantic Tree (semantic stuff + AST)
-   V Given to
-Transformer
-       - Flatten all function definitions so f() { a() {} }
-         Becomes f(){} and f#a(){}
-       - Applies optimizations (inlining constants and evaluating const expressions)
-       - Create struct constructors
-       - (Future) Compile struct method calls to flat
-         functions TYPE#METHOD_NAME
-   V Give optimized data to
-Compiler
-   V Compiles into
-IR byte code
-   V Given to
-Interpreter
-   V Executes
-Result
-*/
-
 #define SCOPE_NIL         0
 #define SCOPE_MAIN        1
 #define SCOPE_FUNCTION    2
