@@ -5,14 +5,20 @@
 #include "objects.h"
 #include "types/ScriptType.h"
 
+#include <vector>
+
+#define TYPEDEF_FUNC(returnType, name, ...) typedef returnType (*name)(__VA_ARGS__)
+
 class NativeCall {
-  uint64* m_args = nullptr;
-  ScriptType** m_types = nullptr;
-  uint32 m_argCount = 0;
+  uint64* const m_args;
+  ScriptType** const m_types;
+  const uint32 m_argCount;
 
   uint64 m_returnValue = 0;
 
   public:
+    NativeCall(ScriptType** argType, uint64* args, uint32 argCount);
+
     void setReturnValue(uint64 value);
     void setF64ReturnValue(float64 value);
     void setF32ReturnValue(float32 value);
@@ -45,6 +51,55 @@ class NativeCall {
     uint8* allocHeap(uint64 size);
 
     void heapFree(uint8* addr);
+};
+
+TYPEDEF_FUNC(void, NativeFunction, NativeCall& call);
+
+#define BINDTYPE_INVALID 0
+#define BINDTYPE_VARIABLE 1
+#define BINDTYPE_FUNCTION 2
+typedef uint8 bindingtype;
+
+class NativeBinding {
+  const conststring m_name;
+
+  public:
+    explicit NativeBinding(conststring name);
+
+    virtual ~NativeBinding() = default;
+    virtual bindingtype btype() const = 0;
+
+    conststring getName() const;
+};
+
+class NativeFunctionBinding: public NativeBinding {
+  NativeFunction m_func;
+
+  NativeFunctionBinding(conststring name, NativeFunction func);
+
+  public:
+    static NativeFunctionBinding* create(conststring name, NativeFunction func);
+
+    static void destroy(NativeFunctionBinding* bind);
+
+    bindingtype btype() const override;
+
+    NativeFunction getFunction() const;
+};
+
+class BindingsObject {
+  std::vector<NativeBinding*> m_bindings;
+
+  public:
+    BindingsObject();
+
+    static BindingsObject* create();
+
+    static void create(BindingsObject* obj);
+
+    const std::vector<NativeBinding*>& getBindings() const;
+
+    void addFunctionBinding(conststring name, NativeFunction func);
 };
 
 #endif //QUICKSCRIPT_NATIVEINTERFACE_H
