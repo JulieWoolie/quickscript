@@ -170,30 +170,14 @@ export async function generateStdLibDeclFile(): Promise<void> {
       continue
     }
 
-    f(8.5, `bool isNaN(${fn} x)`, [
-        "Test if a value is Not-A-Number"
-    ])
-    f(9, `${fn} sqrt(${fn} x)`, [
-        "Square root function"
-    ])
-    f(10, `${fn} cbrt(${fn} x)`, [
-        "Cube root function"
-    ])
-    f(11, `${fn} acos(${fn} x)`, [
-        "Get the arc cosine of a value"
-    ])
-    f(12, `${fn} acosh(${fn} x)`, [
-        "Get the inverse hyperbolic cosine of a value"
-    ])
-    f(13, `${fn} asin(${fn} x)`, [
-        "Get the arc sine of a value"
-    ])
-    f(14, `${fn} asinh(${fn} x)`, [
-        "Get the inverse hyperbolic sine of a value"
-    ])
-    f(15, `${fn} atan(${fn} x)`, [
-        "Get the arc tangent of a value"
-    ])
+    f(8.5, `bool isNaN(${fn} x)`, ["Test if a value is Not-A-Number"])
+    f(9, `${fn} sqrt(${fn} x)`, ["Square root function"])
+    f(10, `${fn} cbrt(${fn} x)`, ["Cube root function"])
+    f(11, `${fn} acos(${fn} x)`, ["Get the arc cosine of a value"])
+    f(12, `${fn} acosh(${fn} x)`, ["Get the inverse hyperbolic cosine of a value"])
+    f(13, `${fn} asin(${fn} x)`, ["Get the arc sine of a value"])
+    f(14, `${fn} asinh(${fn} x)`, ["Get the inverse hyperbolic sine of a value"])
+    f(15, `${fn} atan(${fn} x)`, ["Get the arc tangent of a value"])
     f(16, `${fn} atan2(${fn} x, ${fn} y)`, ["Get the arctangent of the quotient of x and y"])
     f(17, `${fn} atanh(${fn} x)`, ["Get the hyperbolic arc tangent of a value"])
     f(18, `${fn} ceil(${fn} x)`, ["Round up"])
