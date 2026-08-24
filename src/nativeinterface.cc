@@ -4,6 +4,14 @@
 
 #define ARGGET(idx, type) return *((type*) (m_args + idx));
 
+NativeCall::NativeCall(ScriptType** argType, uint64* args, uint32 argCount)
+  : m_args(args),
+    m_types(argType),
+    m_argCount(argCount)
+{
+
+}
+
 void NativeCall::setReturnValue(uint64 value) {
   m_returnValue = value;
 }
