@@ -244,6 +244,18 @@ void Scope::setStackSize(uint64 size) {
   m_stackSize = size;
 }
 
+uint64 Scope::getRegistryStoreSpace() const {
+  return m_registryStoreSpace;
+}
+
+void Scope::setRegistryStoreSpace(const uint64 space) {
+  m_registryStoreSpace = space;
+}
+
+uint64 Scope::getTotalSize() const {
+  return m_registryStoreSpace + m_stackSize;
+}
+
 scopetype Scope::getType() const {
   return m_type;
 }

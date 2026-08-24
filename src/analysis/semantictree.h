@@ -202,6 +202,7 @@ class Scope {
 
   stringid m_loopLabel = EMPTY_STRING;
   uint64 m_stackSize;
+  uint64 m_registryStoreSpace = 0;
   ScriptType* m_expectedReturnType = nullptr;
 
   public:
@@ -228,6 +229,11 @@ class Scope {
 
     uint64 getStackSize() const;
     void setStackSize(uint64 size);
+
+    uint64 getRegistryStoreSpace() const;
+    void setRegistryStoreSpace(uint64 space);
+
+    uint64 getTotalSize() const;
 
     ScriptType* getExpectedReturnType() const;
     void setExpectedReturnType(ScriptType* type);
