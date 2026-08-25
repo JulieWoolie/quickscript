@@ -268,6 +268,9 @@ static void putCurrentStatementsDependOn(SemanticContext& ctx, Symbol* reference
 
 static void acceptExpr(SemanticContext& ctx, Expr* v);
 
+static void incrementReadUses(SemanticContext& ctx, Expr* expr);
+static void incrementSymbolReads(Symbol* sym, const Location& location);
+
 static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
   ScriptType* expectedType = ctx.getExpectedType();
   Symbol* referenced = resolveReferencedSymbol(ctx, ctx.getScope(), v, expectedType);
@@ -296,6 +299,7 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
   for (uint32 i = 0; i < args; i++) {
     Expr* e = v->arguments.at(i);
     acceptExpr(ctx, e);
+    incrementReadUses(ctx, e);
     params[i] = e->resultType;
   }
 
@@ -304,6 +308,8 @@ static void acceptCallExpr(SemanticContext& ctx, CallExpr* v) {
   ctx.pushExpectedType(&sign);
   acceptExpr(ctx, v->target);
   ctx.popExpectedType();
+
+  incrementReadUses(ctx, v->target);
 
   ScriptType* targetType = v->target->resultType;
   if (targetType->kind() == TK_UNKNOWN) {
@@ -348,6 +354,8 @@ static PropertySymbol* findPropSymbol(Scope* scope, const ScriptType* structType
 
 static void acceptPropertyAccessExpr(SemanticContext& ctx, PropertyAccessExpr* v) {
   acceptExpr(ctx, v->target);
+  incrementReadUses(ctx, v->target);
+
   ScriptType* resType = v->target->resultType;
 
   if (resType->kind() == TK_UNKNOWN) {
@@ -526,6 +534,8 @@ static void acceptObjectLiteral(SemanticContext& ctx, ObjectLiteral* v) {
     acceptExpr(ctx, propExpr->value);
     ctx.popExpectedType();
 
+    incrementReadUses(ctx, propExpr->value);
+
     ScriptType* valueType = propExpr->value->resultType;
 
     if (!isAssignableTo(propType, valueType)) {
@@ -558,6 +568,7 @@ static void acceptArrayLiteral(SemanticContext& ctx, ArrayLiteral* v) {
 
   for (Expr* expr : v->values) {
     acceptExpr(ctx, expr);
+    incrementReadUses(ctx, expr);
 
     ScriptType* valType = expr->resultType;
     if (isAssignableTo(componentType, valType)) {
@@ -825,6 +836,8 @@ static void acceptBinaryExpr(SemanticContext& ctx, BinaryExpr* v) {
   acceptExpr(ctx, v->lhs);
   acceptExpr(ctx, v->rhs);
 
+  incrementReadUses(ctx, v->rhs);
+
   ScriptType* leftType = v->lhs->resultType;
   ScriptType* rightType = v->rhs->resultType;
 
@@ -848,6 +861,8 @@ static void acceptBinaryExpr(SemanticContext& ctx, BinaryExpr* v) {
 
   if (op & BOP_ASSIGN_FLAG) {
     checkAssignability(ctx, v->lhs);
+  } else {
+    incrementReadUses(ctx, v->lhs);
   }
 
   v->resultType = res;
@@ -915,6 +930,7 @@ static void acceptUnaryExpr(SemanticContext& ctx, UnaryExpr* v) {
         checkAssignability(ctx, v->target);
         break;
       default:
+        incrementReadUses(ctx, v->target);
         break;
     }
 
@@ -944,6 +960,10 @@ static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
   acceptExpr(ctx, v->left);
   acceptExpr(ctx, v->right);
 
+  incrementReadUses(ctx, v->condition);
+  incrementReadUses(ctx, v->left);
+  incrementReadUses(ctx, v->right);
+
   ScriptType* lType = v->left->resultType;
   ScriptType* rType = v->right->resultType;
   ScriptType* resultType = nullptr;
@@ -968,6 +988,42 @@ static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
   }
 
   v->resultType = resultType;
+}
+
+static void incrementSymbolReads(Symbol* sym, const Location& location) {
+  switch (sym->stype()) {
+    case SYM_LocalFunc:
+      static_cast<LocalFuncSymbol*>(sym)->onCalled();
+      break;
+    case SYM_LocalStruct:
+      static_cast<LocalStructSymbol*>(sym)->used();
+      break;
+    case SYM_LocalVar:
+      static_cast<LocalVarSymbol*>(sym)->getReads().push_back(location);
+      break;
+    case SYM_Property:
+      static_cast<LocalStructPropSymbol*>(sym)->incReadCounter();
+    default:
+      break;
+  }
+}
+
+static void incrementReadUses(SemanticContext& ctx, Expr* expr) {
+  switch (expr->nodeKind()) {
+    case AST_Identifier:
+      incrementSymbolReads(ctx.getSymbolLookup()[expr], expr->location);
+      break;
+
+    case AST_PropertyAccessExpr: {
+      PropertyAccessExpr* propAccess = static_cast<PropertyAccessExpr*>(expr);
+      Symbol* sym = ctx.getSymbolLookup()[propAccess->property];
+      incrementSymbolReads(sym, propAccess->property->location);
+      break;
+    }
+
+    default:
+      break;
+  }
 }
 
 static void acceptExpr(SemanticContext& ctx, Expr* v) {
@@ -1239,9 +1295,16 @@ static void reportUnused(const SemanticContext& ctx, Scope* scope) {
 
         if (writes != 0 && reads == 0) {
           errors.warn("Variable '%.*s' is written to but never read", PRINTVIEW(name));
+          break;
         }
+
         if (writes == 0 && reads == 0) {
           errors.warn("Variable '%.*s' is unused", PRINTVIEW(name));
+          break;
+        }
+
+        if (writes == 0 && !(sym->getFlags() & SYMFLAG_FUNC_ARG)) {
+          errors.info(lvs->getDecl()->location, "Variable can be declared as 'const'");
         }
 
         break;
