@@ -1,0 +1,1 @@
+deno run --sloppy-imports --allow-all main.ts
