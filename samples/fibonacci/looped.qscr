@@ -6,7 +6,7 @@ uint32 fibonacci(uint32 n) {
   uint32 parent = 1
 
   for (uint32 i = 0; i < n - 1; i++) {
-    uint32 r = gparent + parent
+    const uint32 r = gparent + parent
     gparent = parent
     parent = r
   }
