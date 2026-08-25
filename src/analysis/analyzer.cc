@@ -1258,7 +1258,7 @@ static LocalFunction* createFuncSignature(SemanticContext& ctx, FunctionDeclStat
   ctx.getScopeLookup()[sym] = scope;
   ctx.getSymbolLookup()[v] = sym;
 
-  if (isPossibleMainFunction(ctx, v)) {
+  if (!nested && isPossibleMainFunction(ctx, v)) {
     ctx.getMainFuncCandidates().push_back(lf);
   }
 
@@ -1266,7 +1266,7 @@ static LocalFunction* createFuncSignature(SemanticContext& ctx, FunctionDeclStat
 }
 
 static void reportUnused(const SemanticContext& ctx, Scope* scope) {
-  StringTable& strings = ctx.getStrings();
+  const StringTable& strings = ctx.getStrings();
   CompilerErrors& errors = ctx.getErrors();
 
   for (Symbol* sym : scope->getSymbols()) {
