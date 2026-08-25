@@ -266,14 +266,25 @@ Scope* Scope::getParent() const {
 uint32 LocalStructPropSymbol::getReads() const {
   return m_reads;
 }
+
 void LocalStructPropSymbol::setReads(uint32 reads) {
   m_reads = reads;
 }
+
 uint32 LocalStructPropSymbol::getWrites() const {
   return m_writes;
 }
+
 void LocalStructPropSymbol::setWrites(uint32 writes) {
   m_writes = writes;
+}
+
+void LocalStructPropSymbol::incReadCounter() {
+  m_reads++;
+}
+
+void LocalStructPropSymbol::incWriteCounter() {
+  m_writes++;
 }
 
 NativePropertySymbol::NativePropertySymbol(ScriptType* holderType, stringid name, ScriptType* type)

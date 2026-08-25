@@ -141,6 +141,9 @@ class LocalStructPropSymbol: public PropertySymbol {
 
     uint32 getWrites() const;
     void setWrites(uint32 writes);
+
+    void incReadCounter();
+    void incWriteCounter();
 };
 
 class NativePropertySymbol: public PropertySymbol {
