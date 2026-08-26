@@ -87,4 +87,6 @@ add_executable(quickscript src/main.cpp
         src/interpreter/registers.h
         src/compiler_opts.h
         src/interpreter/script_error.h
-        src/interpreter/script_error.cc)
+        src/interpreter/script_error.cc
+        src/strings/utf8.h
+        src/strings/utf8.cc)
