@@ -25,7 +25,7 @@ interpret that IR.
 - [X] `JMPI0` OP Code functionality
 - [X] `JMPN0` OP Code functionality
 - [X] `LOADCONSTSTR` OP Code functionality
-- [ ] `SETARGTYPE` OP Code functionality AND USE
+- [x] `SETARGTYPE` OP Code functionality AND USE
 - [X] `LFUNCLOOKUP` OP Code functionality
 - [ ] `NFUNCLOOKUP` OP Code functionality
 - [X] `INVOKE` OP Code functionality
