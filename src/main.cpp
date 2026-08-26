@@ -12,6 +12,7 @@
 #include "codegen/compiler.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/ir_file.h"
+#include "interpreter/script_error.h"
 #include "parse/lexer.h"
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
@@ -101,7 +102,15 @@ static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& s
 
   BytecodeFile::destroy(bfile);
 
-  const int32 retVal = vm.beginExecution(entryPoint, settings.runArgs);
+  int32 retVal = EXIT_SUCCESS;
+
+  try {
+    retVal = vm.beginExecution(entryPoint, settings.runArgs);
+  } catch (ScriptError& err) {
+    std::string formattedError = formatScriptError(err);
+    fprintf(stderr, "%s", formattedError.c_str());
+    retVal = EXIT_FAILURE;
+  }
 
   printf("Finished with return code %d\n", retVal);
   return retVal;
