@@ -33,10 +33,10 @@ interpret that IR.
 - [x] `EQSTRUCT` OP Code functionality
 - [x] `NEQARR` OP Code functionality
 - [x] `NEQSTRUCT` OP Code functionality
-- [ ] `GTARR` OP Code functionality
-- [ ] `GTEARR` OP Code functionality
-- [ ] `LTARR` OP Code functionality
-- [ ] `LTEARR` OP Code functionality
+- [x] `GTARR` OP Code functionality
+- [x] `GTEARR` OP Code functionality
+- [x] `LTARR` OP Code functionality
+- [x] `LTEARR` OP Code functionality
 - [X] `STRCONCAT` OP Code functionality
 - [ ] Support for native bindings: structs, variables, constants and functions
 - [ ] Standard library
