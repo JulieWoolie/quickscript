@@ -1147,7 +1147,18 @@ void Interpreter::run() {
         break;
       }
 
-      std::string errorMsg = "Assert failed!";
+      std::string errorMsg = "Assert ";
+
+      if (frame->filename.empty()) {
+        errorMsg.append("on line ");
+      } else {
+        errorMsg.append(frame->filename);
+        errorMsg.append("#");
+      }
+
+      errorMsg.append(std::to_string(frame->line));
+      errorMsg.append(" failed!");
+
       if (strPtr) {
         const QsArray arr = castToQsArray(strPtr);
         errorMsg.append("\n  ");
