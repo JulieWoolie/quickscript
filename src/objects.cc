@@ -27,6 +27,18 @@ ARRAY_INDEX_METHOD(uint64, U64)
 ARRAY_INDEX_METHOD(float32, F32)
 ARRAY_INDEX_METHOD(float64, F64)
 
+uint64 QsObject::address() const {
+  return reinterpret_cast<uint64>(data);
+}
+
+uint32 QsObject::getRefCount() const {
+  return *reinterpret_cast<uint32*>(data) & ~REFCOUNT_MASK;
+}
+
+void QsObject::setRefCount(const uint32 count) const {
+  *reinterpret_cast<uint32*>(data) = count | REFCOUNT_MASK;
+}
+
 OBJ_PROP_METHOD(int8, I8)
 OBJ_PROP_METHOD(uint8, U8)
 OBJ_PROP_METHOD(int16, I16)

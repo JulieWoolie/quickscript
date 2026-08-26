@@ -45,3 +45,12 @@ QsArray HeapMemory::allocConstArray(const uint32 count, const uint64 elemSize) {
 QsArray HeapMemory::allocConstString(uint32 length) {
   return allocConstArray(length, 1);
 }
+
+QsObject HeapMemory::allocObject(const uint64 dataSize) {
+  const uint64 memSize = REFCOUNT_PREFIX_SIZE + dataSize;
+  void* ptr = allocBytes(memSize);
+
+  *static_cast<uint32*>(ptr) = REFCOUNT_MASK;
+
+  return castToQsObject(ptr);
+}

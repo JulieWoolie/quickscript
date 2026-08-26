@@ -15,6 +15,8 @@ class HeapMemory {
 
     QsArray allocConstArray(uint32 count, uint64 elemSize);
     QsArray allocConstString(uint32 length);
+
+    QsObject allocObject(uint64 dataSize);
 };
 
 #endif //QUICKSCRIPT_HEAP_MEM_H

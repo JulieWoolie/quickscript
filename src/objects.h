@@ -49,7 +49,10 @@ struct QsArray {
 struct QsObject {
   uint8* data = nullptr;
 
-  uint32& referenceCount() const;
+  uint64 address() const;
+
+  uint32 getRefCount() const;
+  void setRefCount(uint32 count) const;
 
   int8 getI8Property(uint64 offset) const;
   uint8 getU8Property(uint64 offset) const;
