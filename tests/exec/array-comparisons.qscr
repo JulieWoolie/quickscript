@@ -1,0 +1,21 @@
+# MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
+
+void main() {
+  uint32[] arr1 = [1, 2, 3]
+  uint32[] arr2 = [1, 3, 3]
+  uint32[] arr3 = [1, 1, 3]
+  uint32[] arr4 = [1, 2, 3]
+
+  assert arr1 < arr2 : "arr1 < arr2: arr1=" + arr1 + " arr2=" + arr2
+  assert arr1 > arr3 : "arr1 > arr3: arr1=" + arr1 + " arr3=" + arr3
+  assert arr1 >= arr4 : "arr1 >= arr4: arr1=" + arr1 + " arr4=" + arr4
+
+  string str1 = "abc"
+  string str2 = "acc"
+  string str3 = "aac"
+
+  assert str1 < str2 : "str1 < str2: str1='" + str1 + "' str2='" + str2 + "'"
+  assert str1 > str3 : "str1 > str3: str1='" + str1 + "' str3='" + str3 + "'"
+}

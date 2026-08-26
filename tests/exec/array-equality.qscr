@@ -1,0 +1,12 @@
+# MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
+
+void main() {
+  uint32[] arr1 = [1, 2, 3]
+  uint32[] arr2 = [1, 2, 3]
+  uint32[] arr3 = [1, 2, 4]
+
+  assert arr1 == arr2 : "arr1 != arr2"
+  assert arr1 != arr3 : "arr1 == arr3"
+}
