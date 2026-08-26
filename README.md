@@ -29,10 +29,10 @@ interpret that IR.
 - [X] `LFUNCLOOKUP` OP Code functionality
 - [ ] `NFUNCLOOKUP` OP Code functionality
 - [X] `INVOKE` OP Code functionality
-- [ ] `EQARR` OP Code functionality
-- [ ] `EQSTRUCT` OP Code functionality
-- [ ] `NEQARR` OP Code functionality
-- [ ] `NEQSTRUCT` OP Code functionality
+- [x] `EQARR` OP Code functionality
+- [x] `EQSTRUCT` OP Code functionality
+- [x] `NEQARR` OP Code functionality
+- [x] `NEQSTRUCT` OP Code functionality
 - [ ] `GTARR` OP Code functionality
 - [ ] `GTEARR` OP Code functionality
 - [ ] `LTARR` OP Code functionality
