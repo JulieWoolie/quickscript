@@ -13,6 +13,7 @@
 #include "codegen/compiler.h"
 #include "interpreter/interpreter.h"
 #include "interpreter/ir_file.h"
+#include "interpreter/script_error.h"
 #include "parse/JsonPrinter.h"
 #include "parse/lexer.h"
 #include "parse/parser.h"
@@ -30,6 +31,7 @@
 #define TDIR_DROP_ASSERTS 6
 #define TDIR_PROG_ARGUMENT 7
 #define TDIR_BREAKPOINT 8
+#define TDIR_EXPECTED_RUNTIME_ERROR 9
 typedef uint8 TestDirective;
 
 struct TestDirectiveDef {
@@ -51,6 +53,7 @@ static const TestDirectiveDef DIRECTIVES[] = {
   {.directive = TDIR_DROP_ASSERTS, .value = "DROP-ASSERTS"},
   {.directive = TDIR_PROG_ARGUMENT, .value = "PROGRAM-ARG"},
   {.directive = TDIR_BREAKPOINT, .value = "BREAKPOINT"},
+  {.directive = TDIR_EXPECTED_RUNTIME_ERROR, .value = "EXPECT-RUNTIME-ERROR"},
 };
 
 static const RunModeDef RUNMODES[] = {
@@ -279,6 +282,11 @@ static bool parseTestCommand(
       }
       return false;
     }
+    case TDIR_EXPECTED_RUNTIME_ERROR: {
+      skipValueDelimiter(view, readIdx);
+      out.expectedRuntimeError = view.substr(readIdx);
+      return false;
+    }
     case TDIR_EXPECT_AST: {
       skipValueDelimiter(view, readIdx);
       parseExpectedAst(out, view, readIdx);
@@ -493,6 +501,10 @@ static void dumpTestCaseToJson(TestCase& tcase) {
     fprintf(file, "\n  \"expected_ast\": %s,", tcase.expectedAst.c_str());
   }
 
+  if (!tcase.expectedRuntimeError.empty()) {
+    fprintf(file, "\n  \"expected_runtime_error\": \"%s\",", tcase.expectedRuntimeError.c_str());
+  }
+
   fprintf(file, "\n  \"compiler_options\": {");
   fprintf(file, "\n    \"stat_inlining\": %s,", BOOL_STR(tcase.compilerOpts.statOptimizing));
   fprintf(file, "\n    \"expr_inlining\": %s,", BOOL_STR(tcase.compilerOpts.exprOptimizing));
@@ -629,9 +641,22 @@ bool runTestCase(
 
     try {
       vm.beginExecution(entryPoint, settings.runArgs);
-    } catch (std::runtime_error& exc) {
-      fprintf(stderr, "Failed with exception: ");
-      fprintf(stderr, "%s\n", exc.what());
+    } catch (ScriptError& exc) {
+      if (!tcase.expectedRuntimeError.empty()) {
+        if (tcase.expectedRuntimeError == exc.getMessage()) {
+          return true;
+        }
+
+        fprintf(stderr, "Expected runtime error didn't match!\n  Expected: %s\n  Found: ", tcase.expectedRuntimeError.c_str());
+      } else {
+        fprintf(stderr, "Failed with exception: ");
+      }
+
+      fprintf(stderr, "%s", exc.getMessage().c_str());
+
+      if (!exc.getCallStack().empty()) {
+        fprintf(stderr, "\nCall stack:\n  %s\n", exc.getCallStack().c_str());
+      }
       return false;
     }
 

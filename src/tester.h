@@ -25,6 +25,7 @@ struct TestCase {
   bool breakpoint = false;
   std::vector<ExpectedError> expectedErrors;
   std::string expectedAst;
+  std::string expectedRuntimeError;
   std::filesystem::path dumpDirectory;
   CompilationOptions compilerOpts;
 };
