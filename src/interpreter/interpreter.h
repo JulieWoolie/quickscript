@@ -70,6 +70,7 @@ class GlobalMemorySpace {
 };
 
 struct ScriptFunction {
+  std::string filename = "";
   uint32 firstInstrIndex = 0;
   uint64 nameOffset = 0;
   uint64 stackSize = 0;
@@ -90,7 +91,7 @@ class VirtualMachine {
     VirtualMachine();
     ~VirtualMachine();
 
-    uint32 addBytecodeFile(const BytecodeFile& file);
+    uint32 addBytecodeFile(const BytecodeFile& file, const std::string& filename);
 
     int32 beginExecution(uint32 funcEntryIdx, const ProgramArgs& args);
 

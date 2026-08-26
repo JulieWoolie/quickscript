@@ -96,11 +96,12 @@ static void compileSource(const BytecodeFile& bfile, const ProgramSettings& sett
 
 static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& settings) {
   VirtualMachine vm;
-  const uint32 entryPoint = vm.addBytecodeFile(bfile);
+  std::string filename = std::string(settings.inputFile);
+  const uint32 entryPoint = vm.addBytecodeFile(bfile, filename);
 
   BytecodeFile::destroy(bfile);
 
-  int32 retVal = vm.beginExecution(entryPoint, settings.runArgs);
+  const int32 retVal = vm.beginExecution(entryPoint, settings.runArgs);
 
   printf("Finished with return code %d\n", retVal);
   return retVal;

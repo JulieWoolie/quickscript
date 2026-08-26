@@ -307,11 +307,23 @@ static void loadTypes(TypeTable& table, const BytecodeFile& file, TypeReindexLis
   }
 }
 
+static void toStandardFilename(const std::string& fname, std::string& out) {
+  for (uint32 i = 0; i < fname.length(); i++) {
+    const int8 ch = fname[i];
+    if (ch == '\\') {
+      out.push_back('/');
+      continue;
+    }
+    out.push_back(ch);
+  }
+}
+
 static void addFunctionEntries(
   const TypeTable& types,
   const BytecodeFile& file,
   const InstructionRewrite& rewrites,
-  std::vector<ScriptFunction>& functions
+  std::vector<ScriptFunction>& functions,
+  const std::string& filename
 ) {
   FunctionTableEntry* funcTable = file.funcTable;
   const uint32 funcCount = file.funcTableEntries;
@@ -324,11 +336,19 @@ static void addFunctionEntries(
 
     FunctionSignature* sign = static_cast<FunctionSignature*>(types.lookupByIndex(rewrites.typeRewrites.findRewritten(fte->signatureIndex)));
 
-    functions.emplace_back(firstInstr, nameAddr, fte->stackSize, sign);
+    ScriptFunction sf;
+    sf.firstInstrIndex = firstInstr;
+    sf.nameOffset = nameAddr;
+    sf.stackSize = fte->stackSize;
+    sf.signature = sign;
+
+    toStandardFilename(filename, sf.filename);
+
+    functions.push_back(sf);
   }
 }
 
-uint32 VirtualMachine::addBytecodeFile(const BytecodeFile& file) {
+uint32 VirtualMachine::addBytecodeFile(const BytecodeFile& file, const std::string& filename) {
   const uint64 globalMemOff = m_globalMem.size();
   const uint32 jumpAddrOff = m_instrBuf.length();
   const uint32 funcIdxOffset = m_functions.size();
@@ -349,7 +369,7 @@ uint32 VirtualMachine::addBytecodeFile(const BytecodeFile& file) {
     .funcIdxOffset = funcIdxOffset
   };
 
-  addFunctionEntries(m_types, file, instrRewrite, m_functions);
+  addFunctionEntries(m_types, file, instrRewrite, m_functions, filename);
   rewriteInstructions(m_instrBuf.getBuffer() + jumpAddrOff, file.instructionsSize, instrRewrite);
 
   return file.entryPointIndex + funcIdxOffset;
@@ -965,21 +985,29 @@ VirtualMachine& Interpreter::getVirtualMachine() const {
   return m_vm;
 }
 
+static void appendCallStack(std::string& out, CallFrame frames[], const uint32 count) {
+  for (uint32 i = count; i != 0; i--) {
+    const CallFrame* frame = &frames[i - 1];
+    out.append("\n  ");
+
+    out.append("[");
+    out.append(std::to_string(i));
+    out.append("] ");
+
+    out.append("at ");
+    out.append(frame->name);
+
+    out.append(" (");
+    out.append(frame->filename);
+    out.append(":");
+    out.append(std::to_string(frame->line));
+    out.append(")");
+  }
+}
+
 static std::string createCallStackString(CallFrame frames[], const uint32 frameCount) {
   std::string result;
-  for (uint32 i = frameCount; i != 0; i--) {
-    CallFrame* frame = &frames[i];
-    result.append("\n  ");
-
-    result.append("[");
-    result.append(std::to_string(i));
-    result.append("] ");
-
-    result.append("at ");
-    result.append(frame->name);
-    result.append("#");
-    result.append(std::to_string(frame->line));
-  }
+  appendCallStack(result, frames, frameCount);
   return result;
 }
 
@@ -998,6 +1026,9 @@ void Interpreter::moveExecutionTo(const ScriptFunction& func) {
   }
 
   frame->name = std::string(nameContent, nameLen);
+  if (!func.filename.empty()) {
+    frame->filename = func.filename;
+  }
 
   uint64 stackSize = func.stackSize;
   uint64 stackOffset = 0;
@@ -1153,7 +1184,7 @@ void Interpreter::run() {
         errorMsg.append("on line ");
       } else {
         errorMsg.append(frame->filename);
-        errorMsg.append("#");
+        errorMsg.append(":");
       }
 
       errorMsg.append(std::to_string(frame->line));
@@ -1164,6 +1195,9 @@ void Interpreter::run() {
         errorMsg.append("\n  ");
         errorMsg.append(reinterpret_cast<int8*>(arr.data), arr.length);
       }
+
+      errorMsg.append("\nCall stack:");
+      appendCallStack(errorMsg, m_callFrames, m_frameCount);
 
       throw std::runtime_error(errorMsg);
     }

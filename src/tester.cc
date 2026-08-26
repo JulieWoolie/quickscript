@@ -624,7 +624,7 @@ bool runTestCase(
 
     VirtualMachine vm = VirtualMachine();
 
-    uint32 entryPoint = vm.addBytecodeFile(bfile);
+    uint32 entryPoint = vm.addBytecodeFile(bfile, pathString);
     BytecodeFile::destroy(bfile);
 
     try {
