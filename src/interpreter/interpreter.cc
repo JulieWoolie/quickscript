@@ -752,7 +752,7 @@ int8 VirtualMachine::compareString(const uint64 leftPtr, const uint64 rightPtr) 
   }
 
   const QsArray lArr = qsArrayFromAddr(leftPtr);
-  const QsArray rArr = qsArrayFromAddr(leftPtr);
+  const QsArray rArr = qsArrayFromAddr(rightPtr);
   const uint32 len = lArr.length < rArr.length  ? lArr.length : rArr.length;
 
   return memcmp(lArr.data, rArr.data, len);
@@ -780,7 +780,7 @@ int8 VirtualMachine::compareArray(const uint64 leftPtr, const uint64 rightPtr, c
   }
 
   const QsArray lArr = qsArrayFromAddr(leftPtr);
-  const QsArray rArr = qsArrayFromAddr(leftPtr);
+  const QsArray rArr = qsArrayFromAddr(rightPtr);
   const uint32 len = lArr.length < rArr.length  ? lArr.length : rArr.length;
 
   const ScriptType* componentType = arrType->getComponentType();
@@ -791,10 +791,8 @@ int8 VirtualMachine::compareArray(const uint64 leftPtr, const uint64 rightPtr, c
       break;
 
     case TI_BOOL:
-    case TI_UINT8: {
-      const int32 res = memcmp(lArr.data, rArr.data, len);
-      return res;
-    }
+    case TI_UINT8:
+      return memcmp(lArr.data, rArr.data, len);
 
     case TI_INT8:
       ARRAY_COMPARE_LOOP(int8, getI8)
@@ -2185,7 +2183,7 @@ int8 Interpreter::doArrayComparison(const uint8 lhs, const uint8 rhs, const uint
   const uint64 rAddr = m_registers[rhs];
 
   if (ti == TI_STRING) {
-    return m_vm.compareString(lhs, rhs);
+    return m_vm.compareString(lAddr, rAddr);
   }
 
   const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
