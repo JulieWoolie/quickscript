@@ -674,6 +674,9 @@ bool VirtualMachine::stringEquals(const uint64 leftAddr, const uint64 rightAddr)
   if (leftAddr == rightAddr) {
     return true;
   }
+  if (!leftAddr || !rightAddr) {
+    return false;
+  }
 
   const QsArray left = qsArrayFromAddr(leftAddr);
   const QsArray right = qsArrayFromAddr(rightAddr);
@@ -735,6 +738,133 @@ bool VirtualMachine::equals(const uint64 left, const uint64 right, const typeind
   }
 
   return false;
+}
+
+int8 VirtualMachine::compareString(const uint64 leftPtr, const uint64 rightPtr) {
+  if (leftPtr == rightPtr) {
+    return LEFT_EQ_RIGHT;
+  }
+  if (!leftPtr) {
+    return LEFT_LT_RIGHT;
+  }
+  if (!rightPtr) {
+    return LEFT_GT_RIGHT;
+  }
+
+  const QsArray lArr = qsArrayFromAddr(leftPtr);
+  const QsArray rArr = qsArrayFromAddr(leftPtr);
+  const uint32 len = lArr.length < rArr.length  ? lArr.length : rArr.length;
+
+  return memcmp(lArr.data, rArr.data, len);
+}
+
+#define ARRAY_COMPARE_LOOP(type, func) \
+  for (uint32 i = 0; i < len; i++) {\
+    type l = lArr.func(i);\
+    type r = rArr.func(i);\
+    if (l == r) {\
+      continue;\
+    }\
+    return l < r ? LEFT_LT_RIGHT : LEFT_GT_RIGHT;\
+  }
+
+int8 VirtualMachine::compareArray(const uint64 leftPtr, const uint64 rightPtr, const ScriptArrayType* arrType) {
+  if (leftPtr == rightPtr) {
+    return LEFT_EQ_RIGHT;
+  }
+  if (!leftPtr) {
+    return LEFT_LT_RIGHT;
+  }
+  if (!rightPtr) {
+    return LEFT_GT_RIGHT;
+  }
+
+  const QsArray lArr = qsArrayFromAddr(leftPtr);
+  const QsArray rArr = qsArrayFromAddr(leftPtr);
+  const uint32 len = lArr.length < rArr.length  ? lArr.length : rArr.length;
+
+  const ScriptType* componentType = arrType->getComponentType();
+  const typeindex cIdx = m_types.findIndex(componentType);
+
+  switch (cIdx) {
+    case TI_VOID:
+      break;
+
+    case TI_BOOL:
+    case TI_UINT8: {
+      const int32 res = memcmp(lArr.data, rArr.data, len);
+      return res;
+    }
+
+    case TI_INT8:
+      ARRAY_COMPARE_LOOP(int8, getI8)
+      break;
+    case TI_UINT16:
+      ARRAY_COMPARE_LOOP(uint16, getU16)
+      break;
+    case TI_INT16:
+      ARRAY_COMPARE_LOOP(int16, getI16)
+      break;
+    case TI_UINT32:
+      ARRAY_COMPARE_LOOP(int32, getU32)
+      break;
+    case TI_INT32:
+      ARRAY_COMPARE_LOOP(int32, getI32)
+      break;
+    case TI_CLOSURE:
+    case TI_UINT64:
+      ARRAY_COMPARE_LOOP(int64, getU64)
+      break;
+    case TI_INT64:
+      ARRAY_COMPARE_LOOP(int64, getI64)
+      break;
+    case TI_FLOAT32:
+      ARRAY_COMPARE_LOOP(float32, getF32)
+      break;
+    case TI_FLOAT64:
+      ARRAY_COMPARE_LOOP(float64, getF64)
+      break;
+
+    case TI_STRING: {
+      for (uint32 i = 0; i < len; i++) {
+        const uint64 l = lArr.getU64(i);
+        const uint64 r = rArr.getU64(i);
+
+        const int8 cmp = compareString(l, r);
+
+        if (cmp == LEFT_EQ_RIGHT) {
+          continue;
+        }
+
+        return cmp;
+      }
+      break;
+    }
+
+    default:
+      if (componentType->kind() != TK_ARRAY) {
+        break;
+      }
+
+      const ScriptArrayType* cArrayType = static_cast<const ScriptArrayType*>(componentType);
+
+      for (uint32 i = 0; i < len; i++) {
+        const uint64 l = lArr.getU64(i);
+        const uint64 r = rArr.getU64(i);
+
+        const int8 cmp = compareArray(l, r, cArrayType);
+
+        if (cmp == LEFT_EQ_RIGHT) {
+          continue;
+        }
+
+        return cmp;
+      }
+
+      break;
+  }
+
+  return LEFT_EQ_RIGHT;
 }
 
 TypeTable& VirtualMachine::getTypes() {
@@ -1064,48 +1194,6 @@ void Interpreter::run() {
 
     case OP_SETARGTYPE: {
       m_argTypeIndexes[READ_U32ARG(0)] = READ_U32ARG(4);
-      break;
-    }
-
-    case OP_EQARR: {
-      uint64 lAddr = m_registers[args[0]];
-      uint64 rAddr = m_registers[args[1]];
-      const uint32 ti = READ_U32ARG(3);
-
-      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
-      m_registers[args[2]] = m_vm.arrayEquals(lAddr, rAddr, arrType);
-
-      break;
-    }
-    case OP_NEQARR: {
-      uint64 lAddr = m_registers[args[0]];
-      uint64 rAddr = m_registers[args[1]];
-      const uint32 ti = READ_U32ARG(3);
-
-      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
-      m_registers[args[2]] = !m_vm.arrayEquals(lAddr, rAddr, arrType);
-
-      break;
-    }
-
-    case OP_EQSTRUCT: {
-      uint64 lAddr = m_registers[args[0]];
-      uint64 rAddr = m_registers[args[1]];
-      const uint32 ti = READ_U32ARG(3);
-
-      ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
-      m_registers[args[2]] = m_vm.objectEquals(lAddr, rAddr, sType);
-
-      break;
-    }
-    case OP_NEQSTRUCT: {
-      uint64 lAddr = m_registers[args[0]];
-      uint64 rAddr = m_registers[args[1]];
-      const uint32 ti = READ_U32ARG(3);
-
-      ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
-      m_registers[args[2]] = !m_vm.objectEquals(lAddr, rAddr, sType);
-
       break;
     }
 
@@ -1895,6 +1983,12 @@ void Interpreter::run() {
     case OP_EQ64:
       m_registers[args[2]] = REG_AS(args[0], uint64) == REG_AS(args[1], uint64);
       break;
+    case OP_EQARR:
+      m_registers[args[2]] = doArrayEqualityCheck(args[0], args[1], READ_U32ARG(3));
+      break;
+    case OP_EQSTRUCT:
+      m_registers[args[2]] = doStructEqualityCheck(args[0], args[1], READ_U32ARG(3));
+      break;
     case OP_NEQ8:
       m_registers[args[2]] = REG_AS(args[0], uint8) != REG_AS(args[1], uint8);
       break;
@@ -1906,6 +2000,12 @@ void Interpreter::run() {
       break;
     case OP_NEQ64:
       m_registers[args[2]] = REG_AS(args[0], uint64) != REG_AS(args[1], uint64);
+      break;
+    case OP_NEQARR:
+      m_registers[args[2]] = !doArrayEqualityCheck(args[0], args[1], READ_U32ARG(3));
+      break;
+    case OP_NEQSTRUCT:
+      m_registers[args[2]] = !doStructEqualityCheck(args[0], args[1], READ_U32ARG(3));
       break;
     case OP_GTI8:
       m_registers[args[2]] = REG_AS(args[0], int8) > REG_AS(args[1], int8);
@@ -1937,6 +2037,9 @@ void Interpreter::run() {
     case OP_GTF64:
       m_registers[args[2]] = REG_AS(args[0], float64) > REG_AS(args[1], float64);
       break;
+    case OP_GTARR:
+      m_registers[args[2]] = doArrayComparison(args[0], args[1], READ_U32ARG(3)) == LEFT_GT_RIGHT;
+      break;
     case OP_GTEI8:
       m_registers[args[2]] = REG_AS(args[0], int8) >= REG_AS(args[1], int8);
       break;
@@ -1966,6 +2069,9 @@ void Interpreter::run() {
       break;
     case OP_GTEF64:
       m_registers[args[2]] = REG_AS(args[0], float64) >= REG_AS(args[1], float64);
+      break;
+    case OP_GTEARR:
+      m_registers[args[2]] = doArrayComparison(args[0], args[1], READ_U32ARG(3)) != LEFT_LT_RIGHT;
       break;
     case OP_LTI8:
       m_registers[args[2]] = REG_AS(args[0], int8) < REG_AS(args[1], int8);
@@ -1997,6 +2103,9 @@ void Interpreter::run() {
     case OP_LTF64:
       m_registers[args[2]] = REG_AS(args[0], float64) < REG_AS(args[1], float64);
       break;
+    case OP_LTARR:
+      m_registers[args[2]] = doArrayComparison(args[0], args[1], READ_U32ARG(3)) == LEFT_LT_RIGHT;
+      break;
     case OP_LTEI8:
       m_registers[args[2]] = REG_AS(args[0], int8) <= REG_AS(args[1], int8);
       break;
@@ -2027,6 +2136,9 @@ void Interpreter::run() {
     case OP_LTEF64:
       m_registers[args[2]] = REG_AS(args[0], float64) <= REG_AS(args[1], float64);
       break;
+    case OP_LTEARR:
+      m_registers[args[2]] = doArrayComparison(args[0], args[1], READ_U32ARG(3)) != LEFT_GT_RIGHT;
+      break;
     case OP_STRREP8:
       m_registers[args[2]] = stringRepeat(REG_AS(args[0], void*), REG_AS(args[1], uint8), m_vm.getHeap());
       break;
@@ -2046,4 +2158,36 @@ void Interpreter::run() {
 
   ++m_registers[REGISTER_INSTR_COUNTER];
   goto begin;
+}
+
+bool Interpreter::doArrayEqualityCheck(const uint8 r1, const uint8 r2, const uint32 ti) const {
+  const uint64 lAddr = m_registers[r1];
+  const uint64 rAddr = m_registers[r2];
+
+  if (ti == TI_STRING) {
+    return m_vm.stringEquals(lAddr, rAddr);
+  }
+
+  const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
+  return m_vm.arrayEquals(lAddr, rAddr, arrType);
+}
+
+bool Interpreter::doStructEqualityCheck(const uint8 r1, const uint8 r2, const uint32 ti) const {
+  const uint64 lAddr = m_registers[r1];
+  const uint64 rAddr = m_registers[r2];
+
+  ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
+  return m_vm.objectEquals(lAddr, rAddr, sType);
+}
+
+int8 Interpreter::doArrayComparison(const uint8 lhs, const uint8 rhs, const uint32 ti) const {
+  const uint64 lAddr = m_registers[lhs];
+  const uint64 rAddr = m_registers[rhs];
+
+  if (ti == TI_STRING) {
+    return m_vm.compareString(lhs, rhs);
+  }
+
+  const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
+  return m_vm.compareArray(lAddr, rAddr, arrType);
 }

@@ -17,6 +17,10 @@
 #define MAX_CALL_DEPTH 1024
 #define NO_RETURN_ADDR 0xFFFFFFFF
 
+#define LEFT_GT_RIGHT 1
+#define LEFT_EQ_RIGHT 0
+#define LEFT_LT_RIGHT (-1)
+
 struct CallFrame {
   uint32 line = 0;
 
@@ -100,6 +104,10 @@ class VirtualMachine {
 
     bool equals(uint64 left, uint64 right, typeindex idx);
 
+    int8 compareString(uint64 leftPtr, uint64 rightPtr);
+
+    int8 compareArray(uint64 leftPtr, uint64 rightPtr, const ScriptArrayType* arrType);
+
     TypeTable& getTypes();
     StringPool& getStringPool();
     HeapMemory& getHeap();
@@ -136,6 +144,12 @@ class Interpreter {
     int32 beginExecution(const ScriptFunction& func, uint64 argsArrayAddr);
 
     void run();
+
+  private:
+    bool doArrayEqualityCheck(uint8 r1, uint8 r2, uint32 ti) const;
+    bool doStructEqualityCheck(uint8 r1, uint8 r2, uint32 ti) const;
+
+    int8 doArrayComparison(uint8 lhs, uint8 rhs, uint32 ti) const;
 };
 
 #endif //QUICKSCRIPT_INTERPRETER_H

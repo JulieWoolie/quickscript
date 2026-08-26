@@ -447,7 +447,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_GTU64:
     case OP_GTF32:
     case OP_GTF64:
-    case OP_GTARR:
     case OP_GTEI8:
     case OP_GTEU8:
     case OP_GTEI16:
@@ -458,7 +457,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_GTEU64:
     case OP_GTEF32:
     case OP_GTEF64:
-    case OP_GTEARR:
     case OP_LTI8:
     case OP_LTU8:
     case OP_LTI16:
@@ -469,7 +467,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_LTU64:
     case OP_LTF32:
     case OP_LTF64:
-    case OP_LTARR:
     case OP_LTEI8:
     case OP_LTEU8:
     case OP_LTEI16:
@@ -480,7 +477,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_LTEU64:
     case OP_LTEF32:
     case OP_LTEF64:
-    case OP_LTEARR:
     case OP_STRREP8:
     case OP_STRREP16:
     case OP_STRREP32:
@@ -493,6 +489,10 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_EQSTRUCT:
     case OP_NEQARR:
     case OP_NEQSTRUCT:
+    case OP_GTARR:
+    case OP_GTEARR:
+    case OP_LTARR:
+    case OP_LTEARR:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       fprintf(out, " %s", getRegistryName(*(buf + 4)));

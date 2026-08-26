@@ -280,7 +280,7 @@
 | `GTU64`         | `0x010C` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTF32`         | `0x010D` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTF64`         | `0x010E` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `GTARR`         | `0x010F` | 11      | `lhs: register, rhs: register, out: register`                    |
+| `GTARR`         | `0x010F` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
 | `GTEI8`         | `0x0110` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTEU8`         | `0x0111` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTEI16`        | `0x0112` | 11      | `lhs: register, rhs: register, out: register`                    |
@@ -291,7 +291,7 @@
 | `GTEU64`        | `0x0117` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTEF32`        | `0x0118` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTEF64`        | `0x0119` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `GTEARR`        | `0x011A` | 11      | `lhs: register, rhs: register, out: register`                    |
+| `GTEARR`        | `0x011A` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
 | `LTI8`          | `0x011B` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTU8`          | `0x011C` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTI16`         | `0x011D` | 11      | `lhs: register, rhs: register, out: register`                    |
@@ -302,7 +302,7 @@
 | `LTU64`         | `0x0122` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTF32`         | `0x0123` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTF64`         | `0x0124` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `LTARR`         | `0x0125` | 11      | `lhs: register, rhs: register, out: register`                    |
+| `LTARR`         | `0x0125` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
 | `LTEI8`         | `0x0126` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTEU8`         | `0x0127` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTEI16`        | `0x0128` | 11      | `lhs: register, rhs: register, out: register`                    |
@@ -313,7 +313,7 @@
 | `LTEU64`        | `0x012D` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTEF32`        | `0x012E` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `LTEF64`        | `0x012F` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `LTEARR`        | `0x0130` | 11      | `lhs: register, rhs: register, out: register`                    |
+| `LTEARR`        | `0x0130` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
 | `STRCONCAT`     | `0x0131` | 7       | `lhs: register, rhs: register, typeindex: uint32, out: register` |
 | `STRREP8`       | `0x0132` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `STRREP16`      | `0x0133` | 11      | `lhs: register, rhs: register, out: register`                    |

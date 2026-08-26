@@ -41,22 +41,36 @@
   case BOP_##cmptype: \
     if (lkind == TK_PRIMITIVE) { \
       NUMTYPE_OPCODE(lpk, writer, OP_##cmptype) \
-    } else { \
-      writer.startInstr(OP_##cmptype##ARR); \
-    } \
-    BIN_APPEND \
+      BIN_APPEND \
+      break;\
+    }\
+    \
+    writer.startInstr(OP_##cmptype##ARR); \
+    writer.appendU8(r1);\
+    writer.appendU8(r2);\
+    writer.appendU8(outReg);\
+    writer.appendU32(leftIdx);\
+    writer.endInstr();\
     break;
 
 #define EQUALITY_CASE(type)\
   case BOP_##type:\
     if (lkind == TK_PRIMITIVE) {\
       BYTEWIDTH_OPCODE(ltype->stackSizeBytes(), writer, OP_##type)\
-    } else if (lkind == TK_ARRAY || lkind == TK_STRING) {\
+      BIN_APPEND\
+      break;\
+    }\
+    \
+    if (lkind == TK_ARRAY || lkind == TK_STRING) {\
       writer.startInstr(OP_##type##ARR);\
     } else if (lkind == TK_STRUCT) {\
       writer.startInstr(OP_##type##STRUCT);\
     }\
-    BIN_APPEND\
+    writer.appendU8(r1);\
+    writer.appendU8(r2);\
+    writer.appendU8(outReg);\
+    writer.appendU32(leftIdx);\
+    writer.endInstr();\
     break;
 
 #define MATH_CASE(type)\
@@ -434,6 +448,9 @@ static void compileBinaryExpr(
   if (rtype->kind() == TK_PRIMITIVE) {
     rpk = static_cast<PrimitiveScriptType*>(rtype)->getPrimitiveType();
   }
+
+  const typeindex leftIdx = ctx.getSemantics().getTypes().findIndex(ltype);
+  const typeindex rightIdx = ctx.getSemantics().getTypes().findIndex(rtype);
 
   switch (nonAssign) {
     case BOP_SHL:

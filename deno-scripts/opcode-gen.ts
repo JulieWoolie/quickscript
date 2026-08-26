@@ -328,20 +328,30 @@ function comparisonOperators() {
     {name: "EQ", operator: "=="},
     {name: "NEQ", operator: "!="},
   ]
+
+  const typedComparisonParams = [...BINARY_ARGS, uint32("typeindex")]
+
   for (const eqOp of equalityOperators) {
     byteSizedOpCode(eqOp.name, BINARY_ARGS, [
         `%REG:out% = %REG:lhs,%UTYPE%% ${eqOp.operator} %REG:rhs,%UTYPE%%;`
     ])
 
-    opCode(`${eqOp.name}ARR`, [...BINARY_ARGS, uint32("typeindex")])
-    opCode(`${eqOp.name}STRUCT`, [...BINARY_ARGS, uint32("typeindex")])
+    const p = eqOp.name == "NEQ" ? "!" : ""
+
+    opCode(`${eqOp.name}ARR`, typedComparisonParams, [
+        `%REG:out% = ${p}doArrayEqualityCheck(args[%OFFSET:lhs%], args[%OFFSET:rhs%], %CONST:typeindex,32%);`
+    ])
+
+    opCode(`${eqOp.name}STRUCT`, typedComparisonParams, [
+      `%REG:out% = ${p}doStructEqualityCheck(args[%OFFSET:lhs%], args[%OFFSET:rhs%], %CONST:typeindex,32%);`
+    ])
   }
 
   const comparisonOperators = [
-    {name: "GT", operator: ">"},
-    {name: "GTE", operator: ">="},
-    {name: "LT", operator: "<"},
-    {name: "LTE", operator: "<="}
+    {name: "GT", operator: ">", arraySuffix: "== LEFT_GT_RIGHT"},
+    {name: "GTE", operator: ">=", arraySuffix: "!= LEFT_LT_RIGHT"},
+    {name: "LT", operator: "<", arraySuffix: "== LEFT_LT_RIGHT"},
+    {name: "LTE", operator: "<=", arraySuffix: "!= LEFT_GT_RIGHT"},
   ]
   for (const cmpOp of comparisonOperators) {
     for (const ts of NUMBER_TYPES) {
@@ -351,7 +361,10 @@ function comparisonOperators() {
           `%REG:out% = %REG:lhs,${tn}% ${cmpOp.operator} %REG:rhs,${tn}%;`
       ])
     }
-    opCode(`${cmpOp.name}ARR`, BINARY_ARGS)
+
+    opCode(`${cmpOp.name}ARR`, typedComparisonParams, [
+        `%REG:out% = doArrayComparison(args[%OFFSET:lhs%], args[%OFFSET:rhs%], %CONST:typeindex,32%) ${cmpOp.arraySuffix};`
+    ])
   }
 }
 
