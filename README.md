@@ -18,7 +18,7 @@ interpret that IR.
 - [ ] Correct closure handling in semantic transformer
 - [ ] Casting and assigning literals correct types
 - [ ] Proper reference counting which is added in compiler or semantic transformer.
-- [ ] Incorrect "unused" symbol warnings
+- [x] Correct "unused" symbol warnings
 - [x] `PUSHLINE` OP Code functionality
 - [X] `RET` OP Code functionality
 - [X] `JMP` OP Code functionality
