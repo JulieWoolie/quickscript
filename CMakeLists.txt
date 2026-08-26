@@ -85,4 +85,6 @@ add_executable(quickscript src/main.cpp
         src/objects.h
         src/objects.cc
         src/interpreter/registers.h
-        src/compiler_opts.h)
+        src/compiler_opts.h
+        src/interpreter/script_error.h
+        src/interpreter/script_error.cc)

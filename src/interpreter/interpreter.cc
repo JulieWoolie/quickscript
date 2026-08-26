@@ -2,6 +2,7 @@
 
 #include <format>
 
+#include "script_error.h"
 #include "../types/ConstTypes.h"
 
 #define TO_POINTER(expr) reinterpret_cast<void*>(expr)
@@ -988,7 +989,10 @@ VirtualMachine& Interpreter::getVirtualMachine() const {
 static void appendCallStack(std::string& out, CallFrame frames[], const uint32 count) {
   for (uint32 i = count; i != 0; i--) {
     const CallFrame* frame = &frames[i - 1];
-    out.append("\n  ");
+
+    if (i != count) {
+      out.append("\n  ");
+    }
 
     out.append("[");
     out.append(std::to_string(i));
@@ -1005,14 +1009,15 @@ static void appendCallStack(std::string& out, CallFrame frames[], const uint32 c
   }
 }
 
-static std::string createCallStackString(CallFrame frames[], const uint32 frameCount) {
-  std::string result;
-  appendCallStack(result, frames, frameCount);
-  return result;
+void Interpreter::throwScriptError(const std::string& message) {
+  std::string callStack;
+  appendCallStack(callStack, m_callFrames, m_frameCount);
+
+  throw ScriptError(message, callStack);
 }
 
 void Interpreter::moveExecutionTo(const ScriptFunction& func) {
-  CallFrame* oldFrame = getCallFrame();
+  const CallFrame* oldFrame = getCallFrame();
 
   const StringPool& strPool = m_vm.getStringPool();
   const uint32 nameLen = strPool.getLength(func.nameOffset);
@@ -1020,9 +1025,7 @@ void Interpreter::moveExecutionTo(const ScriptFunction& func) {
 
   CallFrame* frame = pushNewFrame();
   if (!frame) {
-    std::string errorMsg = createCallStackString(m_callFrames, m_frameCount);
-    errorMsg.insert(0, "Maximum call depth reached:");
-    throw std::runtime_error(errorMsg);
+    throwScriptError("Maximum call depth reached");
   }
 
   frame->name = std::string(nameContent, nameLen);
@@ -1196,10 +1199,8 @@ void Interpreter::run() {
         errorMsg.append(reinterpret_cast<int8*>(arr.data), arr.length);
       }
 
-      errorMsg.append("\nCall stack:");
-      appendCallStack(errorMsg, m_callFrames, m_frameCount);
-
-      throw std::runtime_error(errorMsg);
+      throwScriptError(errorMsg);
+      break;
     }
 
     case OP_OBJALLOC: {
@@ -1390,7 +1391,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       m_registers[args[1]] = arr.getU8(idx);
@@ -1401,7 +1402,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       m_registers[args[1]] = arr.getU16(idx);
@@ -1412,7 +1413,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       m_registers[args[1]] = arr.getU32(idx);
@@ -1423,7 +1424,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       m_registers[args[1]] = arr.getU64(idx);
@@ -1434,7 +1435,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       const uint8 value = REG_AS(args[1], uint8);
@@ -1446,7 +1447,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       const uint16 value = REG_AS(args[1], uint16);
@@ -1458,7 +1459,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       const uint32 value = REG_AS(args[1], uint32);
@@ -1470,7 +1471,7 @@ void Interpreter::run() {
       const uint32 idx = REG_AS(args[2], uint32);
       
       if (idx >= arr.length) {;
-        throw std::runtime_error("Index out of bounds");
+        throwScriptError("Index out of bounds");
       };
       
       const uint64 value = REG_AS(args[1], uint64);

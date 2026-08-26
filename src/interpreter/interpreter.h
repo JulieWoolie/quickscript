@@ -128,6 +128,8 @@ class Interpreter {
   CallFrame m_callFrames[MAX_CALL_DEPTH];
   uint32 m_frameCount = 0;
 
+  void throwScriptError(const std::string& message);
+
   public:
     explicit Interpreter(VirtualMachine& vm);
     ~Interpreter();
