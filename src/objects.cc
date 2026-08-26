@@ -50,10 +50,6 @@ OBJ_PROP_METHOD(uint64, U64)
 OBJ_PROP_METHOD(float32, F32)
 OBJ_PROP_METHOD(float64, F64)
 
-uint32& QsObject::referenceCount() const {
-  return *reinterpret_cast<uint32*>(data);
-}
-
 uint64 QsArray::address() const {
   if (refCount) {
     return reinterpret_cast<uint64>(refCount);
