@@ -333,8 +333,8 @@ function comparisonOperators() {
         `%REG:out% = %REG:lhs,%UTYPE%% ${eqOp.operator} %REG:rhs,%UTYPE%%;`
     ])
 
-    opCode(`${eqOp.name}ARR`, BINARY_ARGS)
-    opCode(`${eqOp.name}STRUCT`, BINARY_ARGS)
+    opCode(`${eqOp.name}ARR`, [...BINARY_ARGS, uint32("typeindex")])
+    opCode(`${eqOp.name}STRUCT`, [...BINARY_ARGS, uint32("typeindex")])
   }
 
   const comparisonOperators = [

@@ -433,14 +433,10 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_EQ16:
     case OP_EQ32:
     case OP_EQ64:
-    case OP_EQARR:
-    case OP_EQSTRUCT:
     case OP_NEQ8:
     case OP_NEQ16:
     case OP_NEQ32:
     case OP_NEQ64:
-    case OP_NEQARR:
-    case OP_NEQSTRUCT:
     case OP_GTI8:
     case OP_GTU8:
     case OP_GTI16:
@@ -492,6 +488,15 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
+      break;
+    case OP_EQARR:
+    case OP_EQSTRUCT:
+    case OP_NEQARR:
+    case OP_NEQSTRUCT:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " %s", getRegistryName(*(buf + 4)));
+      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 5));
       break;
     case OP_STRCONCAT:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));

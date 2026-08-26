@@ -262,14 +262,14 @@
 | `EQ16`          | `0x00FA` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `EQ32`          | `0x00FB` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `EQ64`          | `0x00FC` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `EQARR`         | `0x00FD` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `EQSTRUCT`      | `0x00FE` | 11      | `lhs: register, rhs: register, out: register`                    |
+| `EQARR`         | `0x00FD` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
+| `EQSTRUCT`      | `0x00FE` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
 | `NEQ8`          | `0x00FF` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `NEQ16`         | `0x0100` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `NEQ32`         | `0x0101` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `NEQ64`         | `0x0102` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `NEQARR`        | `0x0103` | 11      | `lhs: register, rhs: register, out: register`                    |
-| `NEQSTRUCT`     | `0x0104` | 11      | `lhs: register, rhs: register, out: register`                    |
+| `NEQARR`        | `0x0103` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
+| `NEQSTRUCT`     | `0x0104` | 7       | `lhs: register, rhs: register, out: register, typeindex: uint32` |
 | `GTI8`          | `0x0105` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTU8`          | `0x0106` | 11      | `lhs: register, rhs: register, out: register`                    |
 | `GTI16`         | `0x0107` | 11      | `lhs: register, rhs: register, out: register`                    |

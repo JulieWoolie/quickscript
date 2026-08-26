@@ -526,14 +526,10 @@ uint8 getInstructionLength(const opcode code) {
     case OP_EQ16:
     case OP_EQ32:
     case OP_EQ64:
-    case OP_EQARR:
-    case OP_EQSTRUCT:
     case OP_NEQ8:
     case OP_NEQ16:
     case OP_NEQ32:
     case OP_NEQ64:
-    case OP_NEQARR:
-    case OP_NEQSTRUCT:
     case OP_GTI8:
     case OP_GTU8:
     case OP_GTI16:
@@ -606,6 +602,10 @@ uint8 getInstructionLength(const opcode code) {
     case OP_WRITEOBJ64:
       return 6 + LENGTH_OPCODE;
     case OP_LOADCONST64:
+    case OP_EQARR:
+    case OP_EQSTRUCT:
+    case OP_NEQARR:
+    case OP_NEQSTRUCT:
     case OP_STRCONCAT:
       return 7 + LENGTH_OPCODE;
     case OP_STORECONST32:
