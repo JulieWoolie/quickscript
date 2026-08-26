@@ -1,0 +1,9 @@
+# MODE run
+# DISABLE-STAT-INLINING = true
+# DISABLE-EXPR-INLINING = true
+# EXPECT-RUNTIME-ERROR = Index out of bounds
+
+void main() {
+  uint32[] arr = [1, 2]
+  arr[2] = 12
+}
