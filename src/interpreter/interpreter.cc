@@ -4,6 +4,10 @@
 
 #include "../types/ConstTypes.h"
 
+#define TO_POINTER(expr) reinterpret_cast<void*>(expr)
+#define qsArrayFromAddr(expr) castToQsArray(TO_POINTER(expr))
+#define qsObjectFromAddr(expr) castToQsObject(TO_POINTER(expr))
+
 InstructionBuf::InstructionBuf() {
 
 }
@@ -380,7 +384,7 @@ int32 VirtualMachine::beginExecution(const uint32 funcEntryIdx, const ProgramArg
 void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
   switch (type) {
     case TI_STRING: {
-      QsArray rString = castToQsArray(reinterpret_cast<void*>(value));
+      QsArray rString = castToQsArray(TO_POINTER(value));
       out.append(reinterpret_cast<int8*>(rString.data), rString.length);
       return;
     }
@@ -446,7 +450,7 @@ void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
       out.append(structType->getTypeName());
       out.append("{");
 
-      QsObject obj = castToQsObject(reinterpret_cast<void*>(value));
+      QsObject obj = castToQsObject(TO_POINTER(value));
 
       uint64 off = 0;
       const uint32 propCount = structType->getPropertyCount();
@@ -494,7 +498,7 @@ void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
       out.append("[");
 
       if (value) {
-        QsArray arr = castToQsArray(reinterpret_cast<void*>(value));
+        QsArray arr = castToQsArray(TO_POINTER(value));
         const uint32 len = arr.length;
 
         for (uint32 i = 0; i < len; i++) {
@@ -529,6 +533,208 @@ void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
     default:
       return;
   }
+}
+
+bool VirtualMachine::objectEquals(const uint64 leftPtr, const uint64 rightPtr, const ScriptStructType* structType) {
+  if (leftPtr == rightPtr) {
+    return true;
+  }
+
+  const uint32 props = structType->getPropertyCount();
+  uint64 off = 0;
+
+  uint64 leftProp = 0;
+  uint64 rightProp = 0;
+
+  const uint8* left = reinterpret_cast<uint8*>(leftPtr + REFCOUNT_PREFIX_SIZE);
+  const uint8* right = reinterpret_cast<uint8*>(rightPtr + REFCOUNT_PREFIX_SIZE);
+
+  for (uint32 i = 0; i < props; i++) {
+    const StructProperty* prop = structType->getProperty(i);
+    const ScriptType* propType = prop->type;
+
+    const typeindex propTypeIndex = m_types.findIndex(propType);
+    const uint64 memSize = propType->stackSizeBytes();
+
+    leftProp = 0;
+    rightProp = 0;
+
+    memcpy(&leftProp, left + off, memSize);
+    memcpy(&rightProp, right + off, memSize);
+
+    if (!equals(leftProp, rightProp, propTypeIndex)) {
+      return false;
+    }
+
+    off += memSize;
+  }
+
+  return true;
+}
+
+#define ARRAY_EQUALITY_CHECKING_LOOP(size) \
+  for (uint32 i = 0; i < length; i++) {\
+    if (left.getU##size(i) == right.getU##size(i)) {\
+      continue;\
+    }\
+    return false;\
+  }
+
+bool VirtualMachine::arrayEquals(const uint64 leftPtr, const uint64 rightPtr, const ScriptArrayType* arrayType) {
+  if (leftPtr == rightPtr) {
+    return true;
+  }
+
+  const QsArray left = qsArrayFromAddr(leftPtr);
+  const QsArray right = qsArrayFromAddr(rightPtr);
+
+  const uint32 length = left.length;
+
+  if (length != right.length) {
+    return false;
+  }
+
+  const ScriptType* componentType = arrayType->getComponentType();
+  const typeindex componentIndex = m_types.findIndex(componentType);
+
+  switch (componentIndex) {
+    case TI_VOID:
+      return false;
+    case TI_BOOL:
+    case TI_UINT8:
+    case TI_INT8:
+      ARRAY_EQUALITY_CHECKING_LOOP(8)
+      break;
+    case TI_UINT16:
+    case TI_INT16:
+      ARRAY_EQUALITY_CHECKING_LOOP(16)
+      break;
+    case TI_UINT32:
+    case TI_INT32:
+      ARRAY_EQUALITY_CHECKING_LOOP(32)
+      break;
+    case TI_UINT64:
+    case TI_INT64:
+    case TI_CLOSURE:
+      ARRAY_EQUALITY_CHECKING_LOOP(64)
+      break;
+
+    case TI_STRING:
+      for (uint32 i = 0; i < length; i++) {
+        const uint64 l = left.getU64(i);
+        const uint64 r = right.getU64(i);
+        if (stringEquals(l, r)) {
+          continue;
+        }
+        return false;
+      }
+      break;
+
+    default: {
+      const typekind kind = componentType->kind();
+
+      if (kind == TK_ARRAY) {
+        const ScriptArrayType* cArrayType = static_cast<const ScriptArrayType*>(componentType);
+
+        for (uint32 i = 0; i < length; i++) {
+          const uint64 l = left.getU64(i);
+          const uint64 r = right.getU64(i);
+
+          if (l == r || arrayEquals(l, r, cArrayType)) {
+            continue;
+          }
+
+          return false;
+        }
+      }
+
+      if (kind == TK_STRUCT) {
+        const ScriptStructType* sType = static_cast<const ScriptStructType*>(componentType);
+
+        for (uint32 i = 0; i < length; i++) {
+          const uint64 l = left.getU64(i);
+          const uint64 r = right.getU64(i);
+
+          if (l == r || objectEquals(l, r, sType)) {
+            continue;
+          }
+
+          return false;
+        }
+      }
+
+      break;
+    }
+  }
+
+  return true;
+}
+
+bool VirtualMachine::stringEquals(const uint64 leftAddr, const uint64 rightAddr) {
+  if (leftAddr == rightAddr) {
+    return true;
+  }
+
+  const QsArray left = qsArrayFromAddr(leftAddr);
+  const QsArray right = qsArrayFromAddr(rightAddr);
+
+  const uint32 length = left.length;
+  if (length != right.length) {
+    return false;
+  }
+
+  ARRAY_EQUALITY_CHECKING_LOOP(8)
+
+  return true;
+}
+
+bool VirtualMachine::equals(const uint64 left, const uint64 right, const typeindex idx) {
+  switch (idx) {
+    case TI_VOID:
+      return false;
+    case TI_BOOL:
+    case TI_UINT8:
+    case TI_INT8:
+      return static_cast<uint8>(left) == static_cast<uint8>(right);
+    case TI_UINT16:
+    case TI_INT16:
+      return static_cast<uint16>(left) == static_cast<uint16>(right);
+    case TI_UINT32:
+    case TI_INT32:
+      return static_cast<uint32>(left) == static_cast<uint32>(right);
+    case TI_UINT64:
+    case TI_INT64:
+    case TI_CLOSURE:
+      return left == right;
+    case TI_FLOAT32:
+      return *reinterpret_cast<const float32*>(&left) == *reinterpret_cast<const float32*>(&right);
+    case TI_FLOAT64:
+      return std::bit_cast<float64>(left) == std::bit_cast<float64>(right);
+    case TI_STRING:
+      return stringEquals(left, right);
+
+    default: {
+      const ScriptType* scrType = m_types.lookupByIndex(idx);
+
+      if (scrType->kind() == TK_ARRAY) {
+        if (left == right) {
+          return true;
+        }
+        return arrayEquals(left, right, static_cast<const ScriptArrayType*>(scrType));
+      }
+
+      if (scrType->kind() == TK_STRUCT) {
+        if (left == right) {
+          return true;
+        }
+        return objectEquals(left, right, static_cast<const ScriptStructType*>(scrType));
+      }
+
+      break;
+    }
+  }
+
+  return false;
 }
 
 TypeTable& VirtualMachine::getTypes() {
@@ -722,7 +928,7 @@ static uint64 stringRepeat(void* strAddr, const uint32 repeats, HeapMemory& heap
 
 uint64 Interpreter::strConcat(QsArray& lString, const uint64 rightObj, typeindex rType) {
   if (rType == TI_STRING) {
-    QsArray rString = castToQsArray(reinterpret_cast<void*>(rightObj));
+    QsArray rString = castToQsArray(TO_POINTER(rightObj));
     uint32 newSize = lString.length + rString.length;
 
     QsArray result = m_vm.getHeap().allocString(newSize);
@@ -858,6 +1064,48 @@ void Interpreter::run() {
 
     case OP_SETARGTYPE: {
       m_argTypeIndexes[READ_U32ARG(0)] = READ_U32ARG(4);
+      break;
+    }
+
+    case OP_EQARR: {
+      uint64 lAddr = m_registers[args[0]];
+      uint64 rAddr = m_registers[args[1]];
+      const uint32 ti = READ_U32ARG(3);
+
+      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
+      m_registers[args[2]] = m_vm.arrayEquals(lAddr, rAddr, arrType);
+
+      break;
+    }
+    case OP_NEQARR: {
+      uint64 lAddr = m_registers[args[0]];
+      uint64 rAddr = m_registers[args[1]];
+      const uint32 ti = READ_U32ARG(3);
+
+      ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
+      m_registers[args[2]] = !m_vm.arrayEquals(lAddr, rAddr, arrType);
+
+      break;
+    }
+
+    case OP_EQSTRUCT: {
+      uint64 lAddr = m_registers[args[0]];
+      uint64 rAddr = m_registers[args[1]];
+      const uint32 ti = READ_U32ARG(3);
+
+      ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
+      m_registers[args[2]] = m_vm.objectEquals(lAddr, rAddr, sType);
+
+      break;
+    }
+    case OP_NEQSTRUCT: {
+      uint64 lAddr = m_registers[args[0]];
+      uint64 rAddr = m_registers[args[1]];
+      const uint32 ti = READ_U32ARG(3);
+
+      ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
+      m_registers[args[2]] = !m_vm.objectEquals(lAddr, rAddr, sType);
+
       break;
     }
 

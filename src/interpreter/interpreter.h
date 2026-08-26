@@ -92,6 +92,14 @@ class VirtualMachine {
 
     void toString(std::string& out, typeindex type, uint64 value);
 
+    bool objectEquals(uint64 leftPtr, uint64 rightPtr, const ScriptStructType* structType);
+
+    bool arrayEquals(uint64 leftPtr, uint64 rightPtr, const ScriptArrayType* arrayType);
+
+    bool stringEquals(uint64 leftAddr, uint64 rightAddr);
+
+    bool equals(uint64 left, uint64 right, typeindex idx);
+
     TypeTable& getTypes();
     StringPool& getStringPool();
     HeapMemory& getHeap();
