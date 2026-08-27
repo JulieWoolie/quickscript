@@ -143,6 +143,35 @@ export native string sformat(string format, ... args)
 export native uint64 currentTimeMillis()
 
 /**
+ * Get the value of an environment variable
+ * 
+ * If the variable was not found, an empty string is returned
+ */
+export native string getenv(string name)
+
+/**
+ * Set the value of an environment variable
+ * 
+ * If the variable is already defined this function will return false
+ * 
+ * The environment variable will only be changed for the current process and any processes
+ * spawned by the current process
+ */
+export native bool setenv(string name, string value)
+
+/**
+ * Set the value of an environment variable
+ * 
+ * If the variable is defined and overwrite is set to true, then the value will be overridden
+ * and this function will return true, otherwise, if overwrite is set to false, then this will
+ * return false
+ * 
+ * The environment variable will only be changed for the current process and any processes
+ * spawned by the current process
+ */
+export native bool setenv(string name, string value, bool overwrite)
+
+/**
  * Get the absolute value of a number
  * 
  * If the argument is non-negative, the argument is returned
