@@ -254,7 +254,7 @@ static void compileFuncLookup(CompilerContext& ctx, LocalFuncSymbol* lfs, const 
 
 static void compileNativeFuncLookup(
   CompilerContext& ctx,
-  NativeFunctionSymbol* sym,
+  const NativeFunctionSymbol* sym,
   const RegisterId out
 ) {
   BytecodeWriter& writer = ctx.getWriter();
