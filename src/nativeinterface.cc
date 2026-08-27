@@ -2,7 +2,10 @@
 
 #include <bit>
 
-#define ARGGET(idx, type) return *((type*) (m_args + idx));
+#define ARGUMENT_GET_METHOD(name, type) \
+type NativeCall::name(const uint32 idx) const {\
+  return *reinterpret_cast<type*>(&m_args[idx]);\
+}
 
 NativeCall::NativeCall(ScriptType** argType, uint64* args, uint32 argCount)
   : m_args(args),
@@ -12,97 +15,126 @@ NativeCall::NativeCall(ScriptType** argType, uint64* args, uint32 argCount)
 
 }
 
-void NativeCall::setReturnValue(uint64 value) {
+uint64 NativeCall::getReturnValue() const {
+  return m_returnValue;
+}
+
+bool NativeCall::isFailedCall() const {
+  return m_failedCall;
+}
+
+const std::string& NativeCall::getErrorMessage() const {
+  return m_error;
+}
+
+void NativeCall::setReturn(const uint64 value) {
   m_returnValue = value;
 }
 
-void NativeCall::setF64ReturnValue(float64 value) {
+void NativeCall::setF64Return(const float64 value) {
   m_returnValue = std::bit_cast<uint64>(value);
 }
 
-void NativeCall::setF32ReturnValue(float32 value) {
-  m_returnValue = std::bit_cast<uint32>(value);
+void NativeCall::setF32Return(const float32 value) {
+  *reinterpret_cast<float32*>(&m_returnValue) = value;
 }
 
-bool NativeCall::getBoolArgument(uint32 idx) {
-  return m_args[idx];
+void NativeCall::setError(const std::string& errorMessage) {
+  m_error = errorMessage;
 }
 
-int8 NativeCall::getI8Argument(uint32 idx) {
-  ARGGET(idx, int8)
-}
+ARGUMENT_GET_METHOD(getBoolArgument, bool)
+ARGUMENT_GET_METHOD(getU8Argument, uint8)
+ARGUMENT_GET_METHOD(getI8Argument, int8)
+ARGUMENT_GET_METHOD(getU16Argument, uint16)
+ARGUMENT_GET_METHOD(getI16Argument, int16)
+ARGUMENT_GET_METHOD(getU32Argument, uint32)
+ARGUMENT_GET_METHOD(getI32Argument, int32)
+ARGUMENT_GET_METHOD(getU64Argument, uint64)
+ARGUMENT_GET_METHOD(getI64Argument, int64)
+ARGUMENT_GET_METHOD(getF32Argument, float32)
+ARGUMENT_GET_METHOD(getF64Argument, float64)
 
-uint8 NativeCall::getU8Argument(uint32 idx) {
-  ARGGET(idx, uint8)
-}
-
-int16 NativeCall::getI16Argument(uint32 idx) {
-  ARGGET(idx, int16)
-}
-
-uint16 NativeCall::getU16Argument(uint32 idx) {
-  ARGGET(idx, uint16)
-}
-
-int32 NativeCall::getI32Argument(uint32 idx) {
-  ARGGET(idx, int32)
-}
-
-uint32 NativeCall::getU32Argument(uint32 idx) {
-  ARGGET(idx, uint32)
-}
-
-int64 NativeCall::getI64Argument(uint32 idx) {
-  ARGGET(idx, int64)
-}
-
-uint64 NativeCall::getU64Argument(uint32 idx) {
-  ARGGET(idx, uint64)
-}
-
-float32 NativeCall::getF32Argument(uint32 idx) {
-  uint32 b = m_args[idx];
-  return std::bit_cast<float32>(b);
-}
-
-float64 NativeCall::getF64Argument(uint32 idx) const {
-  return std::bit_cast<float64>(m_args[idx]);
-}
-
-QsArray NativeCall::getStringArgument(uint32 idx) {
-  const uint64 ptr = getU64Argument(idx);
-  return getScriptString(ptr);
-}
-
-QsArray NativeCall::getArrayArgument(uint32 idx) {
-  void* addr = reinterpret_cast<void*>(getU64Argument(idx));
+QsArray NativeCall::getArrayArgument(const uint32 idx) const {
+  void* addr = reinterpret_cast<void*>(m_args[idx]);
   return castToQsArray(addr);
 }
 
-QsObject NativeCall::getObjectArgument(uint32 idx) {
-  void* addr = reinterpret_cast<void*>(getU64Argument(idx));
+QsObject NativeCall::getObjectArgument(const uint32 idx) const {
+  void* addr = reinterpret_cast<void*>(m_args[idx]);
   return castToQsObject(addr);
 }
-
-QsArray NativeCall::getScriptString(uint64 heapAddr) {
+QsArray NativeCall::getScriptArray(const uint64 heapAddr) const {
   return castToQsArray(reinterpret_cast<void*>(heapAddr));
 }
 
-QsArray NativeCall::getScriptArray(uint64 heapAddr) {
-  return castToQsArray(reinterpret_cast<void*>(heapAddr));
-}
-
-ScriptType* NativeCall::getArgumentType(uint32 idx) {
-  if (idx > m_argCount) {
-    return nullptr;
-  }
+ScriptType* NativeCall::getArgumentType(const uint32 idx) const {
   return m_types[idx];
 }
 
-uint8* NativeCall::allocHeap(uint64 size) {
-  return (uint8*) malloc(size);
+NativeBinding::NativeBinding(const conststring name) : m_name(name) {
 }
 
-void NativeCall::heapFree(uint8* addr) {
-  free(addr);
+conststring NativeBinding::getName() const {
+  return m_name;
+}
+
+NativeFunctionBinding::NativeFunctionBinding(
+  const conststring name,
+  const NativeFunction func,
+  const FunctionSignature* signature)
+  : NativeBinding(name),
+    m_func(func),
+    m_signature(signature)
+{
+
+}
+
+NativeFunctionBinding* NativeFunctionBinding::create(
+  const conststring name,
+  const NativeFunction func,
+  const FunctionSignature* signature
+) {
+  return new NativeFunctionBinding(name, func, signature);
+}
+
+void NativeFunctionBinding::destroy(NativeFunctionBinding* bind) {
+  delete bind;
+}
+
+bindingtype NativeFunctionBinding::btype() const {
+  return BINDTYPE_FUNCTION;
+}
+
+NativeFunction NativeFunctionBinding::getFunction() const {
+  return m_func;
+}
+
+const FunctionSignature* NativeFunctionBinding::getSignature() const {
+  return m_signature;
+}
+
+BindingsObject::BindingsObject() {
+
+}
+
+BindingsObject* BindingsObject::create() {
+  return new BindingsObject();
+}
+
+void BindingsObject::destroy(BindingsObject* obj) {
+  delete obj;
+}
+
+const std::vector<NativeBinding*>& BindingsObject::getBindings() const {
+  return m_bindings;
+}
+
+void BindingsObject::addFunctionBinding(
+  const conststring name,
+  const FunctionSignature* signature,
+  const NativeFunction func
+) {
+  NativeFunctionBinding* binding = NativeFunctionBinding::create(name, func, signature);
+  m_bindings.push_back(binding);
 }

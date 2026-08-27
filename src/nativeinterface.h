@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include "types/FunctionSignature.h"
+
 #define TYPEDEF_FUNC(returnType, name, ...) typedef returnType (*name)(__VA_ARGS__)
 
 class NativeCall {
@@ -14,49 +16,51 @@ class NativeCall {
   ScriptType** const m_types;
   const uint32 m_argCount;
 
+  bool m_failedCall = false;
   uint64 m_returnValue = 0;
+  std::string m_error;
 
   public:
     NativeCall(ScriptType** argType, uint64* args, uint32 argCount);
 
-    void setReturnValue(uint64 value);
-    void setF64ReturnValue(float64 value);
-    void setF32ReturnValue(float32 value);
+    uint64 getReturnValue() const;
 
-    bool getBoolArgument(uint32 idx);
+    bool isFailedCall() const;
 
-    int8 getI8Argument(uint32 idx);
-    uint8 getU8Argument(uint32 idx);
-    int16 getI16Argument(uint32 idx);
-    uint16 getU16Argument(uint32 idx);
-    int32 getI32Argument(uint32 idx);
-    uint32 getU32Argument(uint32 idx);
-    int64 getI64Argument(uint32 idx);
-    uint64 getU64Argument(uint32 idx);
-    float32 getF32Argument(uint32 idx);
+    const std::string& getErrorMessage() const;
+
+    void setReturn(uint64 value);
+    void setF64Return(float64 value);
+    void setF32Return(float32 value);
+
+    void setError(const std::string& errorMessage);
+
+    bool getBoolArgument(uint32 idx) const;
+
+    int8 getI8Argument(uint32 idx) const;
+    uint8 getU8Argument(uint32 idx) const;
+    int16 getI16Argument(uint32 idx) const;
+    uint16 getU16Argument(uint32 idx) const;
+    int32 getI32Argument(uint32 idx) const;
+    uint32 getU32Argument(uint32 idx) const;
+    int64 getI64Argument(uint32 idx) const;
+    uint64 getU64Argument(uint32 idx) const;
+    float32 getF32Argument(uint32 idx) const;
     float64 getF64Argument(uint32 idx) const;
 
-    QsArray getStringArgument(uint32 idx);
+    QsArray getArrayArgument(uint32 idx) const;
 
-    QsArray getArrayArgument(uint32 idx);
+    QsObject getObjectArgument(uint32 idx) const;
 
-    QsObject getObjectArgument(uint32 idx);
+    QsArray getScriptArray(uint64 heapAddr) const;
 
-    QsArray getScriptString(uint64 heapAddr);
-
-    QsArray getScriptArray(uint64 heapAddr);
-
-    ScriptType* getArgumentType(uint32 idx);
-
-    uint8* allocHeap(uint64 size);
-
-    void heapFree(uint8* addr);
+    ScriptType* getArgumentType(uint32 idx) const;
 };
 
 TYPEDEF_FUNC(void, NativeFunction, NativeCall& call);
 
 #define BINDTYPE_INVALID 0
-#define BINDTYPE_VARIABLE 1
+#define BINDTYPE_CONSTANT 1
 #define BINDTYPE_FUNCTION 2
 typedef uint8 bindingtype;
 
@@ -73,18 +77,21 @@ class NativeBinding {
 };
 
 class NativeFunctionBinding: public NativeBinding {
-  NativeFunction m_func;
+  const NativeFunction m_func;
+  const FunctionSignature* const m_signature;
 
-  NativeFunctionBinding(conststring name, NativeFunction func);
+  NativeFunctionBinding(conststring name, NativeFunction func, const FunctionSignature* signature);
 
   public:
-    static NativeFunctionBinding* create(conststring name, NativeFunction func);
+    static NativeFunctionBinding* create(conststring name, NativeFunction func, const FunctionSignature* signature);
 
     static void destroy(NativeFunctionBinding* bind);
 
     bindingtype btype() const override;
 
     NativeFunction getFunction() const;
+
+    const FunctionSignature* getSignature() const;
 };
 
 class BindingsObject {
@@ -95,11 +102,11 @@ class BindingsObject {
 
     static BindingsObject* create();
 
-    static void create(BindingsObject* obj);
+    static void destroy(BindingsObject* obj);
 
     const std::vector<NativeBinding*>& getBindings() const;
 
-    void addFunctionBinding(conststring name, NativeFunction func);
+    void addFunctionBinding(conststring name, const FunctionSignature* signature, NativeFunction func);
 };
 
 #endif //QUICKSCRIPT_NATIVEINTERFACE_H
