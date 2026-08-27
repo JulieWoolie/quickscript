@@ -11,8 +11,6 @@
 
 #define COMMENT_CHAR '/'
 #define STAR_CHAR '*'
-#define LF '\n'
-#define CR '\r'
 
 class Lexer {
   private:

@@ -2,6 +2,7 @@
 
 #include <utility>
 #include "keyw_lookup.h"
+#include "../strings/strings.h"
 
 Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table, CompilerErrors* errors) {
   m_input = input;
@@ -136,13 +137,6 @@ int8 Lexer::getchar(const int32 readIdx, utf32char* out) const {
   return decodeUtf8(buf, out, m_input.length() - readIdx);
 }
 
-static bool isWhitespace(const int8 ch) {
-  return ch == ' '
-      || ch == '\t'
-      || ch == LF
-      || ch == CR;
-}
-
 void Lexer::skipEmptyContent() {
   while (true) {
     if (currentChar == EOF) {
@@ -188,22 +182,6 @@ void Lexer::skipBlockComment() {
 
     next();
   }
-}
-
-static bool isNumeric(const utf32char ch) {
-  return ch >= '0' && ch <= '9';
-}
-
-static bool isIdentifierStart(const utf32char ch) {
-  return (ch >= 'a' && ch <= 'z')
-      || (ch >= 'A' && ch <= 'Z')
-      || ch == '_'
-      || ch == '$';
-}
-
-static bool isIdentifierPart(const utf32char ch) {
-  return isIdentifierStart(ch)
-      || isNumeric(ch);
 }
 
 Token * Lexer::readToken() {
@@ -565,12 +543,6 @@ Token* Lexer::readIdOrKeyword() {
   }
 
   return valueToken(TT_ID);
-}
-
-static bool isHexChar(const utf32char ch) {
-  return (ch >= '0' && ch <= '9')
-      || (ch >= 'a' && ch <= 'f')
-      || (ch >= 'A' && ch <= 'F');
 }
 
 #define TEN 10u
