@@ -295,7 +295,7 @@ static void compileIdentifier(
 
   if (sym->stype() == SYM_LocalVar) {
     LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(sym);
-    bool isMain = scope->getType() == SCOPE_MAIN;
+    const bool isMain = scope->getType() == SCOPE_MAIN;
 
     if (out != NO_REGISTER) {
       if (isMain) {
