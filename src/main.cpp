@@ -35,6 +35,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out)
   CompilerErrors errors = CompilerErrors(&file_contents, fname.c_str());
 
   Lexer l = Lexer(file_contents, &tokens, &table, &errors);
+  l.next();
   l.lex();
 
   NoFreeAllocator pool = NoFreeAllocator();

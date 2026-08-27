@@ -544,6 +544,7 @@ bool runTestCase(
   bool stepFailed = false;
 
   try {
+    l.next();
     l.lex();
     parseTestCase(tcase, tlist, table);
   } catch (std::runtime_error& err) {
