@@ -252,6 +252,23 @@ static void compileFuncLookup(CompilerContext& ctx, LocalFuncSymbol* lfs, const 
   writer.endInstr();
 }
 
+static void compileNativeFuncLookup(
+  CompilerContext& ctx,
+  NativeFunctionSymbol* sym,
+  const RegisterId out
+) {
+  BytecodeWriter& writer = ctx.getWriter();
+
+  const typeindex idx = ctx.getSemantics().getTypes().findIndex(sym->getScriptType());
+  const StringPoolAddress addr = ctx.getStringPool().emplace(sym->getName());
+
+  writer.startInstr(OP_NFUNCLOOKUP);
+  writer.appendU32(idx);
+  writer.appendU64(addr);
+  writer.appendU8(out);
+  writer.endInstr();
+}
+
 static void compileIdentifier(
   Identifier* id,
   const RegisterIdOpt out,
@@ -267,6 +284,12 @@ static void compileIdentifier(
   if (sym->stype() == SYM_LocalFunc) {
     LocalFuncSymbol* lfs = static_cast<LocalFuncSymbol*>(sym);
     compileFuncLookup(ctx, lfs, out);
+    return;
+  }
+
+  if (sym->stype() == SYM_NativeFunc) {
+    NativeFunctionSymbol* nfs = static_cast<NativeFunctionSymbol*>(sym);
+    compileNativeFuncLookup(ctx, nfs, out);
     return;
   }
 
