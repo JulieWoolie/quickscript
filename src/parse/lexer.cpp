@@ -9,12 +9,9 @@ Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table, Co
   m_table = table;
   m_errors = errors;
 
-  idx = -1;
-  line = 0;
+  idx = 0;
+  line = 1;
   col = 0;
-
-  advanceLineTracker();
-  next();
 
   peekedToken = nullptr;
   eofToken = nullptr;
@@ -54,35 +51,43 @@ void Lexer::lex() {
   eof->valueId = EMPTY_STRING;
 }
 
-void Lexer::advanceLineTracker() {
-  line++;
-  col = 0;
+utf32char Lexer::peek(const int32 ahead) const {
+  const uint32 index = idx + ahead;
+  utf32char ch = 0;
+  getchar(index, &ch);
+  return ch;
 }
 
-int8 Lexer::peek(const int32 ahead) {
-  return getchar(idx + 1 + ahead);
-}
-
-int8 Lexer::peek() {
+utf32char Lexer::peek() const {
   return peek(0);
 }
 
-int8 Lexer::next() {
-  int32 ncur = idx + 1;
-
-  if (ncur >= m_input.length()) {
+utf32char Lexer::next() {
+  if (idx >= m_input.length()) {
     currentChar = EOF;
     idx = m_input.length();
     return EOF;
   }
 
-  int8 nch = getchar(ncur);
+  utf32char nch = 0;
+  uint8 advanceBy = getchar(idx, &nch);
+
+  if (advanceBy == 0) {
+    Location l = recordLocation();
+    m_errors->fatal(l, "Invalid unicode codepoint found");
+  }
 
   if (nch == LF || nch == CR) {
-    advanceLineTracker();
+    line++;
+    col = 0;
 
-    if (nch == CR && getchar(ncur + 1) == LF) {
-      ncur++;
+    if (nch == CR) {
+      utf32char next = 0;
+      const uint8 nextLen = getchar(idx + advanceBy, &next);
+
+      if (next == LF) {
+        advanceBy += nextLen;
+      }
     }
 
     nch = LF;
@@ -90,7 +95,7 @@ int8 Lexer::next() {
     col++;
   }
 
-  idx = ncur;
+  idx += advanceBy;
   currentChar = nch;
 
   return currentChar;
@@ -112,7 +117,7 @@ Token* Lexer::nextToken() {
   return readToken();
 }
 
-Location Lexer::recordLocation() {
+Location Lexer::recordLocation() const {
   Location loc;
   loc.index = idx;
   loc.column = col;
@@ -120,14 +125,18 @@ Location Lexer::recordLocation() {
   return loc;
 }
 
-int8 Lexer::getchar(int32 a) {
-  if (a < 0 || a >= m_input.length()) {
+int8 Lexer::getchar(const int32 readIdx, utf32char* out) const {
+  if (readIdx < 0 || readIdx >= m_input.length()) {
     return EOF;
   }
-  return m_input[a];
+
+  const utf8char* buf = reinterpret_cast<const utf8char*>(m_input.c_str());
+  buf = buf + readIdx;
+
+  return decodeUtf8(buf, out, m_input.length() - readIdx);
 }
 
-bool isWhitespace(const int8 ch) {
+static bool isWhitespace(const int8 ch) {
   return ch == ' '
       || ch == '\t'
       || ch == LF
@@ -181,18 +190,18 @@ void Lexer::skipBlockComment() {
   }
 }
 
-bool isNumeric(const int8 ch) {
+static bool isNumeric(const utf32char ch) {
   return ch >= '0' && ch <= '9';
 }
 
-bool isIdentifierStart(const int8 ch) {
+static bool isIdentifierStart(const utf32char ch) {
   return (ch >= 'a' && ch <= 'z')
       || (ch >= 'A' && ch <= 'Z')
       || ch == '_'
       || ch == '$';
 }
 
-bool isIdentifierPart(const int8 ch) {
+static bool isIdentifierPart(const utf32char ch) {
   return isIdentifierStart(ch) || isNumeric(ch);
 }
 
@@ -207,7 +216,7 @@ Token * Lexer::readToken() {
   tokenStart.line = line;
   tokenStart.column = col;
 
-  int8 p = peek();
+  const utf32char p = peek();
 
   if (!ignoreComments) {
     if (currentChar == '#' || (currentChar == COMMENT_CHAR && p == COMMENT_CHAR)) {
@@ -221,121 +230,121 @@ Token * Lexer::readToken() {
   switch (currentChar) {
     case '{':
       next();
-      return maketoken(TT_LCURL);
+      return token(TT_LCURL);
     case '}':
       next();
-      return maketoken(TT_RCURL);
+      return token(TT_RCURL);
 
     case '[':
       next();
-      return maketoken(TT_LSQUARE);
+      return token(TT_LSQUARE);
     case ']':
       next();
-      return maketoken(TT_RSQUARE);
+      return token(TT_RSQUARE);
 
     case '(':
       next();
-      return maketoken(TT_LBRACKET);
+      return token(TT_LBRACKET);
     case ')':
       next();
-      return maketoken(TT_RBRACKET);
+      return token(TT_RBRACKET);
 
     case ':':
       next();
-      return maketoken(TT_COLON);
+      return token(TT_COLON);
     case ';':
       next();
-      return maketoken(TT_SEMICOLON);
+      return token(TT_SEMICOLON);
     case ',':
       next();
-      return maketoken(TT_COMMA);
+      return token(TT_COMMA);
     case '?':
       next();
-      return maketoken(TT_QUESTION);
+      return token(TT_QUESTION);
 
     case '!':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_NEQ);
+        return token(TT_NEQ);
       }
-      return maketoken(TT_INVERT);
+      return token(TT_INVERT);
     case '~':
       next();
-      return maketoken(TT_BIT_INVERT);
+      return token(TT_BIT_INVERT);
     case '^':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_XOR_ASSIGN);
+        return token(TT_XOR_ASSIGN);
       }
-      return maketoken(TT_XOR);
+      return token(TT_XOR);
     case '%':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_PERCENT_ASSIGN);
+        return token(TT_PERCENT_ASSIGN);
       }
-      return maketoken(TT_PERCENT);
+      return token(TT_PERCENT);
     case '=':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_EQ);
+        return token(TT_EQ);
       }
-      return maketoken(TT_ASSIGN);
+      return token(TT_ASSIGN);
     case '&':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_BIT_AND_ASSIGN);
+        return token(TT_BIT_AND_ASSIGN);
       }
       if (currentChar == '&') {
         next();
         if (currentChar == '=') {
           next();
-          return maketoken(TT_LOGICAL_AND_ASSIGN);
+          return token(TT_LOGICAL_AND_ASSIGN);
         }
-        return maketoken(TT_LOGICAL_AND);
+        return token(TT_LOGICAL_AND);
       }
-      return maketoken(TT_BIT_AND);
+      return token(TT_BIT_AND);
     case '|':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_WALL_ASSIGN);
+        return token(TT_WALL_ASSIGN);
       }
       if (currentChar == '|') {
         next();
         if (currentChar == '=') {
           next();
-          return maketoken(TT_DWALL_ASSIGN);
+          return token(TT_DWALL_ASSIGN);
         }
-        return maketoken(TT_DWALL);
+        return token(TT_DWALL);
       }
-      return maketoken(TT_WALL);
+      return token(TT_WALL);
     case '*':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_STAR_ASSIGN);
+        return token(TT_STAR_ASSIGN);
       }
       if (currentChar == '*') {
         next();
         if (currentChar == '=') {
           next();
-          return maketoken(TT_POW_ASSIGN);
+          return token(TT_POW_ASSIGN);
         }
-        return maketoken(TT_POW);
+        return token(TT_POW);
       }
-      return maketoken(TT_STAR);
+      return token(TT_STAR);
     case '/':
       next();
       if (currentChar == '=') {
         next();
-        return maketoken(TT_SLASH_ASSIGN);
+        return token(TT_SLASH_ASSIGN);
       }
-      return maketoken(TT_SLASH);
+      return token(TT_SLASH);
 
     // Comparison
     case '<':
@@ -344,66 +353,66 @@ Token * Lexer::readToken() {
         next();
         if (currentChar == '=') {
           next();
-          return maketoken(TT_SHL_ASSIGN);
+          return token(TT_SHL_ASSIGN);
         }
-        return maketoken(TT_SHL);
+        return token(TT_SHL);
       }
       if (currentChar == '>') {
         next();
-        return maketoken(TT_LAMBDA_ARROW);
+        return token(TT_LAMBDA_ARROW);
       }
       if (currentChar == '=') {
         next();
-        return maketoken(TT_LTE);
+        return token(TT_LTE);
       }
-      return maketoken(TT_LT);
+      return token(TT_LT);
     case '>':
       next();
       if (currentChar == '>') {
         next();
         if (currentChar == '=') {
           next();
-          return maketoken(TT_SHR_ASSIGN);
+          return token(TT_SHR_ASSIGN);
         }
         if (currentChar == '>') {
           next();
           if (currentChar == '=') {
             next();
-            return maketoken(TT_USHR_ASSIGN);
+            return token(TT_USHR_ASSIGN);
           }
-          return maketoken(TT_USHR);
+          return token(TT_USHR);
         }
-        return maketoken(TT_SHR);
+        return token(TT_SHR);
       }
       if (currentChar == '=') {
         next();
-        return maketoken(TT_GTE);
+        return token(TT_GTE);
       }
-      return maketoken(TT_GT);
+      return token(TT_GT);
 
     // inc/dec operators
     case '-':
       next();
       if (currentChar == '-') {
         next();
-        return maketoken(TT_DEC);
+        return token(TT_DEC);
       }
       if (currentChar == '=') {
         next();
-        return maketoken(TT_MINUS_ASSIGN);
+        return token(TT_MINUS_ASSIGN);
       }
-      return maketoken(TT_MINUS);
+      return token(TT_MINUS);
     case '+':
       next();
       if (currentChar == '+') {
         next();
-        return maketoken(TT_INC);
+        return token(TT_INC);
       }
       if (currentChar == '=') {
         next();
-        return maketoken(TT_PLUS_ASSIGN);
+        return token(TT_PLUS_ASSIGN);
       }
-      return maketoken(TT_PLUS);
+      return token(TT_PLUS);
 
     case '\'':
     case '"':
@@ -425,10 +434,10 @@ Token * Lexer::readToken() {
           next();
           next();
           next();
-          return maketoken(TT_THREE_DOTS);
+          return token(TT_THREE_DOTS);
         }
         next();
-        return maketoken(TT_DOT);
+        return token(TT_DOT);
       }
     case '1':
     case '2':
@@ -451,7 +460,7 @@ Token * Lexer::readToken() {
       }
 
       next();
-      return maketoken(TT_UNKNOWN);
+      return token(TT_UNKNOWN);
 
   }
 }
@@ -475,7 +484,7 @@ Token* Lexer::readBlockComment() {
     next();
   }
 
-  return maketokenv(TT_BCOMMENT);
+  return valueToken(TT_BCOMMENT);
 }
 
 Token* Lexer::readLineComment() {
@@ -501,7 +510,7 @@ Token* Lexer::readLineComment() {
     next();
   }
 
-  return maketokenv(TT_LCOMMENT);
+  return valueToken(TT_LCOMMENT);
 }
 
 Token* Lexer::eoftoken() {
@@ -514,7 +523,7 @@ Token* Lexer::eoftoken() {
   return eofToken;
 }
 
-Token* Lexer::maketoken(tokentype ttype) {
+Token* Lexer::token(const tokentype ttype) const {
   Token* t = m_tokens->newToken();
 
   t->start = tokenStart;
@@ -527,9 +536,9 @@ Token* Lexer::maketoken(tokentype ttype) {
   return t;
 }
 
-Token* Lexer::maketokenv(const tokentype ttype) {
-  Token* t = maketoken(ttype);
-  t->valueId = m_table->allocate(readbuf, readbufLen);
+Token* Lexer::valueToken(const tokentype ttype) const {
+  Token* t = token(ttype);
+  t->valueId = m_table->allocate(reinterpret_cast<conststring>(readbuf), readbufLen);
   return t;
 }
 
@@ -548,24 +557,24 @@ Token* Lexer::readIdOrKeyword() {
     m_errors->fatal(tokenStart, "Invalid Identifier/keyword");
   }
 
-  tokentype keyw = tokenTypeFromString(readbuf, readbufLen);
+  const tokentype keyword = tokenTypeFromString(reinterpret_cast<conststring>(readbuf), readbufLen);
 
-  if (keyw != TT_UNKNOWN) {
-    return maketoken(keyw);
+  if (keyword != TT_UNKNOWN) {
+    return token(keyword);
   }
 
-  return maketokenv(TT_ID);
+  return valueToken(TT_ID);
 }
 
-bool isHexChar(int8 ch) {
+static bool isHexChar(const utf32char ch) {
   return (ch >= '0' && ch <= '9')
       || (ch >= 'a' && ch <= 'f')
       || (ch >= 'A' && ch <= 'F');
 }
 
-#define TEN ((uint8) 10)
+#define TEN 10u
 
-uint8 charHexValue(const int8 ch) {
+static uint32 charHexValue(const utf8char ch) {
   if (ch >= '0' && ch <= '9') {
     return ch - '0';
   }
@@ -575,52 +584,43 @@ uint8 charHexValue(const int8 ch) {
   return TEN + (ch - 'A');
 }
 
-uint16 hexValue(const int8* buf) {
-  return (charHexValue(buf[0]) << 12)
-       | (charHexValue(buf[1]) << 8)
-       | (charHexValue(buf[2]) << 4)
-       | charHexValue(buf[3]);
-}
-
-uint32 utf8Encode(uint16 codepoint, int8 *out) {
-  if (codepoint <= 0x7F) {
-    out[0] = static_cast<int8>(codepoint);
-    return 1;
+static utf32char hexValue(const utf8char* buf, const int32 len) {
+  switch (len) {
+    case 2:
+      return (charHexValue(buf[0]) << 4)
+           |  charHexValue(buf[2]);
+    case 4:
+      return (charHexValue(buf[0]) << 12)
+           | (charHexValue(buf[1]) << 8)
+           | (charHexValue(buf[2]) << 4)
+           |  charHexValue(buf[3]);
+    default:
+      return (charHexValue(buf[0]) << 20)
+           | (charHexValue(buf[1]) << 16)
+           | (charHexValue(buf[2]) << 12)
+           | (charHexValue(buf[3]) << 8)
+           | (charHexValue(buf[4]) << 4)
+           |  charHexValue(buf[5]);
   }
-  if (codepoint <= 0x7FF) {
-    out[0] = 0xC0 | (codepoint >> 6);
-    out[1] = 0x80 | (codepoint & 0x3F);
-    return 2;
-  }
-
-  out[0] = 0xE0 | (codepoint >> 12);
-  out[1] = 0x80 | ((codepoint >> 6) & 0x3F);
-  out[2] = 0x80 | (codepoint & 0x3F);
-  return 3;
 }
 
 void Lexer::readHexEscape() {
   int32 len = 0;
-  int8 chars[4];
+  utf8char chars[6];
 
   Location location = recordLocation();
 
-  while (isHexChar(currentChar) && len < 4) {
+  while (isHexChar(currentChar) && len < 6) {
     chars[len++] = currentChar;
     next();
   }
 
-  if (len != 4) {
+  if (len % 2 != 0) {
     m_errors->fatal(location, "Invalid unicode escape");
   }
 
-  uint16 hexval = hexValue(chars);
-
-  ensureReadBufWriteable(3);
-  uint32 written = utf8Encode(hexval, readbuf + readbufLen);
-
-  readbufLen += written;
-  readbuf[readbufLen] = '\0';
+  const utf32char codepoint = hexValue(chars, len);
+  appendToReadBuf(codepoint);
 }
 
 void Lexer::clearReadBuf() {
@@ -628,37 +628,39 @@ void Lexer::clearReadBuf() {
 }
 
 void Lexer::appendToReadBuf() {
-  ensureReadBufWriteable(1);
-  readbuf[readbufLen++] = currentChar;
+  appendToReadBuf(currentChar);
+}
+
+void Lexer::appendToReadBuf(const utf32char ch) {
+  const uint8 len = getUtf8ByteLength(ch);
+  
+  ensureReadBufWriteable(len);
+  encodeToUtf8(ch, readbuf + readbufLen);
+  
+  readbufLen += len;
   readbuf[readbufLen] = '\0';
 }
 
-void Lexer::appendToReadBuf(int8 ch) {
-  ensureReadBufWriteable(1);
-  readbuf[readbufLen++] = ch;
-  readbuf[readbufLen] = '\0';
-}
+void Lexer::ensureReadBufWriteable(const uint32 characters) {
+  const uint32 newLen = readbufLen + characters + 1;
 
-void Lexer::ensureReadBufWriteable(uint32 characters) {
-  uint32 nlen = readbufLen + characters + 1;
-
-  if (nlen <= readbufCap) {
+  if (newLen <= readbufCap) {
     return;
   }
 
-  uint32 ncap = readbufCap + 128;
-  int8* nbuf = static_cast<int8*>(realloc(readbuf, sizeof(int8) * ncap));
+  const uint32 newCap = readbufCap + 128;
+  utf8char* newBuffer = static_cast<utf8char*>(realloc(readbuf, sizeof(utf8char) * newCap));
 
-  if (!nbuf) {
+  if (!newBuffer) {
     throw std::runtime_error("Failed to allocate bigger readbuf");
   }
 
-  readbuf = nbuf;
-  readbufCap = ncap;
+  readbuf = newBuffer;
+  readbufCap = newCap;
 }
 
 Token* Lexer::readQuotedString() {
-  int8 quote = currentChar;
+  const utf32char quote = currentChar;
   next();
 
   bool escaped = false;
@@ -702,7 +704,7 @@ Token* Lexer::readQuotedString() {
     }
 
     if (escaped) {
-      int8 ch = currentChar;
+      const utf32char ch = currentChar;
       next();
       escaped = false;
 
@@ -752,7 +754,7 @@ Token* Lexer::readQuotedString() {
     }
   }
 
-  return maketokenv(ttype);
+  return valueToken(ttype);
 }
 
 Token* Lexer::readNumberLiteral() {
@@ -780,7 +782,7 @@ Token* Lexer::readNumberLiteral() {
   }
 
   if (currentChar == 'e' || currentChar == 'E') {
-    int8 n = peek();
+    utf32char n = peek();
     if (n == '+' || n == '-') {
       n = peek(1);
     }
@@ -807,7 +809,7 @@ Token* Lexer::readNumberLiteral() {
     m_errors->fatal(tokenStart, "Invalid number");
   }
 
-  return maketokenv(ttype);
+  return valueToken(ttype);
 }
 
 #define SPECIAL_NUMBER_READER_METHOD(name, testMethod, errormsg, tt) Token* Lexer::name() { \
@@ -821,14 +823,14 @@ Token* Lexer::readNumberLiteral() {
   if (readbufLen == 0) {\
     m_errors->fatal(tokenStart, errormsg);\
   }\
-  return maketokenv(tt);\
+  return valueToken(tt);\
   }
 
-bool isOctoChar(int8 ch) {
+static bool isOctoChar(const int8 ch) {
   return ch >= '0' && ch <= '7';
 }
 
-bool isBinaryChar(int8 ch) {
+static bool isBinaryChar(const int8 ch) {
   return ch == '0' || ch == '1';
 }
 

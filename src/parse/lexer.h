@@ -7,6 +7,7 @@
 #include "../stringtable.h"
 #include "token.h"
 #include "../errors.h"
+#include "../strings/utf8.h"
 
 #define COMMENT_CHAR '/'
 #define STAR_CHAR '*'
@@ -19,7 +20,7 @@ class Lexer {
     uint32 line = 0;
     uint32 col = 0;
 
-    int8 currentChar = 0;
+    utf32char currentChar = 0;
 
     std::string m_input;
     TokenList* m_tokens;
@@ -32,7 +33,7 @@ class Lexer {
 
     Location tokenStart;
 
-    int8* readbuf = nullptr;
+    utf8char* readbuf = nullptr;
     uint32 readbufCap = 0;
     uint32 readbufLen = 0;
 
@@ -46,20 +47,18 @@ class Lexer {
 
     void lex();
 
-    int8 peek(int32 ahead);
-    int8 peek();
+    utf32char peek(int32 ahead) const;
+    utf32char peek() const;
 
-    int8 next();
+    utf32char next();
 
     Token* peekToken();
     Token* nextToken();
 
-    Location recordLocation();
+    Location recordLocation() const;
 
   private:
-    int8 getchar(int32 idx);
-
-    void advanceLineTracker();
+    int8 getchar(int32 readIdx, utf32char* out) const;
 
     void skipEmptyContent();
     void skipLineComment();
@@ -72,8 +71,8 @@ class Lexer {
 
     Token* eoftoken();
 
-    Token* maketoken(tokentype ttype);
-    Token* maketokenv(tokentype ttype);
+    Token* token(tokentype ttype) const;
+    Token* valueToken(tokentype ttype) const;
 
     Token* readIdOrKeyword();
     Token* readQuotedString();
@@ -86,7 +85,7 @@ class Lexer {
     void readHexEscape();
 
     void clearReadBuf();
-    void appendToReadBuf(int8 ch);
+    void appendToReadBuf(utf32char ch);
     void appendToReadBuf();
     void ensureReadBufWriteable(uint32 characters);
 };
