@@ -21,6 +21,8 @@ class FunctionSignature: public ScriptType {
 
     static FunctionSignature* create(ScriptType* retType, bool varargs, uint32 pCount, ScriptType** pTypes);
 
+    static FunctionSignature* copy(const FunctionSignature* sign);
+
     static void composeName(std::string& out, ScriptType* retType, uint32 pCount, ScriptType** pTypes);
 
     static void free(FunctionSignature* type);

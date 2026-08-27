@@ -64,6 +64,10 @@ FunctionSignature* FunctionSignature::create(
   return new (sign) FunctionSignature(retType, varargs, pCount, arrStart);
 }
 
+FunctionSignature* FunctionSignature::copy(const FunctionSignature* sign) {
+  return create(sign->m_returnType, sign->m_varargs, sign->m_paramCount, sign->m_paramTypes);
+}
+
 void FunctionSignature::free(FunctionSignature* type) {
   std::free((void*) type);
 }
