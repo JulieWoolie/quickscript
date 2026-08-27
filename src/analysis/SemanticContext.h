@@ -4,6 +4,7 @@
 #include "../allocator.h"
 #include "../compiler_opts.h"
 #include "../errors.h"
+#include "../nativeinterface.h"
 #include "../stringtable.h"
 #include "../parse/syntaxtree.h"
 #include "../types/TypeTable.h"
@@ -27,6 +28,7 @@ class SemanticContext {
   CompilerErrors& m_errors;
   NoFreeAllocator& m_allocator;
   const CompilationOptions& m_options;
+  const BindingsObject* m_bindings;
 
   std::vector<ScriptType*> m_expectedTypes;
   std::vector<Statement*> m_statementStack;
@@ -64,7 +66,8 @@ class SemanticContext {
       StringTable& strings,
       CompilerErrors& errors,
       NoFreeAllocator& allocator,
-      const CompilationOptions& options
+      const CompilationOptions& options,
+      const BindingsObject* bindings
     );
 
     void pushLocalFunction(LocalFunction* func);

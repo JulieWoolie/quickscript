@@ -39,13 +39,15 @@ SemanticContext::SemanticContext(
   StringTable& strings,
   CompilerErrors& errors,
   NoFreeAllocator& allocator,
-  const CompilationOptions& options
+  const CompilationOptions& options,
+  const BindingsObject* bindings
 )
   : m_types(types),
     m_strings(strings),
     m_errors(errors),
     m_allocator(allocator),
-    m_options(options)
+    m_options(options),
+    m_bindings(bindings)
 {
 
 }
