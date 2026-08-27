@@ -185,6 +185,10 @@ const CompilationOptions& SemanticContext::getOptions() const {
   return m_options;
 }
 
+const BindingsObject* SemanticContext::getBindings() const {
+  return m_bindings;
+}
+
 std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolLookup() {
   return m_symbolLookup;
 }

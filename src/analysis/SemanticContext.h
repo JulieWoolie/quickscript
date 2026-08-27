@@ -120,6 +120,8 @@ class SemanticContext {
 
     const CompilationOptions& getOptions() const;
 
+    const BindingsObject* getBindings() const;
+
     std::unordered_map<Node*, Symbol*>& getSymbolLookup();
 
     std::unordered_map<Symbol*, Scope*>& getScopeLookup();
