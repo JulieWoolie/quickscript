@@ -1,4 +1,4 @@
-import {FILE_HEADER, Instruction, InstructionParam, OpCodeGenResult, writeToFile} from "./common";
+import {FILE_HEADER, Instruction, InstructionParam, OpCodeGenResult, writeToFile} from "../common";
 
 function getSignatureString(params: InstructionParam[]): string {
   let sig = ""

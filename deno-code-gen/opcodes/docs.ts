@@ -4,7 +4,7 @@ import {
   InstructionParam,
   OpCodeGenResult,
   writeToFile
-} from "./common";
+} from "../common";
 
 interface Table {
   caption?: string

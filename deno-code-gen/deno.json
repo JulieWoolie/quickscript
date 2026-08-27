@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "run": "deno run --sloppy-imports --allow-all main.ts"
+  },
+  "imports": {}
+}

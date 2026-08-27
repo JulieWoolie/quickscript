@@ -5,7 +5,7 @@ import {
   InstructionParam,
   NUMBER_TYPES,
   OpCodeGenResult, UNARY_ARGS
-} from "./common";
+} from "../common";
 
 interface BaseMathOp {
   name: string

@@ -1,5 +1,4 @@
-cd deno-scripts
-./run.ps1
+deno task --cwd deno-code-gen run
 
 cd ..
 cd gperf

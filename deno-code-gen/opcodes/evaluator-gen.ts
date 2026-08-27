@@ -1,4 +1,4 @@
-import {FILE_HEADER, Instruction, NUMBER_TYPES, OpCodeGenResult, writeToFile} from "./common";
+import {FILE_HEADER, Instruction, NUMBER_TYPES, OpCodeGenResult, writeToFile} from "../common";
 
 const PREFIX = '// region Generated Instructions'
 const SUFFIX = '// endregion Generated Instructions'

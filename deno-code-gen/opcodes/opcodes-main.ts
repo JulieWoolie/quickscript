@@ -2,15 +2,13 @@ import {
   FILE_HEADER,
   Instruction,
   INSTRUCTION_LENGTH,
-  InstructionParam,
   NUMBER_TYPES, OpCodeGenResult,
   writeToFile
-} from "./common";
+} from "../common";
 import {generateOpCodes} from "./opcode-gen";
 import {generateEvaluatorSwitchStatement} from "./evaluator-gen";
 import {generateDocs} from "./docs";
 import {generatePrinterFunction} from "./printer-gen";
-import {generateStdLibDeclFile} from "./stdlib-gen";
 
 async function createOpCodesHeader(res: OpCodeGenResult): Promise<void> {
   const opcodes = res.codes
@@ -185,7 +183,7 @@ async function writeOpCodeTxt(codes: Instruction[]): Promise<void> {
   await writeToFile(out, "./opcodes.txt")
 }
 
-async function main(): Promise<void> {
+export async function opcodeMain(): Promise<void> {
   const res = generateOpCodes()
   const codes = res.codes
 
@@ -198,9 +196,4 @@ async function main(): Promise<void> {
   await generateEvaluatorSwitchStatement(res)
   await generatePrinterFunction(res)
   await writeOpCodeTxt(codes)
-
-  await generateStdLibDeclFile()
 }
-
-// @ts-ignore
-await main()

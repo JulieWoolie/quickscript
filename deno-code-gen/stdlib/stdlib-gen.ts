@@ -1,4 +1,4 @@
-import {NUMBER_TYPES, writeToFile} from "./common";
+import {NUMBER_TYPES, writeToFile} from "../common";
 
 interface FuncParam {
   tn: string,
@@ -120,6 +120,31 @@ export async function generateStdLibDeclFile(): Promise<void> {
 
   f(3, "uint64 currentTimeMillis()", [
     "Get the current time as a UNIX timestamp"
+  ])
+
+  f(3.01, "string getenv(string name)", [
+      "Get the value of an environment variable",
+      "",
+      "If the variable was not found, an empty string is returned"
+  ])
+
+  f(3.01, "bool setenv(string name, string value)", [
+      "Set the value of an environment variable",
+      "",
+      "If the variable is already defined this function will return false",
+      "",
+      "The environment variable will only be changed for the current process and any processes",
+      "spawned by the current process"
+  ])
+  f(3.02, "bool setenv(string name, string value, bool overwrite)", [
+      "Set the value of an environment variable",
+      "",
+      "If the variable is defined and overwrite is set to true, then the value will be overridden",
+      "and this function will return true, otherwise, if overwrite is set to false, then this will",
+      "return false",
+      "",
+      "The environment variable will only be changed for the current process and any processes",
+      "spawned by the current process"
   ])
 
   f(3.1, "float64 NaN", ["Not-A-Number"])
