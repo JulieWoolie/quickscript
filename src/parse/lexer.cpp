@@ -202,7 +202,8 @@ static bool isIdentifierStart(const utf32char ch) {
 }
 
 static bool isIdentifierPart(const utf32char ch) {
-  return isIdentifierStart(ch) || isNumeric(ch);
+  return isIdentifierStart(ch)
+      || isNumeric(ch);
 }
 
 Token * Lexer::readToken() {
@@ -585,23 +586,11 @@ static uint32 charHexValue(const utf8char ch) {
 }
 
 static utf32char hexValue(const utf8char* buf, const int32 len) {
-  switch (len) {
-    case 2:
-      return (charHexValue(buf[0]) << 4)
-           |  charHexValue(buf[2]);
-    case 4:
-      return (charHexValue(buf[0]) << 12)
-           | (charHexValue(buf[1]) << 8)
-           | (charHexValue(buf[2]) << 4)
-           |  charHexValue(buf[3]);
-    default:
-      return (charHexValue(buf[0]) << 20)
-           | (charHexValue(buf[1]) << 16)
-           | (charHexValue(buf[2]) << 12)
-           | (charHexValue(buf[3]) << 8)
-           | (charHexValue(buf[4]) << 4)
-           |  charHexValue(buf[5]);
+  utf32char res = 0;
+  for (uint32 i = 0; i < len; i++) {
+    res |= charHexValue(buf[i]) << ((5 - i) * 4);
   }
+  return res;
 }
 
 void Lexer::readHexEscape() {
@@ -615,11 +604,11 @@ void Lexer::readHexEscape() {
     next();
   }
 
-  if (len % 2 != 0) {
-    m_errors->fatal(location, "Invalid unicode escape");
+  const utf32char codepoint = hexValue(chars, len);
+  if (codepoint > MAX_4BYTE) {
+    m_errors->fatal(location, "Invalid unicode escape sequence");
   }
 
-  const utf32char codepoint = hexValue(chars, len);
   appendToReadBuf(codepoint);
 }
 
@@ -665,7 +654,6 @@ Token* Lexer::readQuotedString() {
 
   bool escaped = false;
   const int32 start = idx;
-  int32 chlen = 0;
 
   clearReadBuf();
 
@@ -682,7 +670,6 @@ Token* Lexer::readQuotedString() {
         escaped = false;
         appendToReadBuf();
         next();
-        chlen++;
         continue;
       }
 
@@ -693,7 +680,6 @@ Token* Lexer::readQuotedString() {
       next();
 
       if (escaped) {
-        chlen++;
         escaped = false;
         appendToReadBuf('\\');
       } else {
@@ -730,11 +716,9 @@ Token* Lexer::readQuotedString() {
           m_errors->fatal(l, "Invalid escape sequence");
       }
 
-      chlen++;
       continue;
     }
 
-    chlen++;
     appendToReadBuf();
     next();
   }
@@ -749,7 +733,7 @@ Token* Lexer::readQuotedString() {
 
   if (quote == '\'') {
     ttype = TT_CHAR_LITERAL;
-    if (chlen != 1) {
+    if (readbufLen != 1) {
       m_errors->fatal(tokenStart, "Char literal too long");
     }
   }
