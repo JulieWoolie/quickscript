@@ -89,4 +89,8 @@ add_executable(quickscript src/main.cpp
         src/interpreter/script_error.h
         src/interpreter/script_error.cc
         src/strings/utf8.h
-        src/strings/utf8.cc)
+        src/strings/utf8.cc
+        src/strings/stringreader.h
+        src/strings/stringreader.cc
+        src/strings/strings.h
+        src/strings/strings.cc)
