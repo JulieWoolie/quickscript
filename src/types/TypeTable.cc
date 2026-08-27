@@ -144,6 +144,20 @@ FunctionSignature* TypeTable::getSignature(
   return result;
 }
 
+FunctionSignature* TypeTable::copySignatureIntoTable(const FunctionSignature* sign) {
+  const std::string name = std::string(sign->getTypeName());
+  ScriptType* existing = lookupByName(name);
+
+  if (existing) {
+    return static_cast<FunctionSignature*>(existing);
+  }
+
+  FunctionSignature* copied = FunctionSignature::copy(sign);
+  emplaceType(copied);
+
+  return copied;
+}
+
 ScriptType* TypeTable::getArrayType(ScriptType* componentType) {
   std::string compName = componentType->getTypeName();
   compName.append("[]");

@@ -45,6 +45,8 @@ class TypeTable {
 
     FunctionSignature* getSignature(ScriptType* returnType, bool variadic, uint32 pCount, ScriptType** paramTypes);
 
+    FunctionSignature* copySignatureIntoTable(const FunctionSignature* sign);
+
     ScriptType* getArrayType(ScriptType* componentType);
 
     typeindex emplaceType(ScriptType* type);
