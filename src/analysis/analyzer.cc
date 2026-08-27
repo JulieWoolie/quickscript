@@ -40,13 +40,13 @@ static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Ident
       }
 
       const symboltype symType = symbol->stype();
-      if (symType != SYM_LocalVar && symType != SYM_LocalFunc) {
+      if (symType != SYM_LocalVar && symType != SYM_LocalFunc && symType != SYM_NativeFunc) {
         continue;
       }
 
-      ScriptType* scriptType = symbol->getScriptType();
+      ScriptType* symbolType = symbol->getScriptType();
       if (!expectedType || expectedKind != TK_FUNC) {
-        if (scriptType->kind() == TK_FUNC) {
+        if (symbolType->kind() == TK_FUNC) {
           continue;
         }
 
@@ -54,12 +54,12 @@ static Symbol* resolveReferencedSymbol(SemanticContext& ctx, Scope* start, Ident
         return symbol;
       }
 
-      if (scriptType->kind() != TK_FUNC) {
+      if (symbolType->kind() != TK_FUNC) {
         continue;
       }
 
       FunctionSignature* callingSign = static_cast<FunctionSignature*>(expectedType);
-      FunctionSignature* funcSign = static_cast<FunctionSignature*>(scriptType);
+      FunctionSignature* funcSign = static_cast<FunctionSignature*>(symbolType);
 
       const int32 score = FunctionSignature::callSignatureMatches(callingSign, funcSign);
       if (score == SIGN_DOES_NOT_MATCH) {
@@ -1829,11 +1829,35 @@ static void checkForInvalidDependencies(SemanticContext& ctx) {
   }
 }
 
+static void addNativeSymbols(SemanticContext& ctx, Scope* scope) {
+  const std::vector<NativeBinding*>& bindings = ctx.getBindings()->getBindings();
+
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  StringTable& strings = ctx.getStrings();
+  TypeTable& types = ctx.getTypes();
+
+  for (NativeBinding* bind : bindings) {
+    if (bind->btype() != BINDTYPE_FUNCTION) {
+      continue;
+    }
+
+    NativeFunctionBinding* nfunc = static_cast<NativeFunctionBinding*>(bind);
+    stringid id = strings.allocate(nfunc->getName());
+
+    FunctionSignature* sign = types.copySignatureIntoTable(nfunc->getSignature());
+    NativeFunctionSymbol* sym = alloc.make<NativeFunctionSymbol>(id, sign);
+
+    scope->pushSymbol(sym);
+  }
+}
+
 void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
   ctx.setGlobalScope(scope);
   ctx.getAstScopeLookup()[v] = scope;
+
+  addNativeSymbols(ctx, scope);
 
   scope->setExpectedReturnType(nullptr);
 
