@@ -6,6 +6,7 @@
 
 #include "args.h"
 #include "common.h"
+#include "nativeinterface.h"
 #include "parse/token.h"
 
 #define TESTMODE_INVALID 0
@@ -32,8 +33,8 @@ struct TestCase {
 
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table);
 
-bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const ProgramSettings& settings);
+bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, const ProgramSettings& settings, const BindingsObject* bindings);
 
-void runTests(const ProgramSettings& settings);
+void runTests(const ProgramSettings& settings, const BindingsObject* bindings);
 
 #endif //QUICKSCRIPT_TESTER_H

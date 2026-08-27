@@ -518,7 +518,8 @@ static void dumpTestCaseToJson(TestCase& tcase) {
 bool runTestCase(
   TestCase& tcase,
   const std::filesystem::path& filePath,
-  const ProgramSettings& settings
+  const ProgramSettings& settings,
+  const BindingsObject* bindings
 ) {
   std::ifstream instream(filePath);
 
@@ -600,7 +601,7 @@ bool runTestCase(
   TypeTable lookup = TypeTable();
 
   if (result->nodeKind() == AST_ScriptFileStatement) {
-    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tcase.compilerOpts);
+    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tcase.compilerOpts, bindings);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
 
     if (!checkErrors(tcase, errors, result)) {
@@ -672,7 +673,7 @@ bool runTestCase(
   return checkErrors(tcase, errors, result);
 }
 
-void runTests(const ProgramSettings& settings) {
+void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
   const std::filesystem::path dirpath = settings.inputFile;
 
   uint32 total = 0;
@@ -693,7 +694,7 @@ void runTests(const ProgramSettings& settings) {
         testCase.dumpDirectory = dumpDir;
       }
 
-      bool success = runTestCase(testCase, path, settings);
+      bool success = runTestCase(testCase, path, settings, bindings);
 
       total++;
 

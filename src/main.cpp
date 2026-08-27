@@ -17,8 +17,9 @@
 #include "parse/syntaxtree.h"
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
+#include "stdlib/qs_stdlib.h"
 
-static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out) {
+static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out, const BindingsObject* bindings) {
   std::string fname = std::string(settings.inputFile);
   std::ifstream file(fname);
 
@@ -52,7 +53,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out)
 
   TypeTable lookup = TypeTable();
 
-  SemanticContext ctx = SemanticContext(lookup, table, errors, pool, settings.compilationOptions);
+  SemanticContext ctx = SemanticContext(lookup, table, errors, pool, settings.compilationOptions, bindings);
   runSemanticAnalysis(sfs, ctx);
 
   if (settings.printAst & PRINTAST_AFTER_ANALYSIS) {
@@ -131,13 +132,16 @@ int32 main(int32 argc, cstring argv[]) {
     return EXIT_SUCCESS;
   }
 
+  BindingsObject* bindings = BindingsObject::create();
+  addStandardLibrary(bindings);
+
   if (settings.command == CMD_TESTS) {
-    runTests(settings);
+    runTests(settings, bindings);
     return EXIT_SUCCESS;
   }
 
   BytecodeFile* bfile;
-  const bool successfullyCompiled = compileBytecode(settings, &bfile);
+  const bool successfullyCompiled = compileBytecode(settings, &bfile, bindings);
 
   if (!successfullyCompiled) {
     return EXIT_FAILURE;
