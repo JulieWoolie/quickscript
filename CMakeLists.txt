@@ -93,4 +93,6 @@ add_executable(quickscript src/main.cpp
         src/strings/stringreader.h
         src/strings/stringreader.cc
         src/strings/strings.h
-        src/strings/strings.cc)
+        src/strings/strings.cc
+        src/stdlib/qs_stdlib.h
+        src/stdlib/qs_stdlib.cc)
