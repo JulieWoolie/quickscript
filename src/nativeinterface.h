@@ -97,9 +97,9 @@ class NativeFunctionBinding: public NativeBinding {
 class BindingsObject {
   std::vector<NativeBinding*> m_bindings;
 
-  public:
-    BindingsObject();
+  BindingsObject();
 
+  public:
     static BindingsObject* create();
 
     static void destroy(BindingsObject* obj);
