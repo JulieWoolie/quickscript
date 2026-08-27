@@ -32,6 +32,16 @@ ScriptType* Symbol::getScriptType() const {
   return m_type;
 }
 
+NativeFunctionSymbol::NativeFunctionSymbol(const stringid name, FunctionSignature* scriptType)
+  : Symbol(name, scriptType)
+{
+
+}
+
+symboltype NativeFunctionSymbol::stype() const {
+  return SYM_NativeFunc;
+}
+
 LocalFuncSymbol::LocalFuncSymbol(LocalFunction* func)
   : Symbol(func->getName(), func->getSignature()), m_function(func), m_calls(0)
 {

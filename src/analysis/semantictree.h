@@ -23,6 +23,7 @@ typedef uint8 scopetype;
 #define SYM_Property      3
 #define SYM_LocalStruct   4
 #define SYM_NativeProp    5
+#define SYM_NativeFunc    6
 typedef uint8 symboltype;
 
 // Symbol is a native binding
@@ -74,6 +75,13 @@ class Symbol {
     ScriptType* getScriptType() const;
 
     virtual symboltype stype() const = 0;
+};
+
+class NativeFunctionSymbol: public Symbol {
+  public:
+    NativeFunctionSymbol(stringid name, FunctionSignature* scriptType);
+
+    symboltype stype() const override;
 };
 
 class LocalFuncSymbol: public Symbol {
