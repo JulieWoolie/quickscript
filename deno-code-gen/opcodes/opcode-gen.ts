@@ -1,5 +1,5 @@
 import {
-  BINARY_ARGS,
+  BINARY_ARGS, getFittingType,
   Instruction,
   INSTRUCTION_LENGTH,
   InstructionParam,
@@ -48,29 +48,13 @@ export function generateOpCodes(): OpCodeGenResult {
   comparisonOperators()
   stringArrayOperations()
 
-  const potentialSizes = [1, 2, 4]
-  let memSize = 0
-  let baseType = ""
-
-  for (const sz of potentialSizes) {
-    let max = parseInt("FF".repeat(sz), 16)
-
-    if (opcodes.length > max) {
-      continue
-    }
-
-    memSize = sz
-    baseType = `uint${sz * 8}`
-
-    break
-  }
-
-  if (baseType == "") {
+  const fittingType = getFittingType(opcodes.length)
+  if (fittingType == null) {
     throw "Too many OP Codes, no valid number type can represent all op codes"
   }
 
   for (const code of opcodes) {
-    let totalMem = memSize
+    let totalMem = fittingType.bytes
     for (const arg of code.params) {
       totalMem += arg.size
     }
@@ -79,8 +63,8 @@ export function generateOpCodes(): OpCodeGenResult {
 
   return {
     codes: opcodes,
-    baseType: baseType,
-    opcodeSize: memSize
+    baseType: fittingType.type,
+    opcodeSize: fittingType.bytes
   }
 }
 

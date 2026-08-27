@@ -86,3 +86,22 @@ export async function writeToFile(out: string, fname: string): Promise<void> {
   await Deno.writeTextFile(fname, out)
   console.log(`Wrote to file ${fname}`)
 }
+
+export function getFittingType(n: number): {bytes: number, type: string} | null {
+  const potentialSizes = [1, 2, 4, 8]
+
+  for (const sz of potentialSizes) {
+    let max = parseInt("FF".repeat(sz), 16)
+
+    if (n > max) {
+      continue
+    }
+
+    const memSize = sz
+    const baseType = `uint${sz * 8}`
+
+    return {bytes: memSize, type: baseType}
+  }
+
+  return null
+}
