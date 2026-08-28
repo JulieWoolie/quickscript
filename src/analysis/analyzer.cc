@@ -1293,6 +1293,13 @@ static void reportUnused(const SemanticContext& ctx, Scope* scope) {
           break;
         }
 
+        if (lvs->getFlags() & SYMFLAG_FUNC_ARG) {
+          if (reads == 0) {
+            errors.warn("Function argument '%.*s' is unused", PRINTVIEW(name));
+          }
+          break;
+        }
+
         if (writes != 0 && reads == 0) {
           errors.warn("Variable '%.*s' is written to but never read", PRINTVIEW(name));
           break;
@@ -1303,7 +1310,7 @@ static void reportUnused(const SemanticContext& ctx, Scope* scope) {
           break;
         }
 
-        if (writes == 0 && !(sym->getFlags() & SYMFLAG_FUNC_ARG)) {
+        if (writes == 0) {
           errors.info(lvs->getDecl()->location, "Variable can be declared as 'const'");
         }
 
