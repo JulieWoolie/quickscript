@@ -557,31 +557,20 @@ static uint32 charHexValue(const utf8char ch) {
   return TEN + (ch - 'A');
 }
 
-static utf32char hexValue(const utf8char* buf, const int32 len) {
-  utf32char res = 0;
-  for (uint32 i = 0; i < len; i++) {
-    res |= charHexValue(buf[i]) << ((5 - i) * 4);
-  }
-  return res;
-}
-
 void Lexer::readHexEscape() {
-  int32 len = 0;
-  utf8char chars[6];
-
+  utf32char result = 0;
   Location location = recordLocation();
 
-  while (isHexChar(currentChar) && len < 6) {
-    chars[len++] = currentChar;
+  while (isHexChar(currentChar)) {
+    result = (result << 4) | charHexValue(currentChar);
     next();
   }
 
-  const utf32char codepoint = hexValue(chars, len);
-  if (codepoint > MAX_4BYTE) {
+  if (result > MAX_4BYTE) {
     m_errors->fatal(location, "Invalid unicode escape sequence");
   }
 
-  appendToReadBuf(codepoint);
+  appendToReadBuf(result);
 }
 
 void Lexer::clearReadBuf() {
