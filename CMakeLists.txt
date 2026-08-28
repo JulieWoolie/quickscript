@@ -95,4 +95,6 @@ add_executable(quickscript src/main.cpp
         src/strings/strings.h
         src/strings/strings.cc
         src/stdlib/qs_stdlib.h
-        src/stdlib/qs_stdlib.cc)
+        src/stdlib/qs_stdlib.cc
+        src/strings/unicode_binary_props.cc
+        src/strings/unicode_binary_props.h)
