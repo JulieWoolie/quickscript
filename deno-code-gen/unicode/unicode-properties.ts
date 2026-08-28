@@ -49,6 +49,7 @@ async function loadPropsFrom(fileName: string, map: BinaryPropertyValueMap, look
 export async function loadProps(map: BinaryPropertyValueMap, lookup: CodepointPropertyLookup) {
   await loadPropsFrom("PropList.txt", map, lookup)
   await loadPropsFrom("DerivedCoreProperties.txt", map, lookup)
+  await loadPropsFrom("emoji/emoji-data.txt", map, lookup)
 }
 
 function toCodeName(name: string) {

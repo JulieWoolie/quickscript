@@ -7,20 +7,86 @@ import {
 } from "./unicode";
 import {FILE_HEADER, getFittingType, writeToFile} from "../common";
 
+function titlecase(str: string): string {
+  return `${str.substring(0, 1).toUpperCase()}${str.substring(1)}`
+}
+
 function getFuncName(cn: string): string {
   const l = cn.toLowerCase()
 
   if (l.startsWith("changes")) {
-    return cn
+    return titlecase(cn)
   }
   if (l.startsWith("expands")) {
-    return cn
+    return titlecase(cn)
   }
 
-  return `is${cn.substring(0, 1).toUpperCase()}${cn.substring(1)}`
+  return `Is${titlecase(cn)}`
 }
 
-export async function generateBinaryPropertyLookups(ctx: CodepointContext, pages: BinaryPropertyPages) {
+interface CodepointRange {
+  min: number,
+  max: number
+}
+
+interface OptimizedNonPagedValues {
+  codepoints: number[]
+  ranges: CodepointRange[]
+}
+
+function isNext(a: number, b: number): boolean {
+  return b == (a + 1)
+}
+
+function optimizeNonPagedProperty(set: Set<number>): OptimizedNonPagedValues {
+  let result: OptimizedNonPagedValues = {
+    codepoints: [],
+    ranges: []
+  }
+
+  const nums = [...set]
+  nums.sort((a, b) => a - b)
+
+  let i = 0
+  while (i < nums.length) {
+    const c = nums[i++]
+
+    if (i < nums.length && isNext(c, nums[i])) {
+      let range: CodepointRange = {
+        min: c,
+        max: c
+      }
+
+      const start = i
+
+      while (i < nums.length && isNext(range.max, nums[i])) {
+        range.max = nums[i++]
+      }
+
+      if (range.max - range.min >= 3) {
+        result.ranges.push(range)
+        continue
+      }
+
+      i = start
+    }
+
+    result.codepoints.push(c)
+  }
+
+  return result
+}
+
+function char(num: number): string {
+  if (num >= 0x20 && num <= 0x7f) {
+    return `'${String.fromCodePoint(num)}'`
+  }
+  return `0x${num.toString(16)}`
+}
+
+type StringMap = {[name: string]: string}
+
+async function generateBinaryPropHeader(binDefs: CodepointProperty[], funcNames: StringMap) {
   let out = `#ifndef UNICODE_BINARY_PROPS_H
 #define UNICODE_BINARY_PROPS_H
 
@@ -32,14 +98,6 @@ ${FILE_HEADER}
 typedef const uint8* UnicodeBitSet;
 
 `
-
-  const binDefs: CodepointProperty[] = [...ctx.pagedBinary, ...ctx.nonPagedBinary]
-  const funcNames: {[name: string]: string} = {}
-
-  for (const def of binDefs) {
-    const tn = def.codeName
-    funcNames[def.name] = `bool char_${getFuncName(tn)}`
-  }
 
   for (const bd of binDefs) {
     out += `#define BPROP_${bd.name} ${bd.typeLocalIndex}\n`
@@ -57,8 +115,69 @@ typedef const uint8* UnicodeBitSet;
   out += `#endif // UNICODE_BINARY_PROPS_H`
 
   await writeToFile(out, "../src/strings/unicode_binary_props.h");
+}
 
-  out = `#include "unicode_bianry_props.h"
+function generateNonPagedPropMethods(funcNames: StringMap, ctx: CodepointContext): string {
+  let out = ""
+  for (const bd of ctx.nonPagedBinary) {
+    out += `\n${funcNames[bd.name]}(const utf32char ch) {`
+
+    const values = ctx.binaryValues[bd.name]!
+    const opt = optimizeNonPagedProperty(values)
+
+    if (opt.codepoints.length == 0) {
+      opt.ranges.forEach((r, i) => {
+        out += `\n  `
+
+        if (i == 0) {
+          out += `return `
+        } else {
+          out += `    || `
+        }
+
+        out += `(ch >= ${char(r.min)} && ch <= ${char(r.max)})`
+      })
+
+      out += `;\n}`
+
+      continue
+    }
+
+    if (opt.ranges.length != 0) {
+      opt.ranges.forEach((r, i) => {
+        out += `\n  `
+        if (i == 0) {
+          out += `if `
+          if (opt.ranges.length > 1) {
+            out += "("
+          }
+        } else {
+          out += ` || `
+        }
+
+        out += `(ch >= ${char(r.min)} && ch <= ${char(r.max)})`
+      })
+
+      if (opt.ranges.length > 1) {
+        out += `\n  )`
+      }
+
+      out += ` {\n    return true;\n  }`
+    }
+
+    out += `\n  switch (ch) {`
+    for (const v of opt.codepoints) {
+      out += `\n    case ${char(v)}:`
+    }
+
+    out += `\n      return true;\n    default:\n      return false;\n  }\n  return false;\n}`
+  }
+
+  return out
+}
+
+async function generateBinaryPropertySourceFile(pages: BinaryPropertyPages, funcNames: StringMap, ctx: CodepointContext) {
+  let out = `#include "unicode_bianry_props.h"
 
 ${FILE_HEADER}
 
@@ -114,18 +233,7 @@ UnicodeBitSet getProperties(const utf32char ch) {
   return &PAGES[dataOffset + ${pageMaskString}];
 }
 `
-
-  for (const bd of ctx.nonPagedBinary) {
-    out += `\n${funcNames[bd.name]}(const utf32char ch) {
-  switch (ch) {`
-
-    const values = ctx.binaryValues[bd.name]!
-    for (const v of values) {
-      out += `\n    case 0x${v.toString(16)}:`
-    }
-
-    out += `\n      return true;\n    default:\n      return false;\n  }\n  return false;\n}`
-  }
+  out += generateNonPagedPropMethods(funcNames, ctx)
 
   for (const bd of ctx.pagedBinary) {
     out += `\n${funcNames[bd.name]}(const utf32char ch) {`
@@ -146,4 +254,17 @@ UnicodeBitSet getProperties(const utf32char ch) {
   }
 
   await writeToFile(out, "../src/strings/unicode_binary_props.cc");
+}
+
+export async function generateBinaryPropertyLookups(ctx: CodepointContext, pages: BinaryPropertyPages) {
+  const binDefs: CodepointProperty[] = [...ctx.pagedBinary, ...ctx.nonPagedBinary]
+  const funcNames: {[name: string]: string} = {}
+
+  for (const def of binDefs) {
+    const tn = def.codeName
+    funcNames[def.name] = `bool uc${getFuncName(tn)}`
+  }
+
+  await generateBinaryPropHeader(binDefs, funcNames)
+  await generateBinaryPropertySourceFile(pages, funcNames, ctx)
 }

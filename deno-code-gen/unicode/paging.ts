@@ -1,7 +1,6 @@
 import {
-  BinaryPropertyPages,
-  BinaryPropertyValueMap, CodepointContext, CodepointProperties,
-  CodepointProperty, MIN_COUNT_FOR_PAGED_DATA, PAGE_MASK, PAGE_SHIFT, PAGE_SIZE, PAGECOUNT
+  BinaryPropertyPages, CodepointContext,
+  CodepointProperty, PAGE_MASK, PAGE_SHIFT, PAGE_SIZE, PAGECOUNT
 } from "./unicode";
 
 function buffersEqual(b1: Uint8Array, b2: Uint8Array, pageSize: number): boolean {
