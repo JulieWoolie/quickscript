@@ -67,13 +67,13 @@ export function paginateBinaryProperties(ctx: CodepointContext): BinaryPropertyP
 
     for (const ch of codepoints) {
       const pageIndex = ch >> PAGE_SHIFT
+      const charIndex = ch & PAGE_MASK
       const page = nonUniquePages[pageIndex]
-      const bufOffset = ch & PAGE_MASK * bytes
 
       const propByteIndex = Math.floor(def.typeLocalIndex / 8)
       const propBitIndex = def.typeLocalIndex % 8
 
-      const index = bufOffset + propByteIndex
+      const index = (charIndex * bytes) + propByteIndex
 
       page[index] |= (1 << propBitIndex)
     }

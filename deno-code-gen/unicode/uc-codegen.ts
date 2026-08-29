@@ -79,7 +79,11 @@ function optimizeNonPagedProperty(set: Set<number>): OptimizedNonPagedValues {
 
 function char(num: number): string {
   if (num >= 0x20 && num <= 0x7f) {
-    return `'${String.fromCodePoint(num)}'`
+    let str = String.fromCodePoint(num)
+    if (str == "'") {
+      str = `\\'`
+    }
+    return `'${str}'`
   }
   return `0x${num.toString(16)}`
 }
@@ -105,8 +109,6 @@ typedef const uint8* UnicodeBitSet;
 
   const baseType = getFittingType(binDefs.length)!
   out += `typedef ${baseType.type} binaryprop;\n\n`
-
-  out += `UnicodeBitSet getProperties(utf32char ch);\n\n`
 
   for (const bd of binDefs) {
     out += `${funcNames[bd.name]}(utf32char ch);\n\n`
@@ -177,7 +179,7 @@ function generateNonPagedPropMethods(funcNames: StringMap, ctx: CodepointContext
 }
 
 async function generateBinaryPropertySourceFile(pages: BinaryPropertyPages, funcNames: StringMap, ctx: CodepointContext) {
-  let out = `#include "unicode_bianry_props.h"
+  let out = `#include "unicode_binary_props.h"
 
 ${FILE_HEADER}
 
@@ -225,31 +227,23 @@ static const uint8 PAGES[${pageCount * pageSize}] = {`
 
   const pageMaskString = `(ch & 0x${PAGE_MASK.toString(16)})`
 
-  out += `\n};
-
-UnicodeBitSet getProperties(const utf32char ch) {
-  uint32 pageIndex = ch >> ${PAGE_SHIFT};
-  uint32 dataOffset = INDEX_LOOKUP[pageIndex];
-  return &PAGES[dataOffset + ${pageMaskString}];
-}
-`
+  out += `\n};\n`
   out += generateNonPagedPropMethods(funcNames, ctx)
 
   for (const bd of ctx.pagedBinary) {
     out += `\n${funcNames[bd.name]}(const utf32char ch) {`
 
-    if (bd.codepointCount == 0) {
-      out += `\n  return false;\n}\n`
-      continue
-    }
-
     const byteIndex = Math.floor(bd.typeLocalIndex / 8)
-    const bitIndex = Math.floor(bd.typeLocalIndex % 8)
+    const bitIndex = bd.typeLocalIndex % 8
     const mask = 1 << bitIndex
 
     let byteIndexStr = byteIndex == 0 ? "" : ` + ${byteIndex}`
 
-    out += `\n  return PAGES[PAGE_STARTS[ch >> ${PAGE_SHIFT}] + ${pageMaskString}${byteIndexStr}] & 0x${mask.toString(16)};`
+    out += `\n  const uint32 pageOffset = PAGE_STARTS[ch >> ${PAGE_SHIFT}];`
+    out += `\n  const uint32 codepointIndex = ${pageMaskString};`
+    out += `\n  const uint32 bitsetStart = pageOffset + (codepointIndex * ${pages.codepointBytes});`
+    out += `\n  const uint32 propStart = bitsetStart + ${byteIndex};`
+    out += `\n  return PAGES[propStart] & 0x${mask.toString(16)};`
     out += `\n}\n`
   }
 
