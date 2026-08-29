@@ -76,8 +76,6 @@ typedef const uint8* UnicodeBitSet;
 #define BPROP_White_Space 66
 typedef uint8 binaryprop;
 
-UnicodeBitSet getProperties(utf32char ch);
-
 bool ucIsAlphabetic(utf32char ch);
 
 bool ucIsCased(utf32char ch);
