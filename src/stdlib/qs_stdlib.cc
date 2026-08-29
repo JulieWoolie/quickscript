@@ -8,7 +8,7 @@
 
 static void qs_println(NativeCall& call) {
   const QsArray str = call.getArrayArgument(0);
-  fprintf(stdout, QS_STR_SPEC, PRINT_QS_STR(str));
+  fprintf(stdout, QS_STR_SPEC "\n", PRINT_QS_STR(str));
 }
 
 void addStandardLibrary(BindingsObject* obj) {
