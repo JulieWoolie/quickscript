@@ -22,6 +22,7 @@
 #define TI_STRING 12
 #define TI_CLOSURE 13
 #define LAST_RESERVED_TYPE_INDEX TI_CLOSURE
+#define FIRST_NON_RESERVED_TYPE_INDEX (LAST_RESERVED_TYPE_INDEX + 1)
 typedef uint64 typeindex;
 
 conststring nativeTypeIndexName(typeindex idx);
