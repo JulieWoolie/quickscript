@@ -1,0 +1,64 @@
+FILE_VERSION = 0
+GLOBAL_SCOPE_SIZE = 0
+ENTRYPOINT_FUNCTION_INDEX = 1
+CONST_STRING_POOL = {
+  [off=0 size=7]: println
+  [off=11 size=13]: Hello, world!
+  [off=28 size=4]: main
+  [off=36 size=7]: <finit>
+}
+TYPE_TABLE = {
+  [14] {
+    type = FUNCSIGN
+    return_type = VOID
+    variadic = 0
+    arguments = [STRING]
+  }
+  [15] {
+    type = FUNCSIGN
+    return_type = VOID
+    variadic = 0
+    arguments = []
+  }
+  [16] {
+    type = ARRAY
+    component_type = STRING
+  }
+  [17] {
+    type = FUNCSIGN
+    return_type = INT32
+    variadic = 0
+    arguments = [16]
+  }
+}
+FUNCTION_TABLE = {
+  [0] {
+    name_offset = 28 # main
+    signature_index = 15
+    first_instruction = 0
+    stack_size = 8
+  }
+  [1] {
+    name_offset = 36 # <finit>
+    signature_index = 17
+    first_instruction = 6
+    stack_size = 8
+  }
+}
+INSTRUCTIONS = {
+  # FUNCTION START: main
+  [   0] PUSHLINE      2
+  [   1] NFUNCLOOKUP   TYPES[14] STRINGS[off=0] /* println */ r03
+  [   2] LOADCONSTSTR  r04 STRINGS[off=11] /* Hello, world! */
+  [   3] SWRITE64      r04 0
+  [   4] INVOKE        r03
+  [   5] RET          
+
+  # FUNCTION START: <finit>
+  [   6] PUSHLINE      0
+  [   7] LFUNCLOOKUP   0 r03
+  [   8] INVOKE        r03
+  [   9] PUSHLINE      0
+  [  10] LOADCONST32   rvr 0
+  [  11] RET          
+}
