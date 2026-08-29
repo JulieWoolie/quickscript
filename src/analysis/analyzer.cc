@@ -1252,6 +1252,10 @@ static LocalFunction* createFuncSignature(SemanticContext& ctx, FunctionDeclStat
   LocalFuncSymbol* sym = alloc.make<LocalFuncSymbol>(lf);
   scope->pushSymbol(sym);
 
+  if (v->flags & DECLFLAG_CONST) {
+    sym->addFlags(SYMFLAG_CONSTEXPR);
+  }
+
   ctx.getScopeLookup()[sym] = scope;
   ctx.getSymbolLookup()[v] = sym;
 
@@ -1428,8 +1432,17 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
   const stringid nameId = v->variableName->value;
 
   Scope* scope = ctx.getScope();
+  bool isNative = v->flags & DECLFLAG_NATIVE;
+
   if (scope->getType() == SCOPE_MAIN) {
     ctx.getGlobalVariables().push_back(v);
+  } else {
+    if (isNative) {
+      ctx.getErrors().error(v->location, "Non-global variables cannot be declared with the 'native' keyword");
+
+      // Turn off so the 'const has no value' reporting isn't skipped later
+      isNative = false;
+    }
   }
 
   ctx.getAllVariables().push_back(v);
@@ -1447,7 +1460,8 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
   scope->pushSymbol(lvs);
   ctx.getScopeLookup()[lvs] = scope;
 
-  if (v->isConstDeclaration) {
+  const bool isConst = v->flags & DECLFLAG_CONST;
+  if (isConst) {
     lvs->setFlags(SYMFLAG_CONST);
   }
 
@@ -1462,13 +1476,14 @@ static void acceptLexicalDeclaration(SemanticContext& ctx, LexicalDeclaration* v
 
     if (valueType->kind() != TK_UNKNOWN && !isAssignableTo(declType, valueType)) {
       ctx.getErrors().error(v->location,
-        "Value of type %s is not assignable to variable with type %s",
+        "Value of type %s is not assignable to %s with type %s",
         valueType->getTypeName(),
+        isNative ? "constant" : "variable",
         declType->getTypeName()
       );
     }
-  } else if (v->isConstDeclaration) {
-    std::string_view view = ctx.getStrings().getview(nameId);
+  } else if (isConst & !isNative) {
+    const std::string_view view = ctx.getStrings().getview(nameId);
     ctx.getErrors().error(v->location, "Const variable '%.*s' has no value", PRINTVIEW(view));
   }
 
@@ -1607,6 +1622,13 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
   LocalFunction* lf = nullptr;
 
   if (parentScope->getType() != SCOPE_MAIN) {
+    if (v->flags & DECLFLAG_EXPORTED) {
+      ctx.getErrors().error(v->location, "Nested functions cannot be exported");
+    }
+    if (v->flags & DECLFLAG_NATIVE) {
+      ctx.getErrors().error(v->location, "Nested functions cannot be declared with the 'native' keyword");
+    }
+
     lf = createFuncSignature(ctx, v, true);
   } else {
     for (LocalFunction* localFunc : ctx.getLocalFunctions()) {
@@ -1628,6 +1650,7 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
   const uint32 args = v->arguments.size();
 
   NoFreeAllocator& alloc = ctx.getAllocator();
+  bool isNative = v->flags & DECLFLAG_NATIVE;
 
   for (uint32 i = 0; i < args; i++) {
     ScriptType* signType = sign->getArgumentType(i);
@@ -1638,21 +1661,27 @@ static void acceptFunctionDeclStatement(SemanticContext& ctx, FunctionDeclStatem
     LocalVarSymbol* lvs = alloc.make<LocalVarSymbol>(arg->name->value, signType, memSize, 0, arg);
     lvs->addFlags(SYMFLAG_FUNC_ARG);
 
+    if (isNative) {
+      lvs->addFlags(SYMFLAG_USED);
+    }
+
     scope->pushSymbol(lvs);
 
     ctx.getScopeLookup()[lvs] = scope;
     ctx.getSymbolLookup()[arg] = lvs;
   }
 
-  acceptBodyNoScope(ctx, v->functionBody);
+  if (!isNative) {
+    acceptBodyNoScope(ctx, v->functionBody);
 
-  if (sign->getReturnType()->kind() != TK_VOID && !everyBranchHasReturn(v->functionBody)) {
-    ctx.getErrors().error(v->location, "Non-void function has no return value");
+    if (sign->getReturnType()->kind() != TK_VOID && !everyBranchHasReturn(v->functionBody)) {
+      ctx.getErrors().error(v->location, "Non-void function has no return value");
+    }
+
+    reportUnused(ctx, scope);
   }
 
-  reportUnused(ctx, scope);
   ctx.popScope();
-
   STAT_POP
 }
 
@@ -1676,8 +1705,15 @@ static void acceptStructDecl(SemanticContext& ctx, StructDecl* v) {
 
   ctx.getDeclaredStructs().push_back(v);
 
+  if (v->flags & DECLFLAG_CONST) {
+    ctx.getErrors().error(v->location, "Structs cannot be declared with the 'const' modifier");
+  }
+  if (v->flags & DECLFLAG_NATIVE) {
+    ctx.getErrors().error(v->location, "Structs cannot be declared with the 'native' modifier");
+  }
+
   const uint32 propCount = v->properties.size();
-  conststring typeName = v->type->getTypeName();
+  const conststring typeName = v->type->getTypeName();
 
   for (uint32 i = 0; i < propCount; i++) {
     StructPropertyDecl* prop = v->properties.at(i);
