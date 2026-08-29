@@ -639,7 +639,6 @@ bool runTestCase(
     VirtualMachine vm = VirtualMachine();
 
     uint32 entryPoint = vm.addBytecodeFile(bfile, pathString);
-    BytecodeFile::destroy(bfile);
 
     try {
       vm.beginExecution(entryPoint, settings.runArgs);
@@ -659,9 +658,12 @@ bool runTestCase(
       if (!exc.getCallStack().empty()) {
         fprintf(stderr, "\nCall stack:\n  %s\n", exc.getCallStack().c_str());
       }
+
+      BytecodeFile::destroy(bfile);
       return false;
     }
 
+    BytecodeFile::destroy(bfile);
     return true;
   }
 
