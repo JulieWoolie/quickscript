@@ -637,6 +637,7 @@ bool runTestCase(
     }
 
     VirtualMachine vm = VirtualMachine();
+    vm.addBindings(bindings);
 
     uint32 entryPoint = vm.addBytecodeFile(bfile, pathString);
 

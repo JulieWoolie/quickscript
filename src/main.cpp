@@ -97,8 +97,10 @@ static void compileSource(const BytecodeFile& bfile, const ProgramSettings& sett
   printf("Saved compiled output to '%s'\n", outFile.c_str());
 }
 
-static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& settings) {
+static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& settings, const BindingsObject* bindings) {
   VirtualMachine vm;
+  vm.addBindings(bindings);
+
   std::string filename = std::string(settings.inputFile);
   const uint32 entryPoint = vm.addBytecodeFile(bfile, filename);
 
@@ -114,7 +116,7 @@ static int32 runCompiledFile(const BytecodeFile& bfile, const ProgramSettings& s
     retVal = EXIT_FAILURE;
   }
 
-  printf("Finished with return code %d\n", retVal);
+  // printf("Finished with return code %d\n", retVal);
   return retVal;
 }
 
@@ -152,6 +154,6 @@ int32 main(int32 argc, cstring argv[]) {
     return EXIT_SUCCESS;
   }
 
-  return runCompiledFile(*bfile, settings);
+  return runCompiledFile(*bfile, settings, bindings);
 }
 
