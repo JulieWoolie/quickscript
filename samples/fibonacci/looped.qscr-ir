@@ -7,45 +7,45 @@ CONST_STRING_POOL = {
   [off=21 size=7]: <finit>
 }
 TYPE_TABLE = {
-  [14] {
+  [15] {
     type = FUNCSIGN
     return_type = UINT32
     variadic = 0
     arguments = [UINT32]
   }
-  [15] {
+  [16] {
     type = FUNCSIGN
     return_type = INT32
     variadic = 0
     arguments = []
   }
-  [16] {
+  [17] {
     type = ARRAY
     component_type = STRING
   }
-  [17] {
+  [18] {
     type = FUNCSIGN
     return_type = INT32
     variadic = 0
-    arguments = [16]
+    arguments = [17]
   }
 }
 FUNCTION_TABLE = {
   [0] {
     name_offset = 0 # fibonacci
-    signature_index = 14
+    signature_index = 15
     first_instruction = 0
     stack_size = 20
   }
   [1] {
     name_offset = 13 # main
-    signature_index = 15
+    signature_index = 16
     first_instruction = 45
     stack_size = 4
   }
   [2] {
     name_offset = 21 # <finit>
-    signature_index = 17
+    signature_index = 18
     first_instruction = 50
     stack_size = 8
   }
