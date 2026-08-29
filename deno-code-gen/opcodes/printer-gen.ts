@@ -46,8 +46,11 @@ export async function generatePrinterFunction(res: OpCodeGenResult) {
 #include <cstdio>
 
 #include "opcodes.h"
+#include "../types/types.h"
 
 ${FILE_HEADER}
+
+void printTypeIndex(FILE* out, typeindex idx);
 
 void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
@@ -59,7 +62,15 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
 ${FILE_HEADER}
 
-static conststring getRegistryName(uint8 r) {${generateRegistryStringNameFunc()}}
+static conststring getRegistryName(const uint8 r) {${generateRegistryStringNameFunc()}}
+
+void printTypeIndex(FILE* out, const typeindex idx) {
+  if (idx < LAST_RESERVED_TYPE_INDEX) {
+    fprintf(out, "%s", nativeTypeIndexName(idx));
+    return;
+  }
+  fprintf(out, "%llu", idx);
+}
 
 void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
   const opcode code = *reinterpret_cast<opcode*>(buf);
@@ -93,6 +104,14 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       let tn: string = p.typename
       let formatSpec: string = ""
       let valExpr: string = ""
+
+      if (p.name == "typeindex") {
+        out += `\n      fprintf(out, " TYPES[");`
+        out += `\n      printTypeIndex(out, *reinterpret_cast<${tn}*>(buf + ${off}));`
+        out += `\n      fprintf(out, "]");`
+        off += p.size
+        continue
+      }
 
       switch (p.typename) {
         case "uint64":

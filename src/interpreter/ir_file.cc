@@ -317,14 +317,6 @@ static conststring TypeTableType_name(const TypeTableType type) {
   }
 }
 
-static void printTypeIndex(FILE* out, const typeindex idx) {
-  if (idx < LAST_RESERVED_TYPE_INDEX) {
-    fprintf(out, "%s", nativeTypeIndexName(idx));
-    return;
-  }
-  fprintf(out, "%llu", idx);
-}
-
 void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   fprintf(printFile, "FILE_VERSION = %d", CURRENT_FILE_VERSION);
   fprintf(printFile, "\nGLOBAL_SCOPE_SIZE = %llu", file.globalScopeSize);

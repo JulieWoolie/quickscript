@@ -5,7 +5,7 @@
 // ./deno-code-gen
 //
 
-static conststring getRegistryName(uint8 r) {
+static conststring getRegistryName(const uint8 r) {
   switch(r) {
     case 0: return "rvr";
     case 1: return "icr";
@@ -73,6 +73,14 @@ static conststring getRegistryName(uint8 r) {
     case 63: return "r63";
     default: return "INVALID_REGISTRY";
   }
+}
+
+void printTypeIndex(FILE* out, const typeindex idx) {
+  if (idx < LAST_RESERVED_TYPE_INDEX) {
+    fprintf(out, "%s", nativeTypeIndexName(idx));
+    return;
+  }
+  fprintf(out, "%llu", idx);
 }
 
 void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
@@ -185,12 +193,16 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       break;
     case OP_OBJALLOC:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 3));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 3));
+      fprintf(out, "]");
       break;
     case OP_ARRAYALLOC:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 3));
-      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 7));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 7));
+      fprintf(out, "]");
       break;
     case OP_INCREFC:
     case OP_DECREFC:
@@ -234,14 +246,18 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       break;
     case OP_SETARGTYPE:
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 6));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 6));
+      fprintf(out, "]");
       break;
     case OP_LFUNCLOOKUP:
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, " %s", getRegistryName(*(buf + 6)));
       break;
     case OP_NFUNCLOOKUP:
-      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, "]");
       fprintf(out, " STRINGS[off=%llu] # %.*s", *reinterpret_cast<uint64*>(buf + 6), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 6)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 6)));
       fprintf(out, " %s", getRegistryName(*(buf + 14)));
       break;
@@ -496,12 +512,16 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
-      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 5));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 5));
+      fprintf(out, "]");
       break;
     case OP_STRCONCAT:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
-      fprintf(out, " TYPE[%d]", *reinterpret_cast<uint32*>(buf + 4));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 4));
+      fprintf(out, "]");
       fprintf(out, " %s", getRegistryName(*(buf + 8)));
       break;
     default:
