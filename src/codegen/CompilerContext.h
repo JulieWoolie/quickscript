@@ -94,6 +94,20 @@ struct ControlFlowCall {
   uint64 writeAddress = 0;
 };
 
+class TypeReferenceCounter {
+  uint32 m_size = 0;
+  uint32* m_counters = nullptr;
+
+  public:
+    explicit TypeReferenceCounter(uint32 size);
+
+    void incrementCounter(typeindex index) const;
+
+    uint32 getReferenceCount(typeindex index) const;
+
+    uint32 getReferencedNonConstTypes() const;
+};
+
 class CompilerContext {
   std::vector<ScriptType*> m_expectedTypes;
 
@@ -105,6 +119,7 @@ class CompilerContext {
 
   ConstStringPoolWriter m_stringPool;
   BytecodeWriter m_writer;
+  TypeReferenceCounter m_typeRefCounter;
 
   SemanticContext& m_semantics;
 
@@ -131,6 +146,7 @@ class CompilerContext {
 
     BytecodeWriter& getWriter();
     ConstStringPoolWriter& getStringPool();
+    TypeReferenceCounter& getTypeRefCounter();
 
     SemanticContext& getSemantics() const;
 
@@ -144,6 +160,8 @@ class CompilerContext {
 
     bool wasReturnCalled() const;
     void setReturnCalled(bool b);
+
+    void countTypeReference(const ScriptType* type) const;
 };
 
 

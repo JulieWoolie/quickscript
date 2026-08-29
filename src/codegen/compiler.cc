@@ -259,8 +259,11 @@ static void compileNativeFuncLookup(
 ) {
   BytecodeWriter& writer = ctx.getWriter();
 
-  const typeindex idx = ctx.getSemantics().getTypes().findIndex(sym->getScriptType());
+  const ScriptType* type = sym->getScriptType();
+  const typeindex idx = ctx.getSemantics().getTypes().findIndex(type);
   const StringPoolAddress addr = ctx.getStringPool().emplace(sym->getName());
+
+  ctx.countTypeReference(type);
 
   writer.startInstr(OP_NFUNCLOOKUP);
   writer.appendU32(idx);
@@ -1070,9 +1073,12 @@ static void compileBlock(const Block* block, CompilerContext& ctx) {
 }
 
 static void compileLexDecl(LexicalDeclaration* lex, CompilerContext& ctx) {
-  ScriptType* stype = lex->typeExpr->referencedType;
-  LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(ctx.getSemantics().getSymbolLookup()[lex]);
-  compileStoredExpr(stype, lex->value, ctx, lvs->getStackOffset(), true);
+  const LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(ctx.getSemantics().getSymbolLookup()[lex]);
+  ScriptType* sType = lvs->getScriptType();
+
+  ctx.countTypeReference(sType);
+
+  compileStoredExpr(sType, lex->value, ctx, lvs->getStackOffset(), true);
 }
 
 static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
@@ -1112,6 +1118,9 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
 static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) {
   FunctionDeclStatement* stat = lf->getDecl();
   LocalFuncSymbol* lfs = static_cast<LocalFuncSymbol*>(ctx.getSemantics().getSymbolLookup()[stat]);
+
+  const FunctionSignature* signature = lf->getSignature();
+  ctx.countTypeReference(signature);
 
   Scope* scope = lf->getScope();
   ctx.setCurrentScope(scope);
@@ -1428,7 +1437,8 @@ static void compileStoredExpr(ScriptType* type, Expr* expr, CompilerContext& ctx
 
 static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
   const TypeTable& types = ctx.getSemantics().getTypes();
-  const uint64 size = types.size() - (LAST_RESERVED_TYPE_INDEX + 1);
+  const TypeReferenceCounter& refCounter = ctx.getTypeRefCounter();
+  const uint64 size = refCounter.getReferencedNonConstTypes();
 
   if (size == 0) {
     out.typeTable = nullptr;
@@ -1438,10 +1448,18 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
 
   TypeTableEntry** entries = createTypeTable(size);
   ConstStringPoolWriter& stringPool = ctx.getStringPool();
+  uint32 tableIndex = 0;
 
-  for (uint32 i = 0; i < size; i++) {
-    const typeindex typeIdx = i + LAST_RESERVED_TYPE_INDEX + 1;
+  out.typeTableSize = size;
+  out.typeTable = entries;
+
+  for (typeindex typeIdx = FIRST_NON_RESERVED_TYPE_INDEX; typeIdx < types.size(); typeIdx++) {
     ScriptType* type = types.lookupByIndex(typeIdx);
+
+    const uint32 references = refCounter.getReferenceCount(typeIdx);
+    if (references == 0) {
+      continue;
+    }
 
     switch (type->kind()) {
       case TK_STRUCT: {
@@ -1474,7 +1492,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         }
 
         ttStruct->properties = props;
-        entries[i] = ttStruct;
+        entries[tableIndex++] = ttStruct;
         break;
       }
       case TK_ARRAY: {
@@ -1487,7 +1505,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         arr->index = typeIdx;
         arr->componentType = cTypeIdx;
 
-        entries[i] = arr;
+        entries[tableIndex++] = arr;
         break;
       }
       case TK_FUNC: {
@@ -1510,7 +1528,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         tableSign->argTypes = argIndexes;
         tableSign->argumentCount = argCount;
 
-        entries[i] = tableSign;
+        entries[tableIndex++] = tableSign;
         break;
       }
 
@@ -1518,9 +1536,6 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         break;
     }
   }
-
-  out.typeTableSize = size;
-  out.typeTable = entries;
 }
 
 static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {

@@ -189,8 +189,40 @@ uint8* ConstStringPoolWriter::getData() const {
   return m_data;
 }
 
+TypeReferenceCounter::TypeReferenceCounter(const uint32 size) {
+  const uint64 memSize = size * sizeof(uint32);
+
+  uint32* buf = static_cast<uint32*>(malloc(memSize));
+  memset(buf, 0, memSize);
+
+  m_counters = buf;
+  m_size = size;
+}
+
+void TypeReferenceCounter::incrementCounter(const typeindex index) const {
+  ++m_counters[index];
+}
+
+uint32 TypeReferenceCounter::getReferenceCount(const typeindex index) const {
+  if (index >= m_size) {
+    return 0;
+  }
+  return m_counters[index];
+}
+
+uint32 TypeReferenceCounter::getReferencedNonConstTypes() const {
+  uint32 res = 0;
+  for (uint32 i = FIRST_NON_RESERVED_TYPE_INDEX; i < m_size; i++) {
+    res += m_counters[i] != 0;
+  }
+  return res;
+}
+
 CompilerContext::CompilerContext(SemanticContext& ctx, RegisterBitSet* registryBitset)
-  : m_stringPool(ctx.getStrings()), m_semantics(ctx), m_registersInUse(registryBitset)
+  : m_stringPool(ctx.getStrings()),
+    m_typeRefCounter(ctx.getTypes().size()),
+    m_semantics(ctx),
+    m_registersInUse(registryBitset)
 {
 
 }
@@ -287,6 +319,10 @@ ConstStringPoolWriter& CompilerContext::getStringPool() {
   return m_stringPool;
 }
 
+TypeReferenceCounter& CompilerContext::getTypeRefCounter() {
+  return m_typeRefCounter;
+}
+
 SemanticContext& CompilerContext::getSemantics() const {
   return m_semantics;
 }
@@ -313,4 +349,44 @@ bool CompilerContext::wasReturnCalled() const {
 
 void CompilerContext::setReturnCalled(bool b) {
   m_returned = b;
+}
+
+void CompilerContext::countTypeReference(const ScriptType* type) const {
+  const typekind kind = type->kind();
+
+  const int64 bIdx = m_semantics.getTypes().findIndex(type);
+  if (bIdx == -1) {
+    throw std::runtime_error("Type not in type table");
+  }
+
+  m_typeRefCounter.incrementCounter(bIdx);
+
+  switch (kind) {
+    case TK_ARRAY: {
+      const ScriptArrayType* arrType = static_cast<const ScriptArrayType*>(type);
+      countTypeReference(arrType->getComponentType());
+      break;
+    }
+    case TK_FUNC: {
+      const FunctionSignature* sign = static_cast<const FunctionSignature*>(type);
+      countTypeReference(sign->getReturnType());
+      for (uint32 i = 0; i < sign->getArgumentsLength(); i++) {
+        countTypeReference(sign->getArgumentType(i));
+      }
+      break;
+    }
+    case TK_STRUCT: {
+      const ScriptStructType* sType = static_cast<const ScriptStructType*>(type);
+      const uint64 props = sType->getPropertyCount();
+
+      for (uint32 i = 0; i < props; i++) {
+        countTypeReference(sType->getProperty(i)->type);
+      }
+
+      break;
+    }
+
+    default:
+      break;
+  }
 }
