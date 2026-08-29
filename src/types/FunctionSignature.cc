@@ -127,7 +127,7 @@ int32 FunctionSignature::callSignatureMatches(FunctionSignature* callSign, Funct
   const uint32 funcParamCount = funcSign->m_paramCount;
   const bool funcVariadic = funcSign->m_varargs;
 
-  if (callParamCount < funcParamCount) {
+  if (callParamCount < (funcParamCount - funcVariadic)) {
     return SIGN_DOES_NOT_MATCH;
   }
   if (!funcVariadic && callParamCount > funcParamCount) {
