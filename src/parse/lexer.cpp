@@ -3,6 +3,7 @@
 #include <utility>
 #include "keyw_lookup.h"
 #include "../strings/strings.h"
+#include "../strings/unicode_binary_props.h"
 
 Lexer::Lexer(const std::string& input, TokenList* tokens, StringTable* table, CompilerErrors* errors) {
   m_input = input;
@@ -430,7 +431,7 @@ Token * Lexer::readToken() {
       return readNumberLiteral();
 
     default:
-      if (isIdentifierStart(currentChar)) {
+      if (isIdentifierStart(currentChar) || ucIsXidStart(currentChar)) {
         return readIdOrKeyword();
       }
 
@@ -522,16 +523,16 @@ Token* Lexer::valueToken(const tokentype ttype) const {
 }
 
 Token* Lexer::readIdOrKeyword() {
-  int32 start = idx;
+  const int32 start = idx;
 
   clearReadBuf();
 
-  while (isIdentifierPart(currentChar)) {
+  while (isIdentifierPart(currentChar) || ucIsXidContinue(currentChar)) {
     appendToReadBuf();
     next();
   }
 
-  int32 end = idx;
+  const int32 end = idx;
   if (start == end) {
     m_errors->fatal(tokenStart, "Invalid Identifier/keyword");
   }
