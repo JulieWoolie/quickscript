@@ -12,6 +12,7 @@
 #include "../args.h"
 #include "../common.h"
 #include "registers.h"
+#include "../nativeinterface.h"
 
 #define MAX_ARGS 128
 #define MAX_CALL_DEPTH 1024
@@ -69,12 +70,31 @@ class GlobalMemorySpace {
     uint64 size() const;
 };
 
+#define FUNCTYPE_LOCAL 0
+#define FUNCTYPE_NATIVE 1
+typedef uint8 functype;
+
 struct ScriptFunction {
+  virtual ~ScriptFunction() = default;
+  virtual functype ftype() const = 0;
+};
+
+struct LocalScriptFunction: ScriptFunction {
   std::string filename = "";
   uint32 firstInstrIndex = 0;
   uint64 nameOffset = 0;
   uint64 stackSize = 0;
   FunctionSignature* signature = nullptr;
+
+  functype ftype() const override;
+};
+
+struct NativeScriptFunction: ScriptFunction {
+  std::string name = "";
+  FunctionSignature* signature = nullptr;
+  NativeFunction callback = nullptr;
+
+  functype ftype() const override;
 };
 
 class VirtualMachine {
@@ -85,11 +105,14 @@ class VirtualMachine {
   InstructionBuf m_instrBuf;
   GlobalMemorySpace m_globalMem;
 
-  std::vector<ScriptFunction> m_functions;
+  std::vector<NativeScriptFunction> m_nativeFunctions;
+  std::vector<LocalScriptFunction> m_functions;
 
   public:
     VirtualMachine();
     ~VirtualMachine();
+
+    void addBindings(const BindingsObject* object);
 
     uint32 addBytecodeFile(const BytecodeFile& file, const std::string& filename);
 
@@ -114,7 +137,8 @@ class VirtualMachine {
     HeapMemory& getHeap();
     InstructionBuf& getInstructions();
     GlobalMemorySpace& getGlobalMemory();
-    std::vector<ScriptFunction>& getFunctions();
+    std::vector<LocalScriptFunction>& getFunctions();
+    std::vector<NativeScriptFunction>& getNativeFunctions();
 };
 
 class Interpreter {
@@ -123,7 +147,7 @@ class Interpreter {
   StackMemory m_stack;
 
   RegisterValue m_registers[REGISTER_COUNT] = {};
-  uint64 m_argTypeIndexes[MAX_ARGS] = {};
+  typeindex m_argTypeIndexes[MAX_ARGS] = {};
 
   CallFrame m_callFrames[MAX_CALL_DEPTH];
   uint32 m_frameCount = 0;
@@ -142,9 +166,9 @@ class Interpreter {
 
     uint64 strConcat(QsArray& lString, uint64 rightObj, typeindex rType);
 
-    void moveExecutionTo(const ScriptFunction& func);
+    void moveExecutionTo(const LocalScriptFunction& func);
 
-    int32 beginExecution(const ScriptFunction& func, uint64 argsArrayAddr);
+    int32 beginExecution(const LocalScriptFunction& func, uint64 argsArrayAddr);
 
     void run();
 
@@ -153,6 +177,8 @@ class Interpreter {
     bool doStructEqualityCheck(uint8 r1, uint8 r2, uint32 ti) const;
 
     int8 doArrayComparison(uint8 lhs, uint8 rhs, uint32 ti) const;
+
+    void callNativeFunction(NativeScriptFunction* nFunc);
 };
 
 #endif //QUICKSCRIPT_INTERPRETER_H

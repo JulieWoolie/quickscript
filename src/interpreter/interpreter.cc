@@ -3,7 +3,6 @@
 #include <format>
 
 #include "script_error.h"
-#include "../types/ConstTypes.h"
 
 #define TO_POINTER(expr) reinterpret_cast<void*>(expr)
 #define qsArrayFromAddr(expr) castToQsArray(TO_POINTER(expr))
@@ -84,12 +83,39 @@ uint64 GlobalMemorySpace::size() const {
   return m_size;
 }
 
+functype LocalScriptFunction::ftype() const {
+  return FUNCTYPE_LOCAL;
+}
+
+functype NativeScriptFunction::ftype() const {
+  return FUNCTYPE_NATIVE;
+}
+
 VirtualMachine::VirtualMachine() {
 
 }
 
 VirtualMachine::~VirtualMachine() {
 
+}
+
+void VirtualMachine::addBindings(const BindingsObject* object) {
+  const std::vector<NativeBinding*>& bindings = object->getBindings();
+  for (NativeBinding* bind : bindings) {
+    if (bind->btype() != BINDTYPE_FUNCTION) {
+      continue;
+    }
+
+    const NativeFunctionBinding* nfb = static_cast<NativeFunctionBinding*>(bind);
+    FunctionSignature* sign = m_types.copySignatureIntoTable(nfb->getSignature());
+
+    NativeScriptFunction nFunc = NativeScriptFunction();
+    nFunc.signature = sign;
+    nFunc.name = nfb->getName();
+    nFunc.callback = nfb->getFunction();
+
+    m_nativeFunctions.push_back(nFunc);
+  }
 }
 
 struct TypeRewrite {
@@ -110,8 +136,9 @@ struct TypeReindexList {
   typeindex findRewritten(const typeindex idx) const {
     for (const TypeRewrite& rewrite : rewrites) {
       if (rewrite.replace != idx) {
-        return rewrite.replaceWith;
+        continue;
       }
+      return rewrite.replaceWith;
     }
     return idx;
   }
@@ -212,6 +239,17 @@ static void rewriteInstructions(uint8* buf, const uint64 len, const InstructionR
         break;
       }
 
+      case OP_GTARR:
+      case OP_GTEARR:
+      case OP_LTARR:
+      case OP_LTEARR:
+      case OP_EQARR:
+      case OP_NEQARR: {
+        uint32* typeIdxPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE + 3);
+        *typeIdxPtr = rewrite.typeRewrites.findRewritten(*typeIdxPtr);
+        break;
+      }
+
       default:
         break;
     }
@@ -241,7 +279,7 @@ static void loadTypes(TypeTable& table, const BytecodeFile& file, TypeReindexLis
     }
 
     ScriptStructType* scriptType = ScriptStructType::create(nameString, nullptr, structType->propertyCount);
-    typeindex newIdx = table.emplaceType(scriptType);
+    const typeindex newIdx = table.emplaceType(scriptType);
 
     if (entry->index != newIdx) {
       out.submit(entry->index, newIdx);
@@ -323,7 +361,7 @@ static void addFunctionEntries(
   const TypeTable& types,
   const BytecodeFile& file,
   const InstructionRewrite& rewrites,
-  std::vector<ScriptFunction>& functions,
+  std::vector<LocalScriptFunction>& functions,
   const std::string& filename
 ) {
   FunctionTableEntry* funcTable = file.funcTable;
@@ -337,7 +375,7 @@ static void addFunctionEntries(
 
     FunctionSignature* sign = static_cast<FunctionSignature*>(types.lookupByIndex(rewrites.typeRewrites.findRewritten(fte->signatureIndex)));
 
-    ScriptFunction sf;
+    LocalScriptFunction sf = LocalScriptFunction();
     sf.firstInstrIndex = firstInstr;
     sf.nameOffset = nameAddr;
     sf.stackSize = fte->stackSize;
@@ -377,7 +415,7 @@ uint32 VirtualMachine::addBytecodeFile(const BytecodeFile& file, const std::stri
 }
 
 int32 VirtualMachine::beginExecution(const uint32 funcEntryIdx, const ProgramArgs& args) {
-  const ScriptFunction& func = m_functions[funcEntryIdx];
+  const LocalScriptFunction& func = m_functions[funcEntryIdx];
 
   uint64 argsAddr;
 
@@ -772,8 +810,11 @@ int8 VirtualMachine::compareString(const uint64 leftPtr, const uint64 rightPtr) 
     return LEFT_GT_RIGHT;
   }
 
-  const QsArray lArr = qsArrayFromAddr(leftPtr);
-  const QsArray rArr = qsArrayFromAddr(rightPtr);
+  void* lPtr = reinterpret_cast<void*>(leftPtr);
+  void* rPtr = reinterpret_cast<void*>(rightPtr);
+
+  const QsArray lArr = castToQsArray(lPtr);
+  const QsArray rArr = castToQsArray(rPtr);
   const uint32 len = lArr.length < rArr.length  ? lArr.length : rArr.length;
 
   return memcmp(lArr.data, rArr.data, len);
@@ -906,8 +947,12 @@ GlobalMemorySpace& VirtualMachine::getGlobalMemory() {
   return m_globalMem;
 }
 
-std::vector<ScriptFunction>& VirtualMachine::getFunctions() {
+std::vector<LocalScriptFunction>& VirtualMachine::getFunctions() {
   return m_functions;
+}
+
+std::vector<NativeScriptFunction>& VirtualMachine::getNativeFunctions() {
+  return m_nativeFunctions;
 }
 
 #define READ_I8ARG(off) *reinterpret_cast<int8*>(args + off)
@@ -1016,7 +1061,7 @@ void Interpreter::throwScriptError(const std::string& message) {
   throw ScriptError(message, callStack);
 }
 
-void Interpreter::moveExecutionTo(const ScriptFunction& func) {
+void Interpreter::moveExecutionTo(const LocalScriptFunction& func) {
   const CallFrame* oldFrame = getCallFrame();
 
   const StringPool& strPool = m_vm.getStringPool();
@@ -1061,7 +1106,7 @@ void Interpreter::moveExecutionTo(const ScriptFunction& func) {
   m_registers[REGISTER_INSTR_COUNTER] = func.firstInstrIndex;
 }
 
-int32 Interpreter::beginExecution(const ScriptFunction& func, const uint64 argsArrayAddr) {
+int32 Interpreter::beginExecution(const LocalScriptFunction& func, const uint64 argsArrayAddr) {
   moveExecutionTo(func);
 
   const CallFrame* frame = getCallFrame();
@@ -1162,9 +1207,16 @@ void Interpreter::run() {
       m_registers[args[4]] = reinterpret_cast<uint64>(&m_vm.getFunctions().at(READ_U32ARG(0)));
       break;
 
-    case OP_INVOKE:
-      moveExecutionTo(*REG_AS(args[0], ScriptFunction*));
-      goto begin;
+    case OP_INVOKE: {
+      ScriptFunction* sf = REG_AS(args[0], ScriptFunction*);
+
+      if (sf->ftype() == FUNCTYPE_LOCAL) {
+        moveExecutionTo(*REG_AS(args[0], LocalScriptFunction*));
+        goto begin;
+      }
+
+
+    }
 
     case OP_LOADCONSTSTR: {
       const uint64 strOffset = READ_U64ARG(1);
@@ -2234,4 +2286,22 @@ int8 Interpreter::doArrayComparison(const uint8 lhs, const uint8 rhs, const uint
 
   const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
   return m_vm.compareArray(lAddr, rAddr, arrType);
+  return m_vm.compareArray(lAddr, rAddr, arrType);
+}
+
+void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
+  CallFrame* parent = getCallFrame();
+
+  CallFrame* frame = pushNewFrame();
+  frame->filename = "<native code>";
+  frame->name = nFunc->name;
+  frame->allocatedSize = 0;
+  frame->stackBase = nullptr;
+  frame->line = 0;
+  frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
+
+  NativeCall call = NativeCall(nullptr, nullptr, 0);
+  nFunc->callback(call);
+
+  m_registers[REGISTER_RETURN_VALUE] = call.getReturnValue();
 }
