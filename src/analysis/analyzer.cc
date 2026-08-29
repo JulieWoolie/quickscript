@@ -1571,7 +1571,9 @@ static void acceptReturnStatement(SemanticContext& ctx, ReturnStatement* v) {
   }
 
   STAT_PUSH
+  ctx.pushExpectedType(expected);
   acceptExpr(ctx, v->value);
+  ctx.popExpectedType();
 
   ScriptType* rtype = v->value->resultType;
 
