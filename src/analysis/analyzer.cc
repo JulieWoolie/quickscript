@@ -2,7 +2,6 @@
 
 #include <bitset>
 #include <functional>
-#include <stdint.h>
 
 #include "../types/ConstTypes.h"
 
