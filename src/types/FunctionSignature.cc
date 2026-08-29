@@ -90,6 +90,8 @@ FunctionSignature* FunctionSignature::make(ScriptType* retType, const uint32 pCo
     paramArray[i] = argType;
   }
 
+  va_end(list);
+
   return create(returnType, false, pCount, paramArray);
 }
 
