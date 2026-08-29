@@ -1,5 +1,8 @@
 #include "FunctionSignature.h"
 
+#include <__stdarg_va_arg.h>
+
+#include "ConstTypes.h"
 #include "ScriptArrayType.h"
 #include "types.h"
 
@@ -66,6 +69,28 @@ FunctionSignature* FunctionSignature::create(
 
 FunctionSignature* FunctionSignature::copy(const FunctionSignature* sign) {
   return create(sign->m_returnType, sign->m_varargs, sign->m_paramCount, sign->m_paramTypes);
+}
+
+FunctionSignature* FunctionSignature::make(ScriptType* retType, const uint32 pCount, ...) {
+  va_list list;
+  va_start(list, pCount);
+
+  ScriptType* paramArray[pCount];
+  ScriptType* returnType = retType;
+
+  if (!returnType) {
+    returnType = ConstTypes::VOID();
+  }
+
+  for (uint32 i = 0; i < pCount; i++) {
+    ScriptType* argType = va_arg(list, ScriptType*);
+    if (!argType) {
+      argType = ConstTypes::VOID();
+    }
+    paramArray[i] = argType;
+  }
+
+  return create(returnType, false, pCount, paramArray);
 }
 
 void FunctionSignature::free(FunctionSignature* type) {
