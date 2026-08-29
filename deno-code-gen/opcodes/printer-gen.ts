@@ -147,7 +147,7 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       }
 
       if (p.name == "straddr" || p.name == "funcName") {
-        formatSpec = "STRINGS[off=%llu] # %.*s"
+        formatSpec = "STRINGS[off=%llu] /* %.*s */"
         valExpr += `, *reinterpret_cast<uint32*>(strPool + ${valExpr}), reinterpret_cast<char*>(strPool + sizeof(uint32) + ${valExpr})`
       }
 

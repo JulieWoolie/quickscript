@@ -128,7 +128,7 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       break;
     case OP_LOADCONSTSTR:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
-      fprintf(out, " STRINGS[off=%llu] # %.*s", *reinterpret_cast<uint64*>(buf + 3), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 3)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 3)));
+      fprintf(out, " STRINGS[off=%llu] /* %.*s */", *reinterpret_cast<uint64*>(buf + 3), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 3)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 3)));
       break;
     case OP_SREAD8:
     case OP_SREAD16:
@@ -258,7 +258,7 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " TYPES[");
       printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, "]");
-      fprintf(out, " STRINGS[off=%llu] # %.*s", *reinterpret_cast<uint64*>(buf + 6), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 6)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 6)));
+      fprintf(out, " STRINGS[off=%llu] /* %.*s */", *reinterpret_cast<uint64*>(buf + 6), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 6)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 6)));
       fprintf(out, " %s", getRegistryName(*(buf + 14)));
       break;
     case OP_INVOKE:
