@@ -586,7 +586,7 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
   Scope* scope = ctx.getCurrentScope();
   BytecodeWriter& writer = ctx.getWriter();
 
-  FunctionSignature* targetSign = static_cast<FunctionSignature*>(call->target->resultType);
+  const FunctionSignature* targetSign = static_cast<FunctionSignature*>(call->target->resultType);
   ctx.countTypeReference(targetSign);
 
   const uint32 argCount = targetSign->getArgumentsLength();
@@ -595,11 +595,12 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
   uint64 runningOffset = scope->getStackSize();
 
   for (uint32 i = argCount; i > 0; i--) {
-    const ScriptType* argType = targetSign->getArgumentType(i - 1);
+    const uint32 argIdx = i - 1;
+    const ScriptType* argType = targetSign->getArgumentType(argIdx);
     const uint64 argSize = argType->stackSizeBytes();
 
     runningOffset -= argSize;
-    offsets[i - 1] = runningOffset;
+    offsets[argIdx] = runningOffset;
   }
 
   const RegisterId funcReg = ctx.acquireRegister();
