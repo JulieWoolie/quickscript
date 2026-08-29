@@ -586,6 +586,7 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
   BytecodeWriter& writer = ctx.getWriter();
 
   FunctionSignature* targetSign = static_cast<FunctionSignature*>(call->target->resultType);
+  ctx.countTypeReference(targetSign);
 
   uint64 offsets[targetSign->getArgumentsLength()];
   uint64 runningOffset = 0;
@@ -617,6 +618,7 @@ static void compileArrayLiteral(ArrayLiteral* lit, const RegisterId out, Compile
   BytecodeWriter& writer = ctx.getWriter();
 
   const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(lit->resultType);
+  ctx.countTypeReference(arrType);
 
   ScriptType* cType = arrType->getComponentType();
 
