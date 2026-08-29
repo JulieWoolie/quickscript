@@ -12,8 +12,8 @@
 #define TYPEDEF_FUNC(returnType, name, ...) typedef returnType (*name)(__VA_ARGS__)
 
 class NativeCall {
-  uint64* const m_args;
-  ScriptType** const m_types;
+  const uint64* const m_args;
+  const ScriptType** const m_types;
   const uint32 m_argCount;
 
   bool m_failedCall = false;
@@ -21,7 +21,7 @@ class NativeCall {
   std::string m_error;
 
   public:
-    NativeCall(ScriptType** argType, uint64* args, uint32 argCount);
+    NativeCall(const ScriptType** argType, const uint64* args, uint32 argCount);
 
     uint64 getReturnValue() const;
 
@@ -54,7 +54,7 @@ class NativeCall {
 
     QsArray getScriptArray(uint64 heapAddr) const;
 
-    ScriptType* getArgumentType(uint32 idx) const;
+    const ScriptType* getArgumentType(uint32 idx) const;
 };
 
 TYPEDEF_FUNC(void, NativeFunction, NativeCall& call);

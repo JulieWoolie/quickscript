@@ -7,10 +7,10 @@
 
 #define ARGUMENT_GET_METHOD(name, type) \
 type NativeCall::name(const uint32 idx) const {\
-  return *reinterpret_cast<type*>(&m_args[idx]);\
+  return *reinterpret_cast<const type*>(&m_args[idx]);\
 }
 
-NativeCall::NativeCall(ScriptType** argType, uint64* args, uint32 argCount)
+NativeCall::NativeCall(const ScriptType** argType, const  uint64* args, uint32 argCount)
   : m_args(args),
     m_types(argType),
     m_argCount(argCount)
@@ -71,7 +71,7 @@ QsArray NativeCall::getScriptArray(const uint64 heapAddr) const {
   return castToQsArray(reinterpret_cast<void*>(heapAddr));
 }
 
-ScriptType* NativeCall::getArgumentType(const uint32 idx) const {
+const ScriptType* NativeCall::getArgumentType(const uint32 idx) const {
   return m_types[idx];
 }
 
