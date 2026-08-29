@@ -143,6 +143,7 @@ class CompilerContext {
     bool registerInUse(RegisterId reg) const;
     void useRegister(RegisterId reg) const;
     void freeRegister(RegisterId reg) const;
+    RegisterBitSet* getUsedRegistries() const;
 
     BytecodeWriter& getWriter();
     ConstStringPoolWriter& getStringPool();

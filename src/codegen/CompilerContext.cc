@@ -311,6 +311,10 @@ void CompilerContext::freeRegister(const RegisterId reg) const {
   *m_registersInUse &= ~(1L << reg);
 }
 
+RegisterBitSet* CompilerContext::getUsedRegistries() const {
+  return m_registersInUse;
+}
+
 BytecodeWriter& CompilerContext::getWriter() {
   return m_writer;
 }
