@@ -7,8 +7,7 @@
 #define REFCOUNT_PREFIX_SIZE 4
 #define REFCOUNT_MASK (1 << 31)
 #define NO_REFCOUNT 0xFFFFFFFF
-#define EMPTY_QS_ARRAY QsArray(0, nullptr)
-#define EMPTY_QS_STRING QsString(0, nullptr)
+#define EMPTY_QS_ARRAY {.length = 0, .refCount = nullptr, .data = nullptr}
 
 static_assert(sizeof(uint32) == LENGTH_PREFIX_SIZE);
 static_assert(sizeof(uint32) == REFCOUNT_PREFIX_SIZE);
