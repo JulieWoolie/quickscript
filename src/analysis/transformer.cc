@@ -880,7 +880,7 @@ void SemanticTransformer::createStructConstructors() {
     }
 
     LexicalDeclaration* lexDecl = alloc.make<LexicalDeclaration>();
-    lexDecl->isConstDeclaration = true;
+    lexDecl->flags = DECLFLAG_CONST;
     lexDecl->variableName = makeId(thisId);
     lexDecl->value = allocExpr;
     lexDecl->parentStatement = funcBlock;
@@ -1167,7 +1167,7 @@ void SemanticTransformer::flattenNestedFunctions() {
       }
 
       LexicalDeclaration* decl = alloc.make<LexicalDeclaration>();
-      decl->isConstDeclaration = true;
+      decl->flags = DECLFLAG_CONST;
       decl->parentStatement = parent;
       decl->value = alloc.make<GetStackPointer>();
       decl->variableName = makeId(closureId);
