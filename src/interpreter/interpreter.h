@@ -75,6 +75,8 @@ class GlobalMemorySpace {
 typedef uint8 functype;
 
 struct ScriptFunction {
+  FunctionSignature* signature = nullptr;
+
   virtual ~ScriptFunction() = default;
   virtual functype ftype() const = 0;
 };
@@ -84,14 +86,12 @@ struct LocalScriptFunction: ScriptFunction {
   uint32 firstInstrIndex = 0;
   uint64 nameOffset = 0;
   uint64 stackSize = 0;
-  FunctionSignature* signature = nullptr;
 
   functype ftype() const override;
 };
 
 struct NativeScriptFunction: ScriptFunction {
   std::string name = "";
-  FunctionSignature* signature = nullptr;
   NativeFunction callback = nullptr;
 
   functype ftype() const override;
@@ -131,6 +131,8 @@ class VirtualMachine {
     int8 compareString(uint64 leftPtr, uint64 rightPtr);
 
     int8 compareArray(uint64 leftPtr, uint64 rightPtr, const ScriptArrayType* arrType);
+
+    NativeScriptFunction* lookupNativeFunction(const FunctionSignature* sign, const std::string& name);
 
     TypeTable& getTypes();
     StringPool& getStringPool();

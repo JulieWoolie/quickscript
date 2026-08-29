@@ -206,12 +206,6 @@ static void rewriteInstructions(uint8* buf, const uint64 len, const InstructionR
         break;
       }
 
-      case OP_SETARGTYPE: {
-        uint32* typeIndexPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE + 4);
-        *typeIndexPtr = rewrite.typeRewrites.findRewritten(*typeIndexPtr);
-        break;
-      }
-
       case OP_NFUNCLOOKUP: {
         uint32* typeIdxPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE);
         uint64* strPtr = reinterpret_cast<uint64*>(typeIdxPtr + 1);
@@ -927,6 +921,19 @@ int8 VirtualMachine::compareArray(const uint64 leftPtr, const uint64 rightPtr, c
   return LEFT_EQ_RIGHT;
 }
 
+NativeScriptFunction* VirtualMachine::lookupNativeFunction(
+  const FunctionSignature* sign,
+  const std::string& name
+) {
+  for (NativeScriptFunction& nFunc : m_nativeFunctions) {
+    if (nFunc.name != name || nFunc.signature != sign) {
+      continue;
+    }
+    return &nFunc;
+  }
+  return nullptr;
+}
+
 TypeTable& VirtualMachine::getTypes() {
   return m_types;
 }
@@ -1207,6 +1214,45 @@ void Interpreter::run() {
       m_registers[args[4]] = reinterpret_cast<uint64>(&m_vm.getFunctions().at(READ_U32ARG(0)));
       break;
 
+    case OP_NFUNCLOOKUP: {
+      const typeindex signatureIndex = READ_U32ARG(0);
+      const uint64 strPoolAddr = READ_U64ARG(4);
+      const uint8 outReg = args[12];
+
+      StringPool& pool = m_vm.getStringPool();
+
+      const uint32 len = pool.getLength(strPoolAddr);
+      int8* charData = pool.getCharacterData(strPoolAddr);
+
+      std::string name = std::string(charData, len);
+      FunctionSignature* sign = static_cast<FunctionSignature*>(m_vm.getTypes().lookupByIndex(signatureIndex));
+
+      NativeScriptFunction* nFunc = m_vm.lookupNativeFunction(sign, name);
+      if (!nFunc) {
+        std::string msg = "Failed to find native function ";
+        msg.append(sign->getReturnType()->getTypeName());
+        msg.append(" ");
+        msg.append(name);
+        msg.append("(");
+
+        const uint32 argCount = sign->getArgumentsLength();
+        for (uint32 i = 0 ; i < argCount; i++) {
+          if (i != 0) {
+            msg.append(", ");
+          }
+          msg.append(sign->getArgumentType(i)->getTypeName());
+        }
+
+        msg.append(")");
+
+        throwScriptError(msg);
+        break;
+      }
+
+      m_registers[outReg] = reinterpret_cast<uint64>(nFunc);
+      break;
+    }
+
     case OP_INVOKE: {
       ScriptFunction* sf = REG_AS(args[0], ScriptFunction*);
 
@@ -1215,7 +1261,8 @@ void Interpreter::run() {
         goto begin;
       }
 
-
+      callNativeFunction(static_cast<NativeScriptFunction*>(sf));
+      break;
     }
 
     case OP_LOADCONSTSTR: {
@@ -1285,11 +1332,6 @@ void Interpreter::run() {
     case OP_STRCONCAT: {
       QsArray lString = castToQsArray(REG_AS(args[0], void*));
       m_registers[args[6]] = strConcat(lString, m_registers[args[1]], READ_U32ARG(2));
-      break;
-    }
-
-    case OP_SETARGTYPE: {
-      m_argTypeIndexes[READ_U32ARG(0)] = READ_U32ARG(4);
       break;
     }
 
@@ -2292,6 +2334,39 @@ int8 Interpreter::doArrayComparison(const uint8 lhs, const uint8 rhs, const uint
 void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   CallFrame* parent = getCallFrame();
 
+  FunctionSignature* sign = nFunc->signature;
+  const uint32 argsLen = sign->getArgumentsLength();
+
+  uint64 runningOffset = parent->allocatedSize;
+  uint64 argumentValues[argsLen];
+  const ScriptType* argumentTypes[argsLen];
+
+  for (uint32 i = argsLen; i > 0; i--) {
+    const uint32 argIndex = argsLen - i;
+    const ScriptType* argType = sign->getArgumentType(argIndex);
+    const uint64 sz = argType->stackSizeBytes();
+
+    runningOffset -= sz;
+    argumentTypes[argIndex] = argType;
+
+    uint8* stackAddr = parent->stackBase + runningOffset;
+
+    switch (sz) {
+      case 1:
+        argumentValues[argIndex] = *stackAddr;
+        break;
+      case 2:
+        argumentValues[argIndex] = *reinterpret_cast<uint16*>(stackAddr);
+        break;
+      case 4:
+        argumentValues[argIndex] = *reinterpret_cast<uint32*>(stackAddr);
+        break;
+      default:
+        argumentValues[argIndex] = *reinterpret_cast<uint64*>(stackAddr);
+        break;
+    }
+  }
+
   CallFrame* frame = pushNewFrame();
   frame->filename = "<native code>";
   frame->name = nFunc->name;
@@ -2300,8 +2375,10 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   frame->line = 0;
   frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
 
-  NativeCall call = NativeCall(nullptr, nullptr, 0);
+  NativeCall call = NativeCall(argumentTypes, argumentValues, 0);
   nFunc->callback(call);
+
+  popCallFrame();
 
   m_registers[REGISTER_RETURN_VALUE] = call.getReturnValue();
 }
