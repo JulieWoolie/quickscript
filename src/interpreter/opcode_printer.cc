@@ -244,12 +244,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
-    case OP_SETARGTYPE:
-      fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
-      fprintf(out, " TYPES[");
-      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 6));
-      fprintf(out, "]");
-      break;
     case OP_LFUNCLOOKUP:
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, " %s", getRegistryName(*(buf + 6)));

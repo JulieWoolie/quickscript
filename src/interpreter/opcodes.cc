@@ -73,7 +73,6 @@ conststring opcode_name(opcode code) {
     case OP_WRITEIDX32: return "WRITEIDX32";
     case OP_WRITEIDX64: return "WRITEIDX64";
     case OP_ARRLEN: return "ARRLEN";
-    case OP_SETARGTYPE: return "SETARGTYPE";
     case OP_LFUNCLOOKUP: return "LFUNCLOOKUP";
     case OP_NFUNCLOOKUP: return "NFUNCLOOKUP";
     case OP_INVOKE: return "INVOKE";
@@ -610,7 +609,6 @@ uint8 getInstructionLength(const opcode code) {
       return 7 + LENGTH_OPCODE;
     case OP_STORECONST32:
     case OP_GSTORECONST32:
-    case OP_SETARGTYPE:
       return 8 + LENGTH_OPCODE;
     case OP_LOADCONSTSTR:
     case OP_SREAD8:

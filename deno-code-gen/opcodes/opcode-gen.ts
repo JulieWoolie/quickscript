@@ -53,12 +53,22 @@ export function generateOpCodes(): OpCodeGenResult {
     throw "Too many OP Codes, no valid number type can represent all op codes"
   }
 
+  let paddingError = false
   for (const code of opcodes) {
     let totalMem = fittingType.bytes
     for (const arg of code.params) {
       totalMem += arg.size
     }
     code.padding = INSTRUCTION_LENGTH - totalMem
+
+    if (code.padding < 0) {
+      console.error(`OP Code ${code.opcode} arguments are too long, left with ${code.padding} padding.`)
+      paddingError = true
+    }
+  }
+
+  if (paddingError) {
+    throw `One or more opcodes use too many bytes for their instruction`
   }
 
   return {
@@ -189,7 +199,7 @@ function heapOperations() {
 function functionCallOperations() {
   currentCategory = "2.4.6 Function Call Instructions"
 
-  opCode("SETARGTYPE", [uint32("index"), uint32("typeindex")])
+  // opCode("SETARG", [uint32("index"), uint32("typeindex"), uint32("stackoffset")])
   opCode("LFUNCLOOKUP", [uint32("index"), reg("out")])
   opCode("NFUNCLOOKUP", [uint32("typeindex"), uint64("funcName"), reg("out")])
 
