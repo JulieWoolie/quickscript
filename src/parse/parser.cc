@@ -141,16 +141,39 @@ ScriptFileStatement * Parser::parse() {
   return res;
 }
 
+static declflags modifierFromTokenType(const tokentype ttype) {
+  switch (ttype) {
+    case TT_KEYW_CONST:
+      return DECLFLAG_CONST;
+    case TT_KEYW_EXPORT:
+      return DECLFLAG_EXPORTED;
+    case TT_KEYW_NATIVE:
+      return DECLFLAG_NATIVE;
+    default:
+      return 0;
+  }
+}
+
 declflags Parser::parseDeclFlags() {
   declflags flags = 0;
-  if (is(TT_KEYW_EXPORT)) {
-    flags |= DECLFLAG_EXPORTED;
-    next();
+
+  Token* p = peek();
+  tokentype ttype = p->ttype;
+  declflags flag = 0;
+
+  // While the next token is a valid modifier flag,
+  // read it and add it to the flags bitset
+  while ((flag = modifierFromTokenType(ttype))) {
+    if (flags & flag) {
+      ERROR(p->start, "Declaration modifier already used");
+    }
+
+    flags |= flag;
+
+    p = next();
+    ttype = p->ttype;
   }
-  if (is(TT_KEYW_NATIVE)) {
-    flags |= DECLFLAG_NATIVE;
-    next();
-  }
+
   return flags;
 }
 
@@ -161,7 +184,8 @@ uint8 Parser::isLexOrFuncDecl() {
   bool canBeLabelled = true;
   uint32 line = peek()->start.line;
 
-  while (tt == TT_KEYW_EXPORT || tt == TT_KEYW_NATIVE) {
+  // While next token is a modifier, skip it
+  while (modifierFromTokenType(tt)) {
     next();
     tt = peek()->ttype;
     line = peek()->start.line;
@@ -212,14 +236,14 @@ uint8 Parser::isLexOrFuncDecl() {
     return LFDL_NONE;
   }
 
-  uint32 idLine = next()->start.line;
+  const uint32 idLine = next()->start.line;
 
   if (is(TT_ASSIGN)) {
     RESTORECURSOR
     return LFDL_LEX;
   }
   if (!is(TT_LBRACKET)) {
-    Token* peeked = peek();
+    const Token* peeked = peek();
 
     RESTORECURSOR
 
@@ -236,7 +260,7 @@ uint8 Parser::isLexOrFuncDecl() {
 }
 
 Statement* Parser::statement() {
-  Token* t = peek();
+  const Token* t = peek();
 
   switch (t->ttype) {
     case TT_KEYW_IF:
@@ -256,20 +280,18 @@ Statement* Parser::statement() {
       return block();
     case TT_KEYW_STRUCT:
       return structDecl();
-    case TT_KEYW_CONST:
-      return lexDecl();
     case TT_KEYW_ASSERT:
       return assertStatement();
 
     default:
-      uint8 lfdl = isLexOrFuncDecl();
-      if (lfdl == LFDL_LEX) {
+      const uint8 nextType = isLexOrFuncDecl();
+      if (nextType == LFDL_LEX) {
         return lexDecl();
       }
-      if (lfdl == LFDL_FUNC) {
+      if (nextType == LFDL_FUNC) {
         return funcDecl();
       }
-      if (lfdl == LFDL_LABELLED_LOOP) {
+      if (nextType == LFDL_LABELLED_LOOP) {
         return labelledStatement();
       }
 
@@ -504,16 +526,9 @@ WhileStatement* Parser::whileStatement(Identifier* label) {
 }
 
 LexicalDeclaration * Parser::lexDecl() {
+  Location loc = peek()->start;
+
   const declflags flags = parseDeclFlags();
-  const bool isConst = is(TT_KEYW_CONST);
-
-  Location loc;
-
-  if (isConst) {
-    loc = next()->start;
-  } else {
-    loc = peek()->start;
-  }
 
   TypeExpr* te = typeExpr();
   Identifier* name = id();
@@ -535,7 +550,6 @@ LexicalDeclaration * Parser::lexDecl() {
   lex.typeExpr = te;
   lex.variableName = name;
   lex.value = val;
-  lex.isConstDeclaration = isConst;
   lex.flags = flags;
 
   return EMPLACE(lex);

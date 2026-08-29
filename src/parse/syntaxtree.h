@@ -47,8 +47,9 @@ struct AssertStatement;
 struct ObjectAllocExpr;
 struct GetStackPointer;
 
-#define DECLFLAG_NATIVE 0x1
+#define DECLFLAG_NATIVE   0x1
 #define DECLFLAG_EXPORTED 0x2
+#define DECLFLAG_CONST    0x4
 typedef uint32 declflags;
 
 #define AST_NIL 0
@@ -379,7 +380,6 @@ AST_TYPE(LexicalDeclaration, Statement,
   TypeExpr* typeExpr = nullptr;
   Identifier* variableName = nullptr;
   Expr* value = nullptr;
-  bool isConstDeclaration = false;
   declflags flags = 0;
 )
 
