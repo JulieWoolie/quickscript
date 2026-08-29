@@ -286,8 +286,6 @@ static void acceptIdentifier(SemanticContext& ctx, Identifier* v) {
   }
 
   putCurrentStatementsDependOn(ctx, referenced);
-
-  // referenced->readUses++;
   v->resultType = referenced->getScriptType();
 }
 
