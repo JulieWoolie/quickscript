@@ -174,10 +174,14 @@ ScriptType* TypeTable::getArrayType(ScriptType* componentType) {
 }
 
 typeindex TypeTable::emplaceType(ScriptType* type) {
-  conststring name = type->getTypeName();
-  std::string nameStr = name;
+  const conststring name = type->getTypeName();
+  const std::string nameStr = name;
 
   ensureIndexLookupHasSpace(m_indexLookupLen + 1);
+
+  if (m_nameLookup.contains(nameStr)) {
+    throw std::runtime_error("Duplicate type insertion");
+  }
 
   m_nameLookup[nameStr] = type;
 
