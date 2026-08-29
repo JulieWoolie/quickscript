@@ -107,8 +107,6 @@ class BindingsObject {
     const std::vector<NativeBinding*>& getBindings() const;
 
     NativeFunctionBinding* addFunctionBinding(conststring name, const FunctionSignature* signature, NativeFunction func);
-
-    NativeFunctionBinding* addFunctionBinding(conststring name, conststring signature, NativeFunction func);
 };
 
 #endif //QUICKSCRIPT_NATIVEINTERFACE_H
