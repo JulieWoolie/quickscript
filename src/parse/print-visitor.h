@@ -207,13 +207,6 @@ struct PrintingVisitor: Visitor {
     }
     void acceptLexicalDeclaration(LexicalDeclaration *v) override {
       PRINTNODEBASE
-      printf(" const=");
-      if (v->isConstDeclaration) {
-        printf("true");
-      } else {
-        printf("false");
-      }
-
       printf(")");
       OBJBEGIN
       OBJPROPO("type", v->typeExpr)

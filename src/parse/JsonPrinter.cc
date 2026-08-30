@@ -178,7 +178,6 @@ void JsonPrinter::acceptForStatement(ForStatement* v) {
 }
 void JsonPrinter::acceptLexicalDeclaration(LexicalDeclaration* v) {
   START_NODE
-  PROP("const", v->isConstDeclaration ? "true" : "false")
   AST_PROP(typeExpr)
   AST_PROP(variableName)
   if (v->value) {
