@@ -29,6 +29,7 @@ struct CallFrame {
   std::string filename;
 
   uint8* stackBase = nullptr;
+  uint64 stackFrameSize = 0;
   uint64 allocatedSize = 0;
 
   uint32 returnAddr = NO_RETURN_ADDR;

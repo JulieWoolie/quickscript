@@ -1113,7 +1113,8 @@ void Interpreter::moveExecutionTo(const LocalScriptFunction& func) {
     frame->filename = func.filename;
   }
 
-  uint64 stackSize = func.stackSize;
+  const uint64 frameSize = func.stackSize;
+  uint64 allocationSize = frameSize;
   uint64 stackOffset = 0;
 
   if (oldFrame) {
@@ -1124,13 +1125,14 @@ void Interpreter::moveExecutionTo(const LocalScriptFunction& func) {
       paramsSize += sign->getArgumentType(i)->stackSizeBytes();
     }
 
-    stackSize -= paramsSize;
+    allocationSize -= paramsSize;
     stackOffset = paramsSize;
   }
 
-  uint8* stackFrame = m_stack.allocateFrame(stackSize);
+  uint8* stackFrame = m_stack.allocateFrame(allocationSize);
   frame->stackBase = stackFrame - stackOffset;
-  frame->allocatedSize = stackSize;
+  frame->allocatedSize = allocationSize;
+  frame->stackFrameSize = frameSize;
 
   if (!oldFrame) {
     frame->returnAddr = NO_RETURN_ADDR;
@@ -2365,7 +2367,7 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   FunctionSignature* sign = nFunc->signature;
   const uint32 argsLen = sign->getArgumentsLength();
 
-  uint64 runningOffset = parent->allocatedSize;
+  uint64 runningOffset = parent->stackFrameSize;
   uint64 argumentValues[argsLen];
   const ScriptType* argumentTypes[argsLen];
 
