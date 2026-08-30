@@ -1,9 +1,12 @@
 
 uint32 mul(uint32... values) {
-  uint32 result = 0
+  if values.length == 0 return 0
+
+  uint32 result = 1
   for (uint32 i = 0; i < values.length; i++) {
     result *= values[i]
   }
+
   return result
 }
 
