@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "heap_mem.h"
-#include "ir_file.h"
+#include "bytecode_file.h"
 #include "opcodes.h"
 #include "StackMemory.h"
 #include "StringPool.h"

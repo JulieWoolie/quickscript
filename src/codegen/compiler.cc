@@ -2,7 +2,7 @@
 
 #include "CompilerContext.h"
 #include "../interpreter/interpreter.h"
-#include "../interpreter/ir_file.h"
+#include "../interpreter/bytecode_file.h"
 #include "../interpreter/opcodes.h"
 #include "../types/ConstTypes.h"
 

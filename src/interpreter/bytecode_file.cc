@@ -1,4 +1,4 @@
-#include "ir_file.h"
+#include "bytecode_file.h"
 
 #include "opcodes.h"
 #include "opcode_printer.h"

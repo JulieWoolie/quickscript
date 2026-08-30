@@ -12,7 +12,7 @@
 #include "analysis/transformer.h"
 #include "codegen/compiler.h"
 #include "interpreter/interpreter.h"
-#include "interpreter/ir_file.h"
+#include "interpreter/bytecode_file.h"
 #include "interpreter/script_error.h"
 #include "parse/JsonPrinter.h"
 #include "parse/lexer.h"
