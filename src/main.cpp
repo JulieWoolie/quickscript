@@ -34,6 +34,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out,
   StringTable table = StringTable();
 
   CompilerErrors errors = CompilerErrors(&file_contents, fname.c_str());
+  errors.setLogLevel(settings.loggerLevel);
 
   Lexer l = Lexer(file_contents, &tokens, &table, &errors);
   l.next();
