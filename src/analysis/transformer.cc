@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "../interpreter/registers.h"
 #include "../types/ConstTypes.h"
 
 #define IS_NUM_LITERAL(v) (v == AST_IntLiteral || v == AST_FloatLiteral)
@@ -1272,7 +1273,9 @@ static void processGlobalVarScopes(SemanticContext& ctx) {
     off += lvs->getStackSize();
   }
 
-  gscope->setStackSize(off);
+  gscope->setVariableSpace(off);
+  gscope->setRegistryStoreSpace(0);
+  gscope->setCallArgsSpace(0);
 }
 
 struct ScopeProcessContext {
@@ -1322,6 +1325,7 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
     case AST_IndexAccessExpr: {
       CASTED_VAR(i, IndexAccessExpr, node)
       processScope(i->target, ctx);
+      processScope(i->index, ctx);
       return;
     }
     case AST_BinaryExpr: {
@@ -1404,7 +1408,12 @@ static void processScope(Node* node, ScopeProcessContext& ctx, const bool rollba
       processScope(r->value, ctx);
       return;
     }
-    case AST_LexicalDeclaration:
+    case AST_LexicalDeclaration: {
+      CASTED_VAR(lex, LexicalDeclaration, node)
+      if (lex->value) {
+        processScope(lex->value, ctx);
+      }
+    }
     case AST_FunctionParam: {
       LocalVarSymbol* lvs = LOOKUP_LOCALVAR(ctx.semantics.getSymbolLookup(), node);
       lvs->setStackOffset(start);
@@ -1478,12 +1487,10 @@ static void processFunctionScopes(SemanticContext& ctx, const LocalFunction* lf)
   }
   processScope(body, procContext, false);
 
-  const uint64 scopeSize
-      = procContext.variableSpace
-      + procContext.extraSpace
-      + procContext.callArgsSpace;
+  const uint64 variableSpaceSize = procContext.variableSpace + procContext.extraSpace;
 
-  scope->setStackSize(scopeSize);
+  scope->setVariableSpace(variableSpaceSize);
+  scope->setCallArgsSpace(procContext.callArgsSpace);
 }
 
 void SemanticTransformer::processScopes() const {

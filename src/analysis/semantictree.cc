@@ -158,8 +158,8 @@ void LocalFunction::setNested(bool b) {
   m_nested = b;
 }
 
-Scope::Scope(scopetype type, Scope* parent)
-  : m_type(type), m_parentScope(parent), m_stackSize(0) {
+Scope::Scope(scopetype type, Scope* parent) : m_type(type), m_parentScope(parent) {
+
 }
 
 std::vector<Symbol*>& Scope::getSymbols() {
@@ -246,24 +246,40 @@ void Scope::setLoopLabel(stringid loopLabel) {
   m_loopLabel = loopLabel;
 }
 
-uint64 Scope::getStackSize() const {
-  return m_stackSize;
-}
-
-void Scope::setStackSize(uint64 size) {
-  m_stackSize = size;
+uint64 Scope::getVariableSpace() const {
+  return m_variableSpace;
 }
 
 uint64 Scope::getRegistryStoreSpace() const {
   return m_registryStoreSpace;
 }
 
+uint64 Scope::getUsedRegistryStoreSpace() const {
+  return m_usedRegistryStoreSpace;
+}
+
+uint64 Scope::getCallArgsSpace() const {
+  return m_callArgsSpace;
+}
+
+uint64 Scope::getTotalStackSize() const {
+  return m_callArgsSpace + m_registryStoreSpace + m_variableSpace;
+}
+
+void Scope::setVariableSpace(const uint64 space) {
+  m_variableSpace = space;
+}
+
 void Scope::setRegistryStoreSpace(const uint64 space) {
   m_registryStoreSpace = space;
 }
 
-uint64 Scope::getTotalSize() const {
-  return m_registryStoreSpace + m_stackSize;
+void Scope::setUsedRegistryStoreSpace(uint64 space) {
+  m_usedRegistryStoreSpace = space;
+}
+
+void Scope::setCallArgsSpace(const uint64 space) {
+  m_callArgsSpace = space;
 }
 
 scopetype Scope::getType() const {

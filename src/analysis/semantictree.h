@@ -212,9 +212,12 @@ class Scope {
   std::vector<Symbol*> m_symbols;
 
   stringid m_loopLabel = EMPTY_STRING;
-  uint64 m_stackSize;
-  uint64 m_registryStoreSpace = 0;
   ScriptType* m_expectedReturnType = nullptr;
+
+  uint64 m_variableSpace = 0;
+  uint64 m_registryStoreSpace = 0;
+  uint64 m_usedRegistryStoreSpace = 0;
+  uint64 m_callArgsSpace = 0;
 
   public:
     Scope(scopetype type, Scope* parent);
@@ -238,13 +241,17 @@ class Scope {
     stringid getLoopLabel() const;
     void setLoopLabel(stringid loopLabel);
 
-    uint64 getStackSize() const;
-    void setStackSize(uint64 size);
-
+    uint64 getVariableSpace() const;
     uint64 getRegistryStoreSpace() const;
-    void setRegistryStoreSpace(uint64 space);
+    uint64 getUsedRegistryStoreSpace() const;
+    uint64 getCallArgsSpace() const;
 
-    uint64 getTotalSize() const;
+    uint64 getTotalStackSize() const;
+
+    void setVariableSpace(uint64 space);
+    void setRegistryStoreSpace(uint64 space);
+    void setUsedRegistryStoreSpace(uint64 space);
+    void setCallArgsSpace(uint64 space);
 
     ScriptType* getExpectedReturnType() const;
     void setExpectedReturnType(ScriptType* type);

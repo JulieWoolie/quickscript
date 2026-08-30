@@ -581,10 +581,68 @@ static void compileFuncCall(
   }
 }
 
+static uint64 getRequiredSpillSpace(const RegisterBitSet bitset) {
+  uint64 result = 0;
+  for (uint32 i = FIRST_NON_RESERVED_REGISTER ; i < REGISTER_COUNT; i++) {
+    result += ((bitset & REGISTRY_MASK(i)) != 0) * REGISTER_SIZE_BYTES;
+  }
+  return result;
+}
+
+static void storeRegistriesOnStack(
+  const Scope* scope,
+  const RegisterBitSet usedRegistries,
+  BytecodeWriter& writer
+) {
+  uint64 spillOffset = scope->getVariableSpace();
+
+  for (uint32 i = FIRST_NON_RESERVED_REGISTER; i < REGISTER_COUNT; i++) {
+    const bool inUse = usedRegistries & REGISTRY_MASK(i);
+    if (!inUse) {
+      continue;
+    }
+
+    writer.startInstr(OP_SWRITE64);
+    writer.appendU8(i);
+    writer.appendU64(spillOffset);
+    writer.endInstr();
+
+    spillOffset += REGISTER_SIZE_BYTES;
+  }
+}
+
+static void readRegistriesFromStack(
+  const Scope* scope,
+  const RegisterBitSet bitSet,
+  BytecodeWriter& writer
+  ) {
+  uint64 spillOffset = scope->getVariableSpace();
+
+  for (uint32 i = FIRST_NON_RESERVED_REGISTER; i < REGISTER_COUNT; i++) {
+    const bool inUse = bitSet & REGISTRY_MASK(i);
+    if (!inUse) {
+      continue;
+    }
+
+    writer.startInstr(OP_SREAD64);
+    writer.appendU8(i);
+    writer.appendU64(spillOffset);
+    writer.endInstr();
+
+    spillOffset += REGISTER_SIZE_BYTES;
+  }
+}
 
 static void compileCallExpr(const CallExpr* call, const RegisterId out, CompilerContext& ctx) {
   Scope* scope = ctx.getCurrentScope();
   BytecodeWriter& writer = ctx.getWriter();
+
+  const RegisterBitSet usedRegistries = *ctx.getUsedRegistries() & ~REGISTRY_MASK(out);
+  const uint64 spillSpace = getRequiredSpillSpace(usedRegistries);
+
+  if (spillSpace > scope->getUsedRegistryStoreSpace()) {
+    scope->setUsedRegistryStoreSpace(spillSpace);
+  }
 
   const FunctionSignature* targetSign = static_cast<FunctionSignature*>(call->target->resultType);
   ctx.countTypeReference(targetSign);
@@ -592,7 +650,7 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
   const uint32 argCount = targetSign->getArgumentsLength();
 
   uint64 offsets[argCount];
-  uint64 runningOffset = scope->getStackSize();
+  uint64 runningOffset = scope->getTotalStackSize();
 
   for (uint32 i = argCount; i > 0; i--) {
     const uint32 argIdx = i - 1;
@@ -614,7 +672,10 @@ static void compileCallExpr(const CallExpr* call, const RegisterId out, Compiler
 
   const bool ignoreReturn = targetSign->getReturnType() == ConstTypes::VOID();
 
+  storeRegistriesOnStack(scope, usedRegistries, writer);
   compileFuncCall(writer, funcReg, out, ignoreReturn);
+  readRegistriesFromStack(scope, usedRegistries, writer);
+
   ctx.freeRegister(funcReg);
 }
 
@@ -1121,6 +1182,76 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
   }
 }
 
+static void offsetAddressesToAccountForSpillSpace(
+  const BytecodeWriter& writer,
+  Scope* scope,
+  const uint32 start,
+  const uint32 end
+) {
+  const uint64 varSpace = scope->getVariableSpace();
+  const uint64 registrySpace = scope->getRegistryStoreSpace();
+  const uint64 usedSpillSpace = scope->getUsedRegistryStoreSpace();
+
+  const uint64 unusedSpillSpace = registrySpace - usedSpillSpace;
+  if (unusedSpillSpace == 0) {
+    return;
+  }
+
+  scope->setRegistryStoreSpace(usedSpillSpace);
+
+  const uint64 rewriteBeginOffset = varSpace + usedSpillSpace;
+
+  const uint64 startAddr = start * LENGTH_INSTRUCTION;
+  const uint64 endAddr = end * LENGTH_INSTRUCTION;
+  const uint64 appliedOffset = unusedSpillSpace;
+
+  uint8* buffer = writer.getBuffer();
+
+  for (uint64 addr = startAddr; addr < endAddr; addr += LENGTH_INSTRUCTION) {
+    opcode code = *reinterpret_cast<opcode*>(buffer + addr);
+
+    switch (code) {
+      case OP_SREAD8:
+      case OP_SREAD16:
+      case OP_SREAD32:
+      case OP_SREAD64:
+      case OP_SWRITE8:
+      case OP_SWRITE16:
+      case OP_SWRITE32:
+      case OP_SWRITE64: {
+        // '1' for the initial registry argument all the opcodes in this case use
+        uint64* offsetPtr = reinterpret_cast<uint64*>(buffer + addr + LENGTH_OPCODE + 1);
+        const uint64 stackOffset = *offsetPtr;
+
+        if (stackOffset < rewriteBeginOffset) {
+          break;
+        }
+
+        *offsetPtr = stackOffset - unusedSpillSpace;
+        break;
+      }
+
+      case OP_STORECONST8:
+      case OP_STORECONST16:
+      case OP_STORECONST32:
+      case OP_STORECONST64: {
+        uint32* offsetPtr = reinterpret_cast<uint32*>(buffer + addr + LENGTH_OPCODE);
+        const uint32 stackOffset = *offsetPtr;
+
+        if (stackOffset < rewriteBeginOffset) {
+          break;
+        }
+
+        *offsetPtr = stackOffset - unusedSpillSpace;
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+}
+
 static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) {
   FunctionDeclStatement* stat = lf->getDecl();
   LocalFuncSymbol* lfs = static_cast<LocalFuncSymbol*>(ctx.getSemantics().getSymbolLookup()[stat]);
@@ -1130,6 +1261,9 @@ static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) 
 
   Scope* scope = lf->getScope();
   ctx.setCurrentScope(scope);
+
+  scope->setUsedRegistryStoreSpace(0);
+  scope->setRegistryStoreSpace(REGISTERS_MEMSIZE);
 
   BytecodeWriter& writer = ctx.getWriter();
   const uint32 start = writer.getInstructionCounter();
@@ -1142,6 +1276,9 @@ static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) 
     writer.startInstr(OP_RET);
     writer.endInstr();
   }
+
+  const uint32 end = writer.getInstructionCounter();
+  offsetAddressesToAccountForSpillSpace(writer, scope, start, end);
 
   ctx.setReturnCalled(false);
   ctx.pushCompiledFunction(lfs, start);
@@ -1563,7 +1700,7 @@ static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
       .nameOffset = cfunc.poolId,
       .signatureIndex = tIndex,
       .startingInstruction = cfunc.bodyStart,
-      .stackSize = cfunc.functionSymbol->getFunction()->getScope()->getStackSize()
+      .stackSize = cfunc.functionSymbol->getFunction()->getScope()->getTotalStackSize()
     };
   }
 
@@ -1617,7 +1754,7 @@ BytecodeFile& compile(SemanticContext& ctx) {
   file.instructionCount = cctx.getWriter().getInstructionCounter();
   file.constStringPool = cctx.getStringPool().getData();
   file.stringPoolSize = cctx.getStringPool().getLength();
-  file.globalScopeSize = ctx.getGlobalScope()->getStackSize();
+  file.globalScopeSize = ctx.getGlobalScope()->getVariableSpace();
 
   return file;
 }
