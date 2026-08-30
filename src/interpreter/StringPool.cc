@@ -41,13 +41,7 @@ StringPool::StringPool() {
 }
 
 StringPool::~StringPool() {
-  if (m_data) {
-    free(m_data);
-  }
-
-  m_data = nullptr;
-  m_cap = 0;
-  m_len = 0;
+  freePool();
 }
 
 uint32 StringPool::getLength(const uint64 poolOffset) const {
@@ -148,4 +142,14 @@ PoolOffsetRewrite StringPool::emplacePoolData(uint8* data, uint64 len) {
 
 uint8* StringPool::getPointer(const uint64 offset) const {
   return m_data + offset;
+}
+
+void StringPool::freePool() {
+  if (m_data) {
+    free(m_data);
+  }
+
+  m_data = nullptr;
+  m_cap = 0;
+  m_len = 0;
 }

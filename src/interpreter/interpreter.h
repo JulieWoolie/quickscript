@@ -42,6 +42,7 @@ class InstructionBuf {
 
   public:
     InstructionBuf();
+    ~InstructionBuf();
 
     void insertInstructions(const uint8* instrBuf, uint64 len);
 
@@ -54,6 +55,8 @@ class InstructionBuf {
     uint8* getBuffer() const;
 
     uint64 getInstructionCount() const;
+
+    void freeBuffer();
 };
 
 class GlobalMemorySpace {
@@ -62,12 +65,15 @@ class GlobalMemorySpace {
 
   public:
     GlobalMemorySpace();
+    ~GlobalMemorySpace();
 
     void grow(uint64 bytes);
 
     uint8* getData() const;
 
     uint64 size() const;
+
+    void free();
 };
 
 #define FUNCTYPE_LOCAL 0

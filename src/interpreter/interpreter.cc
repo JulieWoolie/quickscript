@@ -12,6 +12,10 @@ InstructionBuf::InstructionBuf() {
 
 }
 
+InstructionBuf::~InstructionBuf() {
+  freeBuffer();
+}
+
 void InstructionBuf::insertInstructions(const uint8* instrBuf, const uint64 len) {
   const uint64 newLen = m_len + len;
 
@@ -59,8 +63,23 @@ uint64 InstructionBuf::getInstructionCount() const {
   return m_instrCount;
 }
 
+void InstructionBuf::freeBuffer() {
+  if (m_buf) {
+    free(m_buf);
+  }
+
+  m_buf = nullptr;
+  m_cap = 0;
+  m_len = 0;
+  m_instrCount = 0;
+}
+
 GlobalMemorySpace::GlobalMemorySpace() {
 
+}
+
+GlobalMemorySpace::~GlobalMemorySpace() {
+  free();
 }
 
 void GlobalMemorySpace::grow(const uint64 bytes) {
@@ -81,6 +100,15 @@ uint8* GlobalMemorySpace::getData() const {
 
 uint64 GlobalMemorySpace::size() const {
   return m_size;
+}
+
+void GlobalMemorySpace::free() {
+  if (m_data) {
+    std::free(m_data);
+  }
+
+  m_data = nullptr;
+  m_size = 0;
 }
 
 functype LocalScriptFunction::ftype() const {
