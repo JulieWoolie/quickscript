@@ -1,0 +1,68 @@
+====================================================================================================
+======================================== Reference counting ========================================
+====================================================================================================
+
+When something is allocated, its reference counter is set to zero by default. When it's assigned to
+a variable its reference counter is increased by one.
+
+
+==== Examples ======================================================================================
+
+Example 1)
+====================================================================================================
+uint32[] makeArray(uint32 x, uint32 y) {
+  return [x, y]
+}
+void main() {
+  makeArray(1, 2)
+}
+====================================================================================================
+When the return expression executes, it creates the array with reference counter value of 0, it is
+incremented when returned to 1.
+
+The result of the 'makeArray' call is unsued, thus the reference counter is decreased to 0 and the
+object is freed.
+
+
+Example 2)
+====================================================================================================
+uint32[] makeArray(uint32 x, uint32 y) {
+  return [x, y]
+}
+void main() {
+  uint32[] arr = makeArray(0, 1)
+  println("arr[0]: " + arr[0])
+}
+====================================================================================================
+As before, ref counter is set to 0, increased to 1 when returned, since the result is used, it is
+not decremented.
+However when the function exits, the reference counter of every allocated object in the scope is
+decreased, since no more references exist, the array is freed.
+
+Example 3)
+====================================================================================================
+struct Foo {
+  uint32[] array
+}
+uint32[] makeArray(uint32 x, uint32 y) {
+  return [x, y]
+}
+void main() {
+  uint32[] arr = makeArray(2, 3)
+  Foo foo = {
+    array = arr
+  }
+  println("foo.array: " + foo.arr)
+}
+====================================================================================================
+Ref counter of arr is set to 1 after function call, it is then assigned to a property of foo,
+causing it to be increased again to 2.
+
+Accessing the array, like before, does not increase the reference count, only assignments increase
+the reference counter.
+
+When the function scope ends and is exited, all allocated objects have their reference counters
+decreased. That means the reference counter for the 'arr' symbol is decremented, then the 'foo'
+reference counter is decremented, which also means every property has is reference counter
+decremented, meaning 'Foo.array' has its ref counter decremented as well, reducing it to 0 and
+causing it to be freed after which 'foo' itself is freed as well.
