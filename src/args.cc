@@ -61,11 +61,17 @@ void showHelpMessage() {
   printf("    --loglevel=<level>            Set the logger level.\n");
   printf("                                  (One of: error, warn, info)\n");
   printf("    --text-compile -tc            Compile to a text based IR instead of binary.\n");
+  printf("                                  (Only used for the 'compile' command)");
   printf("    --omit-ok-tests -oot          Do not log tests that passed.\n");
+  printf("                                  (Only used for the 'test' command)");
   printf("    --test-dump-dir=<dir>         Directory to dump random test-related debug info to.\n");
+  printf("                                  (Only used for the 'test' command)");
   printf("    --ignore-asserts -ia          Do not compile or assert statements.\n");
+  printf("                                  (Ignored when using 'test' command)");
   printf("    --no-stat-inlining            Do not inline statements.\n");
+  printf("                                  (Ignored when using 'test' command)");
   printf("    --no-expr-inlining            Do not inline expressions.\n");
+  printf("                                  (Ignored when using 'test' command)");
   printf("\n");
   printf("COMMANDS\n");
   printf("    help                                Display this help message.\n");
