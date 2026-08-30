@@ -515,6 +515,23 @@ static void dumpTestCaseToJson(TestCase& tcase) {
   fclose(file);
 }
 
+static void dumpAst(const conststring fileName, const TestCase& tcase, Node* result) {
+  if (tcase.dumpDirectory.empty()) {
+    return;
+  }
+
+  std::filesystem::create_directories(tcase.dumpDirectory);
+
+  // Write JSON AST
+  JsonPrinter printer;
+  result->acceptVisit(&printer);
+
+  const std::string& jsonString = printer.getResult();
+  std::ofstream jsonStream(tcase.dumpDirectory / fileName);
+
+  jsonStream << jsonString;
+}
+
 bool runTestCase(
   TestCase& tcase,
   const std::filesystem::path& filePath,
@@ -585,18 +602,7 @@ bool runTestCase(
     return checkErrors(tcase, errors, result);
   }
 
-  if (!tcase.dumpDirectory.empty()) {
-    std::filesystem::create_directories(tcase.dumpDirectory);
-
-    // Write JSON AST
-    JsonPrinter printer;
-    result->acceptVisit(&printer);
-
-    const std::string& jsonString = printer.getResult();
-    std::ofstream jsonStream(tcase.dumpDirectory / "ast.json");
-
-    jsonStream << jsonString;
-  }
+  dumpAst("ast.json", tcase, result);
 
   TypeTable lookup = TypeTable();
 
@@ -614,6 +620,8 @@ bool runTestCase(
 
     runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
     BytecodeFile& bfile = compile(ctx);
+
+    dumpAst("post-transform-ast.json", tcase, result);
 
     if (!tcase.dumpDirectory.empty()) {
       std::filesystem::path binaryIrFile = tcase.dumpDirectory / "bytecode.qscr-bin";
