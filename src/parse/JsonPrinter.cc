@@ -16,6 +16,7 @@
   m_result.append(",\"" name "\":");
 
 #define AST_PROP(name) PROP_BEGIN(#name) v->name->acceptVisit(this);
+#define AST_PROPO(name) if (v->name) {PROP_BEGIN(#name) v->name->acceptVisit(this);}
 
 #define AST_ARRAY(arr) \
   m_result.append("[");\
@@ -215,14 +216,14 @@ void JsonPrinter::acceptScriptFileStatement(ScriptFileStatement* v) {
 }
 void JsonPrinter::acceptFunctionParam(FunctionParam* v) {
   START_NODE
-  AST_PROP(paramType)
+  AST_PROPO(paramType)
   AST_PROP(name)
   PROP("varargs", v->varargs ? "true" : "false")
   END_NODE
 }
 void JsonPrinter::acceptFunctionDeclStatement(FunctionDeclStatement* v) {
   START_NODE
-  AST_PROP(returnType)
+  AST_PROPO(returnType)
   AST_PROP(name)
 
   PROP_BEGIN("arguments")

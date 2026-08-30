@@ -92,42 +92,60 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_RET:
       break;
     case OP_PUSHLINE:
+      fprintf(out, " /*lineno*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       break;
     case OP_JMP:
+      fprintf(out, " /*to*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
       break;
     case OP_JMPI0:
     case OP_JMPN0:
+      fprintf(out, " /*to*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " /*condition*/");
       fprintf(out, " %s", getRegistryName(*(buf + 6)));
       break;
     case OP_ASSERT:
+      fprintf(out, " /*condition*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*message*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
     case OP_MOV:
+      fprintf(out, " /*from*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*to*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
     case OP_LOADCONST8:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*val*/");
       fprintf(out, " %d", *(buf + 3));
       break;
     case OP_LOADCONST16:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*val*/");
       fprintf(out, " %d", *reinterpret_cast<uint16*>(buf + 3));
       break;
     case OP_LOADCONST32:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*val*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 3));
       break;
     case OP_LOADCONST64:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*val*/");
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
       break;
     case OP_LOADCONSTSTR:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*straddr*/");
       fprintf(out, " STRINGS[off=%llu] /* %.*s */", *reinterpret_cast<uint64*>(buf + 3), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 3)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 3)));
       break;
     case OP_SREAD8:
@@ -138,7 +156,9 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_GREAD16:
     case OP_GREAD32:
     case OP_GREAD64:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*offset*/");
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
       break;
     case OP_SWRITE8:
@@ -149,113 +169,156 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_GWRITE16:
     case OP_GWRITE32:
     case OP_GWRITE64:
+      fprintf(out, " /*val*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*offset*/");
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
       break;
     case OP_STORECONST8:
     case OP_GSTORECONST8:
+      fprintf(out, " /*offset*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " /*value*/");
       fprintf(out, " %d", *(buf + 6));
       break;
     case OP_STORECONST16:
     case OP_GSTORECONST16:
+      fprintf(out, " /*offset*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " /*value*/");
       fprintf(out, " %d", *reinterpret_cast<uint16*>(buf + 6));
       break;
     case OP_STORECONST32:
     case OP_GSTORECONST32:
+      fprintf(out, " /*offset*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " /*value*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 6));
       break;
     case OP_STORECONST64:
     case OP_GSTORECONST64:
+      fprintf(out, " /*offset*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " /*value*/");
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 6));
       break;
     case OP_GETSTACKPTR:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       break;
     case OP_CREAD8:
     case OP_CREAD16:
     case OP_CREAD32:
     case OP_CREAD64:
+      fprintf(out, " /*closure*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*off*/");
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 11)));
       break;
     case OP_CWRITE8:
     case OP_CWRITE16:
     case OP_CWRITE32:
     case OP_CWRITE64:
+      fprintf(out, " /*closure*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*off*/");
       fprintf(out, " %llu", *reinterpret_cast<uint64*>(buf + 3));
+      fprintf(out, " /*val*/");
       fprintf(out, " %s", getRegistryName(*(buf + 11)));
       break;
     case OP_OBJALLOC:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*typeindex*/");
       fprintf(out, " TYPES[");
       printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 3));
       fprintf(out, "]");
       break;
     case OP_ARRAYALLOC:
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*count*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 3));
+      fprintf(out, " /*typeindex*/");
       fprintf(out, " TYPES[");
       printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 7));
       fprintf(out, "]");
       break;
     case OP_INCREFC:
     case OP_DECREFC:
+      fprintf(out, " /*obj*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       break;
     case OP_READOBJ8:
     case OP_READOBJ16:
     case OP_READOBJ32:
     case OP_READOBJ64:
+      fprintf(out, " /*obj*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*off*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 4));
       break;
     case OP_WRITEOBJ8:
     case OP_WRITEOBJ16:
     case OP_WRITEOBJ32:
     case OP_WRITEOBJ64:
+      fprintf(out, " /*obj*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*val*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*off*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 4));
       break;
     case OP_READIDX8:
     case OP_READIDX16:
     case OP_READIDX32:
     case OP_READIDX64:
+      fprintf(out, " /*obj*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*idx*/");
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
       break;
     case OP_WRITEIDX8:
     case OP_WRITEIDX16:
     case OP_WRITEIDX32:
     case OP_WRITEIDX64:
+      fprintf(out, " /*obj*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*val*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*idx*/");
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
       break;
     case OP_ARRLEN:
+      fprintf(out, " /*obj*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
     case OP_LFUNCLOOKUP:
+      fprintf(out, " /*index*/");
       fprintf(out, " %d", *reinterpret_cast<uint32*>(buf + 2));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 6)));
       break;
     case OP_NFUNCLOOKUP:
+      fprintf(out, " /*typeindex*/");
       fprintf(out, " TYPES[");
       printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 2));
       fprintf(out, "]");
+      fprintf(out, " /*funcName*/");
       fprintf(out, " STRINGS[off=%llu] /* %.*s */", *reinterpret_cast<uint64*>(buf + 6), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 6)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 6)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 14)));
       break;
     case OP_INVOKE:
+      fprintf(out, " /*func*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       break;
     case OP_I8TU8:
@@ -368,7 +431,9 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_DECU64:
     case OP_DECF32:
     case OP_DECF64:
+      fprintf(out, " /*in*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
       break;
     case OP_LSHIFT:
@@ -491,8 +556,11 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_STRREP16:
     case OP_STRREP32:
     case OP_STRREP64:
+      fprintf(out, " /*lhs*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*rhs*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
       break;
     case OP_EQARR:
@@ -503,19 +571,27 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_GTEARR:
     case OP_LTARR:
     case OP_LTEARR:
+      fprintf(out, " /*lhs*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*rhs*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 4)));
+      fprintf(out, " /*typeindex*/");
       fprintf(out, " TYPES[");
       printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 5));
       fprintf(out, "]");
       break;
     case OP_STRCONCAT:
+      fprintf(out, " /*lhs*/");
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " /*rhs*/");
       fprintf(out, " %s", getRegistryName(*(buf + 3)));
+      fprintf(out, " /*typeindex*/");
       fprintf(out, " TYPES[");
       printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 4));
       fprintf(out, "]");
+      fprintf(out, " /*out*/");
       fprintf(out, " %s", getRegistryName(*(buf + 8)));
       break;
     default:
