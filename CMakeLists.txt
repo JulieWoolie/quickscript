@@ -36,7 +36,7 @@ add_executable(quickscript src/main.cpp
         src/codegen/compiler.cc
         src/codegen/type_conv.h
         src/codegen/type_conv.cc
-        src/interpreter/bytecode_file.h
+        src/bytecode/bytecode_file.h
         src/codegen/CompilerContext.cc
         src/codegen/CompilerContext.h
         src/interpreter/StackMemory.cc
@@ -76,7 +76,7 @@ add_executable(quickscript src/main.cpp
         src/parse/JsonPrinter.h
         src/types/ScriptClosureType.cc
         src/types/ScriptClosureType.h
-        src/interpreter/bytecode_file.cc
+        src/bytecode/bytecode_file.cc
         src/interpreter/opcode_printer.h
         src/interpreter/opcode_printer.cc
         src/interpreter/heap_mem.h

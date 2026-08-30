@@ -2,7 +2,7 @@
 #define QUICKSCRIPT_COMPILER_H
 
 #include "../analysis/SemanticContext.h"
-#include "../interpreter/bytecode_file.h"
+#include "../bytecode/bytecode_file.h"
 
 BytecodeFile& compile(SemanticContext& ctx);
 

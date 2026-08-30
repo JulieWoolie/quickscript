@@ -1,7 +1,7 @@
 #include "bytecode_file.h"
 
-#include "opcodes.h"
-#include "opcode_printer.h"
+#include "../interpreter/opcodes.h"
+#include "../interpreter/opcode_printer.h"
 
 #define CREATE_WRITE_METHOD(name, type) \
   void name(type x) {\
