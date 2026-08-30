@@ -1235,9 +1235,10 @@ ObjectLiteral* Parser::objectLiteral() {
 
     if (is(TT_COMMA)) {
       next();
-      if (is(TT_RCURL)) {
-        ERROR(peek()->start, "Illegal trailing comma in object initializer");
-      }
+      // This should be completely okay, just ignore it
+      // if (is(TT_RCURL)) {
+      //   ERROR(peek()->start, "Illegal trailing comma in object initializer");
+      // }
     }
   }
 
@@ -1258,9 +1259,10 @@ ArrayLiteral* Parser::arrayLiteral() {
 
     if (is(TT_COMMA)) {
       skip();
-      if (is(TT_RSQUARE)) {
-        ERROR(peek()->start, "Illegal trailing comma in array initializer");
-      }
+      // This should be considered completely okay, not a problem
+      // if (is(TT_RSQUARE)) {
+      //   ERROR(peek()->start, "Illegal trailing comma in array initializer");
+      // }
     }
   }
 
