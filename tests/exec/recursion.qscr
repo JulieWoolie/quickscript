@@ -1,0 +1,37 @@
+
+uint32 fibonacci(uint32 n) {
+  if n < 3 return n
+  return fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+void main() {
+  uint32[] expectedResults = [
+    /*0*/ 0,
+    /*1*/ 1,
+    /*2*/ 2,
+    /*3*/ 3,
+    /*4*/ 5,
+    /*5*/ 8,
+    /*6*/ 13,
+    /*7*/ 21,
+    /*8*/ 34,
+    /*9*/ 55,
+    /*10*/ 89,
+    /*11*/ 144,
+    /*12*/ 233,
+    /*13*/ 377,
+    /*14*/ 610,
+    /*15*/ 987,
+    /*16*/ 1597,
+    /*17*/ 2584,
+    /*18*/ 4181,
+    /*19*/ 6765,
+  ]
+
+  for (uint32 i = 0; i < expectedResults.length; i++) {
+    uint32 expect = expectedResults[i]
+    uint32 gotten = fibonacci(i)
+
+    assert gotten == expect : "gotten == expect i=" + i + " expected=" + expect + " gotten=" + gotten
+  }
+}
