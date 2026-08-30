@@ -66,7 +66,7 @@ void showHelpMessage() {
   printf("                                  (Only used for the 'test' command)\n");
   printf("    --test-dump-dir=<dir>         Directory to dump random test-related debug info to.\n");
   printf("                                  (Only used for the 'test' command)\n");
-  printf("    --ignore-asserts -ia          Do not compile or assert statements.\n");
+  printf("    --ignore-asserts -ia          Do not compile assert statements.\n");
   printf("                                  (Ignored when using 'test' command)\n");
   printf("    --no-stat-inlining            Do not inline statements.\n");
   printf("                                  (Ignored when using 'test' command)\n");
