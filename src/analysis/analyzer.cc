@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <functional>
+#include <unordered_set>
 
 #include "../types/ConstTypes.h"
 
@@ -988,6 +989,10 @@ static void acceptTernaryExpr(SemanticContext& ctx, TernaryExpr* v) {
 }
 
 static void incrementSymbolReads(Symbol* sym, const Location& location) {
+  if (!sym) {
+    return;
+  }
+
   switch (sym->stype()) {
     case SYM_LocalFunc:
       static_cast<LocalFuncSymbol*>(sym)->onCalled();
@@ -1813,7 +1818,7 @@ static void acceptStatement(SemanticContext& ctx, Statement* stat) {
   }
 }
 
-static void reportInvalidDependencies(SemanticContext& ctx, DependencyGraph& graph, Symbol* sym) {
+static void reportInvalidDependencies(SemanticContext& ctx, DependencyGraph& graph, Symbol* sym, std::unordered_set<Symbol*>& dejavu) {
   if (!graph.hasDependencies(sym)) {
     return;
   }
@@ -1840,7 +1845,13 @@ static void reportInvalidDependencies(SemanticContext& ctx, DependencyGraph& gra
       ctx.getErrors().error(loc, "Accessing '%.*s' before its initialized", PRINTVIEW(view));
       continue;
     }
-    reportInvalidDependencies(ctx, graph, dependentSym);
+
+    if (dejavu.contains(dependentSym)) {
+      continue;
+    }
+
+    dejavu.insert(dependentSym);
+    reportInvalidDependencies(ctx, graph, dependentSym, dejavu);
   }
 }
 
@@ -1866,7 +1877,9 @@ static void checkForInvalidDependencies(SemanticContext& ctx) {
       continue;
     }
 
-    reportInvalidDependencies(ctx, graph, sym);
+    std::unordered_set<Symbol*> dejavu;
+
+    reportInvalidDependencies(ctx, graph, sym, dejavu);
     sym->removeFlags(SYMFLAG_MID_INIT);
   }
 }
