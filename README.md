@@ -14,7 +14,7 @@ Basically, get the language to parse, check the types, compile it to an IR and t
 interpret that IR.
 
 ## TODO (Problems)
-- [ ] Calling errors (Function stores something in a register, calls a function, function overwrites that register, data is lost)
+- [X] Calling errors (Function stores something in a register, calls a function, function overwrites that register, data is lost)
 - [ ] Correct logic around passing object and array literals to functions  
       **Note on this:**  
       Since during semantic analysis, the system iterates over each argument and attempts to 
