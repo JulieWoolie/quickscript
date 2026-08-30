@@ -105,8 +105,6 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
       let formatSpec: string = ""
       let valExpr: string = ""
 
-      out += `\n      fprintf(out, " /*${p.name}:*/");`
-
       if (p.name == "typeindex") {
         out += `\n      fprintf(out, " TYPES[");`
         out += `\n      printTypeIndex(out, *reinterpret_cast<${tn}*>(buf + ${off}));`
