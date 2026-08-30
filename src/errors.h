@@ -26,6 +26,7 @@ class CompilerErrors {
   std::string* m_fileContent;
   conststring m_fileName;
   bool m_silent = false;
+  loglevel m_logLevel = LOGL_INFO;
 
   std::vector<ReportedError> m_errors;
 
@@ -37,6 +38,9 @@ class CompilerErrors {
     uint32 getErrorCount() const;
 
     std::vector<ReportedError>& getErrors();
+
+    loglevel getLogLevel() const;
+    void setLogLevel(loglevel level);
 
     void fatal(Location& loc, conststring msg, ...) __attribute__((format(printf, 3, 4)));
     void fatal(conststring msg, ...) __attribute__((format(printf, 2, 3)));

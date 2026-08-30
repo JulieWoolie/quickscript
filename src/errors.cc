@@ -33,6 +33,14 @@ std::vector<ReportedError>& CompilerErrors::getErrors() {
   return m_errors;
 }
 
+loglevel CompilerErrors::getLogLevel() const {
+  return m_logLevel;
+}
+
+void CompilerErrors::setLogLevel(const loglevel level) {
+  m_logLevel = level;
+}
+
 CREATE_LOG_METHOD(fatal, LOGL_FATAL)
 CREATE_LOG_METHOD_NL(fatal, LOGL_FATAL)
 
@@ -45,9 +53,9 @@ CREATE_LOG_METHOD_NL(warn, LOGL_WARN)
 CREATE_LOG_METHOD(info, LOGL_INFO)
 CREATE_LOG_METHOD_NL(info, LOGL_INFO)
 
-static uint32 findLineBoundary(std::string* bufstr, int32 pos, int32 direction) {
+static uint32 findLineBoundary(const std::string* str, const int32 pos, const int32 direction) {
   int32 p = pos;
-  int32 len = bufstr->length();
+  const int32 len = str->length();
 
   while (true) {
     if (p >= len) {
@@ -57,7 +65,7 @@ static uint32 findLineBoundary(std::string* bufstr, int32 pos, int32 direction) 
       return 0;
     }
 
-    const char ch = bufstr->at(p);
+    const char ch = str->at(p);
 
     if (ch == '\n' || ch == '\r') {
       if (direction == -1) {
@@ -100,7 +108,7 @@ void CompilerErrors::log(loglevel level, Location *l, conststring msg, va_list l
 
   m_errors.push_back(reported);
 
-  if (!m_silent) {
+  if (!m_silent && m_logLevel >= level) {
     printError(reported);
   }
 
