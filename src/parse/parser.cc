@@ -307,19 +307,20 @@ Statement* Parser::statement() {
 
 FunctionParam * Parser::funcParam() {
   TypeExpr* ptype = typeExpr();
+  bool variadic = false;
+
+  if (is(TT_THREE_DOTS)) {
+    next();
+    variadic = true;
+  }
+
   Identifier* pname = id();
 
   FunctionParam param;
   param.location = ptype->location;
   param.name = pname;
   param.paramType = ptype;
-  
-  if (is(TT_THREE_DOTS)) {
-    next();
-    param.varargs = true;
-  } else {
-    param.varargs = false;
-  }
+  param.varargs = variadic;
 
   return EMPLACE(param);
 }
