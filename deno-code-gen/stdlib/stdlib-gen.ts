@@ -24,6 +24,19 @@ interface Var extends ScriptSymbol {
 
 type PrintSymbol = Var | Func
 
+interface Signature {
+  returnType: string
+  params: FuncParam[]
+}
+
+interface SignatureMapEntry {
+  varName: string,
+  uses: number
+  signature: Signature
+}
+
+type SignatureMap = {[sig: string]: SignatureMapEntry}
+
 const SYMBOLS: PrintSymbol[] = []
 
 function f(prio: number, inp: string, comments?: string[]): void {
@@ -70,7 +83,7 @@ function f(prio: number, inp: string, comments?: string[]): void {
   })
 }
 
-export async function generateStdLibDeclFile(): Promise<void> {
+function createStdSymbols(): void {
   const formatCodes: string[] = [
     "FORMAT CODES:",
     "- '%d' Decimal number",
@@ -102,7 +115,7 @@ export async function generateStdLibDeclFile(): Promise<void> {
     ""
   ]
 
-  f(0, "void printf(string format, ... args)", [
+  f(0, "void printf(string format, uint64... args)", [
     "Print a formatted message to the standard output",
     "",
     ...formatCodes
@@ -112,7 +125,7 @@ export async function generateStdLibDeclFile(): Promise<void> {
     "Print a message to the standard output"
   ])
 
-  f(2, "string sformat(string format, ... args)", [
+  f(2, "string sformat(string format, uint64... args)", [
     "Format a string",
     "",
     ...formatCodes
@@ -220,7 +233,9 @@ export async function generateStdLibDeclFile(): Promise<void> {
     f(29, `${fn} sinh(${fn} x)`, ["Get the hyperbolic sine of a value"])
     f(30, `${fn} tan(${fn} x)`, ["Get the tangent of a value"])
   }
+}
 
+function sortSymbols() {
   SYMBOLS.forEach(s => {
     if (s.type == "constant") {
       s.prio = s.prio - 100
@@ -228,7 +243,9 @@ export async function generateStdLibDeclFile(): Promise<void> {
   })
 
   SYMBOLS.sort((a, b) => a.prio - b.prio)
+}
 
+async function generateStdLibDeclFile(): Promise<void> {
   let out = `#
 # quickscript Standard Library
 # Version 0
@@ -259,4 +276,140 @@ export async function generateStdLibDeclFile(): Promise<void> {
   }
 
   await writeToFile(out, "../stdlib.qscr")
+}
+
+function getNativeFunctionName(sym: Func): string {
+  let str = `qs_${sym.name}`
+  sym.params.forEach((v) => {
+    let tn = v.tn
+    if (tn.endsWith("...")) {
+      tn = `${tn.substring(0, tn.length - 3)}va`
+    }
+    str += `_${tn}`
+  })
+  return str
+}
+
+function signatureToString(f: Func): string {
+  let pStr = f.params.map(v => `${v.tn} ${v.pname}`).join(", ")
+  return `(${pStr})=>${f.stype}`
+}
+
+async function generateStdLibHeader(): Promise<void> {
+  let out = `#ifndef QS_STDLIB_H_
+#define QS_STDLIB_H_
+
+#include "../nativeinterface.h"
+
+void defineStandardLibrary(BindingsObject* object);
+
+#endif // QS_STDLIB_H_`
+  await writeToFile(out, "../src/stdlib/qs_stdlib.h")
+}
+
+function typeExpression(tn: string): string {
+  if (tn.endsWith("...")) {
+    let realname = tn.substring(0, tn.length - 3)
+    return `new ScriptArrayType(${typeExpression(realname)})`
+  }
+
+  return `ConstTypes::${tn.toUpperCase()}()`
+}
+
+function makeSignatureConstructor(e: Signature): string {
+  let out = `FunctionSignature::make(`
+  out += typeExpression(e.returnType)
+
+  let variadic = false
+  if (e.params.length != 0 && e.params[e.params.length - 1].tn.endsWith("...")) {
+    variadic = true
+  }
+
+  out += `, ${variadic}, ${e.params.length}`
+
+  for (const p of e.params) {
+    out += `, ${typeExpression(p.tn)}`
+  }
+
+  out += `)`
+  return out
+}
+
+async function generateStdLibSource(): Promise<void> {
+  let out = `#include "qs_stdlib.h"
+
+#include "../types/ConstTypes.h"
+#include "../types/ScriptArrayType.h"`
+
+  for (const sym of SYMBOLS) {
+    if (sym.type != "func") {
+      continue
+    }
+
+    out += `\n\nstatic void ${getNativeFunctionName(sym)}(NativeCall& call) {
+
+}`
+  }
+
+  const signMap: SignatureMap = {}
+  let signaturesLength = 0
+
+  for (const sym of SYMBOLS) {
+    if (sym.type != "func") {
+      continue
+    }
+
+    const sStr: string = signatureToString(sym)
+    let entry: SignatureMapEntry = signMap[sStr]
+
+    if (entry == undefined) {
+      entry = {
+        signature: {
+          params: sym.params,
+          returnType: sym.stype
+        },
+        uses: 0,
+        varName: `signature${signaturesLength}`
+      }
+
+      signaturesLength++
+      signMap[sStr] = entry
+    }
+
+    entry.uses++
+  }
+
+  out += `\n\nvoid defineStandardLibrary(BindingsObject* obj) {
+  // Signature definitions`
+
+  for (const key in signMap) {
+    const entry = signMap[key]
+    out += `\n  const FunctionSignature* ${entry.varName} = ${makeSignatureConstructor(entry.signature)};`
+  }
+
+  out += `\n\n  // Function definitions`
+
+  for (const sym of SYMBOLS) {
+    if (sym.type != "func") {
+      continue
+    }
+
+    const signStr = signatureToString(sym)
+    const varName = signMap[signStr].varName
+
+    out += `\n  obj->addFunctionBinding("${sym.name}", ${varName}, ${getNativeFunctionName(sym)});`
+  }
+
+  out += "\n}"
+
+  await writeToFile(out, "../src/stdlib/qs_stdlib.cc")
+}
+
+export async function generateStdLib(): Promise<void> {
+  createStdSymbols()
+  sortSymbols()
+
+  await generateStdLibDeclFile()
+  await generateStdLibHeader()
+  await generateStdLibSource()
 }
