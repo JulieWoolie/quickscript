@@ -151,9 +151,9 @@ static void compileIndexAccessExpr(
   CompilerContext& ctx
 ) {
   const RegisterId targetReg = ctx.acquireRegister();
-  const RegisterId idxReg = ctx.acquireRegister();
-
   compileExpr(access->target, targetReg, nullptr, ctx);
+
+  const RegisterId idxReg = ctx.acquireRegister();
   compileExpr(access->index, idxReg, nullptr, ctx);
 
   if (out != NO_REGISTER) {
@@ -186,8 +186,8 @@ static void compilePropertyAccess(
   ScriptType* type = prop->target->resultType;
 
   const typekind targetKind = type->kind();
-  const RegisterId targetReg = ctx.acquireRegister();
 
+  const RegisterId targetReg = ctx.acquireRegister();
   compileExpr(prop->target, targetReg, nullptr, ctx);
 
   BytecodeWriter& writer = ctx.getWriter();
@@ -1100,6 +1100,8 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
   writer.appendU8(reg);
   writer.endInstr();
 
+  ctx.freeRegister(reg);
+
   compileStatement(stat->body, ctx);
 
   if (stat->elseBody) {
@@ -1117,8 +1119,6 @@ static void compileIfStatement(const IfStatement* stat, CompilerContext& ctx) {
   } else {
     writer.writeInstructionCounter(condFailedJumpAddr);
   }
-
-  ctx.freeRegister(reg);
 }
 
 static void compileLocalFunction(const LocalFunction* lf, CompilerContext& ctx) {
@@ -1176,8 +1176,7 @@ static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
 
   compileLexDecl(loop->first, ctx);
 
-  const RegisterId conditionReg = ctx.acquireRegister();
-  const RegisterId thirdReg = ctx.acquireRegister();
+  RegisterId conditionReg = ctx.acquireRegister();
 
   const uint64 conditionInstr = writer.getInstructionCounter();
 
@@ -1189,8 +1188,13 @@ static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
   writer.appendU8(conditionReg);
   writer.endInstr();
 
+  ctx.freeRegister(conditionReg);
+
   compileStatement(loop->loopBody, ctx);
+
+  RegisterId thirdReg = ctx.acquireRegister();
   compileExpr(loop->third, thirdReg, nullptr, ctx);
+  ctx.freeRegister(thirdReg);
 
   writer.startInstr(OP_JMP);
   writer.appendU32(conditionInstr);
@@ -1201,19 +1205,16 @@ static void compileForLoop(ForStatement* loop, CompilerContext& ctx) {
 
   const stringid label = loop->label ? loop->label->value : nullptr;
   writeControlFlowAddresses(ctx, label, endInstr, conditionInstr);
-
-  ctx.freeRegister(thirdReg);
-  ctx.freeRegister(conditionReg);
 }
 
 static void compileWhileLoop(WhileStatement* loop, CompilerContext& ctx) {
-  RegisterId conditionRegister = ctx.acquireRegister();
   uint64 endWriteAddr = 0;
   BytecodeWriter& writer = ctx.getWriter();
 
   const bool doWhile = loop->doWhile;
 
   if (!doWhile) {
+    const RegisterId conditionRegister = ctx.acquireRegister();
     compileExpr(loop->condition, conditionRegister, nullptr, ctx);
 
     writer.startInstr(OP_JMPI0);
@@ -1221,6 +1222,8 @@ static void compileWhileLoop(WhileStatement* loop, CompilerContext& ctx) {
     writer.appendU32(0);
     writer.appendU8(conditionRegister);
     writer.endInstr();
+
+    ctx.freeRegister(conditionRegister);
   }
 
   const uint32 startInstr = writer.getInstructionCounter();
@@ -1233,17 +1236,19 @@ static void compileWhileLoop(WhileStatement* loop, CompilerContext& ctx) {
   writeControlFlowAddresses(ctx, label, endInstr, startInstr);
 
   if (doWhile) {
+    const RegisterId conditionRegister = ctx.acquireRegister();
+
     compileExpr(loop->condition, conditionRegister, nullptr, ctx);
 
     writer.startInstr(OP_JMPN0);
     writer.appendU32(startInstr);
     writer.appendU8(conditionRegister);
     writer.endInstr();
+
+    ctx.freeRegister(conditionRegister);
   } else {
     writer.writeInstructionCounter(endWriteAddr, endInstr);
   }
-
-  ctx.freeRegister(conditionRegister);
 }
 
 static void compileControlFlow(ControlFlowStatement* cft, CompilerContext& ctx) {
@@ -1273,11 +1278,11 @@ static void compileReturn(const ReturnStatement* ret, CompilerContext& ctx) {
 
 static void compileAssert(AssertStatement* assert, CompilerContext& ctx) {
   const RegisterId condReg = ctx.acquireRegister();
-  const RegisterId msgReg = ctx.acquireRegister();
-
   BytecodeWriter& writer = ctx.getWriter();
 
   compileExpr(assert->condition, condReg, nullptr, ctx);
+
+  const RegisterId msgReg = ctx.acquireRegister();
 
   if (assert->message) {
     compileExpr(assert->message, msgReg, nullptr, ctx);
