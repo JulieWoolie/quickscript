@@ -1,7 +1,10 @@
 #include "bytecode_file.h"
 
+#include <vector>
+
 #include "../interpreter/opcodes.h"
 #include "../interpreter/opcode_printer.h"
+#include "../strings/utf8.h"
 
 #define CREATE_WRITE_METHOD(name, type) \
   void name(type x) {\
@@ -11,6 +14,16 @@
   }\
   void name##At(type x, uint64 off) {\
     *reinterpret_cast<type*>(buf + off) = x;\
+  }
+
+#define CREATE_READ_METHOD(name, type) \
+  type name() {\
+    if (!hasRemaining(sizeof(type))) {\
+      return 0;\
+    }\
+    type value = *reinterpret_cast<const type*>(buffer + cursor);\
+    cursor += sizeof(type);\
+    return value;\
   }
 
 struct BinaryWriter {
@@ -44,6 +57,26 @@ struct BinaryWriter {
     ensureHasSpace(bytes);
     memcpy(buf + len, from, bytes);
     len += bytes;
+  }
+};
+
+struct BinaryReader {
+  const uint8* buffer;
+  const uint64 capacity;
+
+  uint64 cursor = 0;
+
+  bool hasRemaining(const uint64 bytes = 1) const {
+    return (cursor + bytes) <= capacity;
+  }
+
+  CREATE_READ_METHOD(readU8, uint8)
+  CREATE_READ_METHOD(readU16, uint16)
+  CREATE_READ_METHOD(readU32, uint32)
+  CREATE_READ_METHOD(readU64, uint64)
+
+  BinaryReader subReader(const uint64 start, const uint64 size) {
+    return BinaryReader(buffer + start, size, 0);
   }
 };
 
@@ -115,54 +148,6 @@ static void writeInstructions(const BytecodeFile& file, BinaryWriter& writer) {
   }
 }
 
-TypeTableArray* TypeTableArray::create() {
-  return new TypeTableArray();
-}
-
-void TypeTableArray::destroy(const TypeTableArray* tt) {
-  delete tt;
-}
-
-TypeTableFuncSign* TypeTableFuncSign::create(const uint32 argCount) {
-  constexpr uint64 signSize = sizeof(TypeTableFuncSign);
-  const uint64 argsSize = sizeof(typeindex) * argCount;
-  const uint64 memSize = signSize + argsSize;
-
-  TypeTableFuncSign* sign = static_cast<TypeTableFuncSign*>(malloc(memSize));
-  new (sign) TypeTableFuncSign();
-
-  if (argCount != 0) {
-    sign->argumentCount = argCount;
-    sign->argTypes = reinterpret_cast<typeindex*>(sign + 1);
-  }
-
-  return sign;
-}
-
-void TypeTableFuncSign::destroy(TypeTableFuncSign* sign) {
-  free(sign);
-}
-
-TypeTableStruct* TypeTableStruct::create(const uint32 propertyCount) {
-  constexpr uint64 ttSize = sizeof(TypeTableStruct);
-  const uint64 propsMemSize = propertyCount * sizeof(TypeTableStructProperty);
-  const uint64 memSize = ttSize + propsMemSize;
-
-  TypeTableStruct* data = static_cast<TypeTableStruct*>(malloc(memSize));
-  new (data) TypeTableStruct();
-
-  if (propertyCount != 0) {
-    data->propertyCount = propertyCount;
-    data->properties = reinterpret_cast<TypeTableStructProperty*>(data + 1);
-  }
-
-  return data;
-}
-
-void TypeTableStruct::destroy(TypeTableStruct* tt) {
-  free(tt);
-}
-
 BytecodeFile::BytecodeFile() {
 
 }
@@ -177,13 +162,7 @@ BytecodeFile::~BytecodeFile() {
   if (typeTable) {
     for (uint32 i = 0; i < typeTableSize; i++) {
       TypeTableEntry* e = typeTable[i];
-      if (e->type == TYPE_TABLE_ARRAY) {
-        TypeTableArray::destroy(static_cast<const TypeTableArray*>(e));
-      } else if (e->type == TYPE_TABLE_SIGNATURE) {
-        TypeTableFuncSign::destroy(static_cast<TypeTableFuncSign*>(e));
-      } else if (e->type == TYPE_TABLE_STRUCT) {
-        TypeTableStruct::destroy(static_cast<TypeTableStruct*>(e));
-      }
+      freeTypeTableEntry(e);
     }
 
     freeTypeTable(typeTable);
@@ -217,28 +196,6 @@ BytecodeFile& BytecodeFile::create() {
 
 void BytecodeFile::destroy(const BytecodeFile& bfile) {
   delete &bfile;
-}
-
-FunctionTableEntry* createFunctionTableArray(const uint32 entries) {
-  if (entries == 0) {
-    return nullptr;
-  }
-  return static_cast<FunctionTableEntry*>(malloc(sizeof(FunctionTableEntry) * entries));
-}
-
-void freeFunctionTableArray(FunctionTableEntry* arr) {
-  free(arr);
-}
-
-TypeTableEntry** createTypeTable(const uint32 entries) {
-  if (entries == 0) {
-    return nullptr;
-  }
-  return static_cast<TypeTableEntry**>(malloc(sizeof(TypeTableEntry*) * entries));
-}
-
-void freeTypeTable(TypeTableEntry** table) {
-  free(table);
 }
 
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
@@ -300,6 +257,263 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
 
   *sizeOut = finalLength;
   return writer.buf;
+}
+
+static bool hasCorrectFilePrefix(const BinaryReader& reader) {
+  if (!reader.hasRemaining(PREFIX_LEN)) {
+    return false;
+  }
+
+  constexpr conststring str = FILE_PREFIX;
+
+  for (uint32 i = 0; i < PREFIX_LEN; i++) {
+    if (reader.buffer[i] != str[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+static BytecodeReadResult readStringPool(BinaryReader& reader, BytecodeFile& out) {
+  while (reader.hasRemaining(4)) {
+    const uint32 len = reader.readU32();
+
+    if (!reader.hasRemaining(len)) {
+      return IR_RESULT_MALFORMED_STRING_POOL;
+    }
+
+    const uint8* strBuf = reader.buffer + reader.cursor;
+
+    if (!isValidUtf8String(strBuf, len)) {
+      return IR_RESULT_MALFORMED_STRING_POOL;
+    }
+
+    reader.cursor += len;
+  }
+
+  uint8* strPoolBuf = static_cast<uint8*>(malloc(reader.capacity));
+  if (!strPoolBuf) {
+    return IR_RESULT_STRING_POOL_ALLOC_FAILED;
+  }
+
+  memcpy(strPoolBuf, reader.buffer, reader.capacity);
+
+  out.stringPoolSize = reader.capacity;
+  out.constStringPool = strPoolBuf;
+
+  return IR_RESULT_OK;
+}
+
+static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out) {
+  std::vector<TypeTableEntry*> entries;
+
+  while (reader.hasRemaining(5)) {
+    const uint32 typeIndex = reader.readU32();
+    const TypeTableType entryType = reader.readU8();
+
+    switch (entryType) {
+      case TYPE_TABLE_ARRAY: {
+        const uint32 componentTypeIndex = reader.readU32();
+
+        TypeTableArray* arr = TypeTableArray::create();
+        arr->type = entryType;
+        arr->index = typeIndex;
+        arr->componentType = componentTypeIndex;
+
+        entries.push_back(arr);
+        break;
+      }
+      case TYPE_TABLE_STRUCT: {
+        const uint64 nameOffset = reader.readU64();
+        const uint32 ctorFuncIdx = reader.readU32();
+        const uint32 propCount = reader.readU32();
+
+        TypeTableStruct* entry = TypeTableStruct::create(propCount);
+        entry->nameOffset = nameOffset;
+        entry->constructorFuncIndex = ctorFuncIdx;
+        entry->propertyCount = propCount;
+
+        for (uint32 i = 0; i < propCount; i++) {
+          TypeTableStructProperty* prop = &entry->properties[i];
+          prop->nameOffset = reader.readU64();
+          prop->valueOffset = reader.readU32();
+          prop->type = reader.readU32();
+        }
+
+        entries.push_back(entry);
+        break;
+      }
+      case TYPE_TABLE_SIGNATURE: {
+        const uint32 returnTypeIdx = reader.readU32();
+        const uint32 argCount = reader.readU32();
+        const bool variadic = reader.readU8();
+
+        TypeTableFuncSign* entry = TypeTableFuncSign::create(argCount);
+        entry->returnType = returnTypeIdx;
+        entry->argumentCount = argCount;
+        entry->varargs = variadic;
+
+        for (uint32 i = 0; i < argCount; i++) {
+          entry->argTypes[i] = reader.readU32();
+        }
+
+        entries.push_back(entry);
+        break;
+      }
+      default:
+        // Free the entries so we don't create a memory leak
+        for (TypeTableEntry* e : entries) {
+          freeTypeTableEntry(e);
+        }
+        return IR_RESULT_MALFORMED_TYPETABLE;
+    }
+  }
+
+  const uint32 entryCount = entries.size();
+  TypeTableEntry** typeTable = createTypeTable(entryCount);
+
+  for (uint32 i = 0; i < entryCount; i++) {
+    typeTable[i] = entries[i];
+  }
+
+  out.typeTable = typeTable;
+  out.typeTableSize = entryCount;
+
+  return IR_RESULT_OK;
+}
+
+static BytecodeReadResult readFunctionTable(BinaryReader& reader, BytecodeFile& out) {
+  constexpr uint64 funcTableEntrySize = 8 + 8 + 4 + 4;
+  const uint32 entryCount = reader.capacity / funcTableEntrySize;
+
+  FunctionTableEntry* table = createFunctionTableArray(entryCount);
+
+  for (uint32 i = 0; i < entryCount; i++) {
+    const uint64 nameOff = reader.readU64();
+    const uint64 stackSize = reader.readU64();
+    const uint32 firstInstr = reader.readU32();
+    const uint32 signatureIdx = reader.readU32();
+
+    table[i] = {
+      .nameOffset = nameOff,
+      .signatureIndex = signatureIdx,
+      .startingInstruction = firstInstr,
+      .stackSize = stackSize
+    };
+  }
+
+  out.funcTable = table;
+  out.funcTableEntries = entryCount;
+
+  return IR_RESULT_OK;
+}
+
+static BytecodeReadResult unpackInstructions(BinaryReader& reader, const uint64 instrCount, BytecodeFile& out) {
+  const uint64 memSize = instrCount * LENGTH_INSTRUCTION;
+
+  uint8* instrBuf = static_cast<uint8*>(malloc(memSize));
+  uint64 instrWriteOffset = 0;
+
+  memset(instrBuf, 0, memSize);
+
+  for (uint32 i = 0; i < instrCount; i++) {
+    const uint8* start = reader.buffer + reader.cursor;
+    const opcode code = *reinterpret_cast<const opcode*>(start);
+
+    const uint8 instrLength = getInstructionLength(code);
+
+    if (instrLength == 0) {
+      free(instrBuf);
+      return IR_RESULT_MALFORMED_INSTRUCTIONS;
+    }
+
+    memcpy(instrBuf + instrWriteOffset, start, instrLength);
+    instrWriteOffset += LENGTH_INSTRUCTION;
+    reader.cursor += instrLength;
+  }
+
+  out.instructionCount = instrCount;
+  out.instructionsSize = memSize;
+  out.instructionBuf = instrBuf;
+
+  return IR_RESULT_OK;
+}
+
+BytecodeReadResult deserializeBytecodeFile(const uint8* buf, const uint64 bufSize, BytecodeFile& out) {
+  BinaryReader reader = {
+    .buffer = buf,
+    .capacity = bufSize,
+    .cursor = 0
+  };
+
+  if (!hasCorrectFilePrefix(reader)) {
+    return IR_RESULT_INVALID_PREFIX;
+  }
+
+  reader.cursor = PREFIX_LEN;
+
+  const uint16 fileVersion = reader.readU16();
+  if (fileVersion > CURRENT_FILE_VERSION) {
+    return IR_RESULT_FILE_VERSION_NEWER;
+  }
+
+  const uint64* sections = reinterpret_cast<const uint64*>(reader.buffer + PREFIX_LEN + HEADER_VERSION_SIZE);
+  const uint64 strPoolStart = sections[HSECT_STRPOOL_OFF];
+  const uint64 strPoolSize = sections[HSECT_STRPOOL_SIZE];
+  const uint64 typeTableStart = sections[HSECT_TYPES_OFF];
+  const uint64 typeTableSize = sections[HSECT_TYPES_SIZE];
+  const uint64 fTableStart = sections[HSECT_FTABLE_OFF];
+  const uint64 fTableSize = sections[HSECT_FTABLE_SIZE];
+  const uint64 instrStart = sections[HSECT_INSTR_OFF];
+  const uint64 instrSize = sections[HSECT_INSTR_SIZE];
+  const uint64 instructionCount = sections[HSECT_INSTR_COUNT];
+  const uint64 globalScopeSize = sections[HSECT_GLOBAL_SCOPE_SIZE];
+  const uint64 entryPointIndex = sections[HSECT_ENTRYPOINT_FUNC_IDX];
+
+  out.entryPointIndex = entryPointIndex;
+  out.globalScopeSize = globalScopeSize;
+
+  // Read string pool
+  BinaryReader strPoolReader = reader.subReader(strPoolStart, strPoolSize);
+  const BytecodeReadResult strPoolResult = readStringPool(strPoolReader, out);
+  if (strPoolResult != IR_RESULT_OK) {
+    return strPoolResult;
+  }
+
+  // Read type table
+  BinaryReader typeTableReader = reader.subReader(typeTableStart, typeTableSize);
+  const BytecodeReadResult typeTableResult = readTypeTable(typeTableReader, out);
+  if (typeTableResult != IR_RESULT_OK) {
+    return typeTableResult;
+  }
+
+  BinaryReader funcTableReader = reader.subReader(fTableStart, fTableSize);
+  const BytecodeReadResult fTableResult = readFunctionTable(funcTableReader, out);
+  if (fTableResult != IR_RESULT_OK) {
+    return fTableResult;
+  }
+
+  BinaryReader instrReader = reader.subReader(instrStart, instrSize);
+  const BytecodeReadResult instrResult = unpackInstructions(instrReader, instructionCount, out);
+  if (instrResult != IR_RESULT_OK) {
+    return instrResult;
+  }
+
+  return IR_RESULT_OK;
+}
+
+conststring getReadResultMessage(const BytecodeReadResult res) {
+  switch (res) {
+    case IR_RESULT_OK: return "OK";
+    case IR_RESULT_INVALID_PREFIX: return "Invalid file prefix";
+    case IR_RESULT_FILE_VERSION_NEWER: return "Unsupported file version";
+    case IR_RESULT_STRING_POOL_ALLOC_FAILED: return "Failed to allocate string pool buffer";
+    case IR_RESULT_MALFORMED_STRING_POOL: return "Malformed string pool data";
+    case IR_RESULT_MALFORMED_TYPETABLE: return "Malformed type table data";
+    case IR_RESULT_MALFORMED_INSTRUCTIONS: return "Malformed IR instructions data";
+    default: return "Unknown";
+  }
 }
 
 static void writePooledString(FILE* out, uint64 off, uint8* strPool) {

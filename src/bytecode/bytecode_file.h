@@ -1,8 +1,19 @@
 #ifndef QUICKSCRIPT_IR_FILE_H
 #define QUICKSCRIPT_IR_FILE_H
 
+#include "bytecode_functable.h"
+#include "bytecode_typetable.h"
 #include "../common.h"
 #include "../types/types.h"
+
+#define IR_RESULT_OK 0
+#define IR_RESULT_INVALID_PREFIX 1
+#define IR_RESULT_FILE_VERSION_NEWER 2
+#define IR_RESULT_STRING_POOL_ALLOC_FAILED 3
+#define IR_RESULT_MALFORMED_STRING_POOL 4
+#define IR_RESULT_MALFORMED_TYPETABLE 5
+#define IR_RESULT_MALFORMED_INSTRUCTIONS 6
+typedef uint32 BytecodeReadResult;
 
 #define FILE_PREFIX "quickscript"
 #define PREFIX_LEN 11
@@ -23,60 +34,7 @@
 #define HSECT_GLOBAL_SCOPE_SIZE 9
 #define HSECT_ENTRYPOINT_FUNC_IDX 10
 
-#define TYPE_TABLE_ARRAY 0x0
-#define TYPE_TABLE_STRUCT 0x1
-#define TYPE_TABLE_SIGNATURE 0x3
-typedef uint8 TypeTableType;
-
 #define CURRENT_FILE_VERSION 0
-
-struct FunctionTableEntry {
-  uint64 nameOffset = 0;
-  typeindex signatureIndex = 0;
-  uint64 startingInstruction = 0;
-  uint64 stackSize = 0;
-};
-
-struct TypeTableEntry {
-  TypeTableType type = 0;
-  typeindex index = 0;
-};
-
-struct TypeTableArray: TypeTableEntry {
-  typeindex componentType = 0;
-
-  static TypeTableArray* create();
-
-  static void destroy(const TypeTableArray* tt);
-};
-
-struct TypeTableFuncSign: TypeTableEntry {
-  typeindex returnType = 0;
-  bool varargs = false;
-  typeindex* argTypes = nullptr;
-  uint32 argumentCount = 0;
-
-  static TypeTableFuncSign* create(uint32 argCount);
-
-  static void destroy(TypeTableFuncSign* sign);
-};
-
-struct TypeTableStructProperty {
-  uint64 nameOffset = 0;
-  uint64 valueOffset = 0;
-  typeindex type = 0;
-};
-
-struct TypeTableStruct: TypeTableEntry {
-  uint64 nameOffset = 0;
-  uint32 constructorFuncIndex = 0;
-  uint32 propertyCount = 0;
-  TypeTableStructProperty* properties = nullptr;
-
-  static TypeTableStruct* create(uint32 propertyCount);
-
-  static void destroy(TypeTableStruct* tt);
-};
 
 struct BytecodeFile {
   uint8* constStringPool = nullptr;
@@ -103,15 +61,11 @@ struct BytecodeFile {
   static void destroy(const BytecodeFile& bfile);
 };
 
-FunctionTableEntry* createFunctionTableArray(uint32 entries);
-
-void freeFunctionTableArray(FunctionTableEntry* arr);
-
-TypeTableEntry** createTypeTable(uint32 entries);
-
-void freeTypeTable(TypeTableEntry** table);
-
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut);
+
+BytecodeReadResult deserializeBytecodeFile(const uint8* buf, uint64 bufSize, BytecodeFile& out);
+
+conststring getReadResultMessage(BytecodeReadResult res);
 
 void printBytecodeFile(const BytecodeFile& file, FILE* printFile);
 
