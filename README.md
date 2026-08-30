@@ -58,54 +58,6 @@ deno scripts. Currently, they are executed with powershell scripts. To run the g
 Then build the CMake project itself, no clue how to do that, I use CLion so just pray your CLion 
 can build this project :3
 
-## Notes
-### Casting
-I do want to add a cast expression, something like this:
-  
-#### Syntax
-*cast-expression*:  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*assignment-expression*  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**cast (** *type-expression* **,** *expression* **)**  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**bitcast (** *type-expression* **,** *expression* **)**
-
-Or alternatively:  
-*cast-expression*:  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*assignment-expression*  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*cast-expression* **as** *type-expression*  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*cast-expression* **bitsas** *type-expression*  
-
-#### Semantics
-1. Casts an expression to a specified type.
-2. Casting operation is dependent on which casting is used: `cast` or `bitcast`. `cast` casts the 
-   type correctly, changing bits and so forth, whereas `bitcast` just treats an existing value as a 
-   different type.
-
-#### Constraints
-1. The specified type expression must result in a compatible type, see the below table for 
-   compatible types:
-
-| Type                                | Compatible Types                                                      |
-|-------------------------------------|-----------------------------------------------------------------------|
-| Any integral or floating point type | Any other numeric type                                                |
-| Any primitive array type            | Any primitive array type of the same size (eg: `uint8[]` to `int8[]`) |
-
-The reason for this would be twofold, to add easy casting of types for programmers writing code on the fly,
-and for the compiler to insert these wherever casting is required. I think the 2nd syntax is better as it
-makes it clear this is a casting expression and not a function call to a native function named `cast`.
-
-I don't know how to parse it without the `cast()` syntax though. 
-
-#### Examples
-```txt
-float32 x = 1.23
-int32 y = x
-```
-This results in an error, but you could make it valid by changing the 2nd assignment to
-```txt
-float32 x = 1.23
-int32 y = x as int32
-```
-
 ## Future goals
 
 ### Struct Methods
