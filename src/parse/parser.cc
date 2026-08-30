@@ -170,7 +170,9 @@ declflags Parser::parseDeclFlags() {
 
     flags |= flag;
 
-    p = next();
+    next();
+
+    p = peek();
     ttype = p->ttype;
   }
 
