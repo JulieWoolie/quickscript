@@ -137,3 +137,18 @@ uint8 decodeUtf8(const utf8char* in, utf32char* out, const uint32 len) {
       return 0;
   }
 }
+
+bool isValidUtf8String(const utf8char* buf, const uint32 len) {
+  uint32 idx = 0;
+  utf32char ch = 0;
+
+  while (idx < len) {
+    uint8 readBytes = decodeUtf8(buf + idx, &ch, len - idx);
+    if (readBytes == 0) {
+      return false;
+    }
+    idx += readBytes;
+  }
+
+  return true;
+}

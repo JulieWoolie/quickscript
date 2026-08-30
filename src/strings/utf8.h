@@ -42,4 +42,6 @@ uint8 encodeToUtf8(utf32char ch, utf8char* out);
 
 uint8 decodeUtf8(const utf8char* in, utf32char* out, uint32 len);
 
+bool isValidUtf8String(const utf8char* buf, uint32 len);
+
 #endif //QUICKSCRIPT_QSSTRINGS_H
