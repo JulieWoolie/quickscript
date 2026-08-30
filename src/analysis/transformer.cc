@@ -106,11 +106,15 @@ Expr* SemanticTransformer::optimizeStringRepeat(StringLiteral* lhs, Expr* rhs) c
   return lhs;
 }
 
-Expr* SemanticTransformer::optimizeBinary(BinaryExpr* e) const {
+Expr* SemanticTransformer::transformBinary(BinaryExpr* e) const {
   const binaryop op = e->op;
 
-  Expr* lhs = e->lhs = optimizeExpr(e->lhs);
-  Expr* rhs = e->rhs = optimizeExpr(e->rhs);
+  Expr* lhs = e->lhs = transformExpr(e->lhs);
+  Expr* rhs = e->rhs = transformExpr(e->rhs);
+
+  if (ctx.getOptions().exprOptimizing) {
+    return e;
+  }
   
   const astnodetype lkind = e->lhs->nodeKind();
   const astnodetype rkind = e->rhs->nodeKind();
@@ -324,8 +328,12 @@ Expr* SemanticTransformer::optimizeBinary(BinaryExpr* e) const {
   return e;
 }
 
-Expr* SemanticTransformer::optimizeUnary(UnaryExpr* u) const {
-  Expr* target = u->target = optimizeExpr(u->target);
+Expr* SemanticTransformer::transformUnary(UnaryExpr* u) const {
+  Expr* target = u->target = transformExpr(u->target);
+
+  if (!ctx.getOptions().exprOptimizing) {
+    return target;
+  }
 
   const unaryop op = u->op;
   const astnodetype kind = target->nodeKind();
@@ -384,10 +392,14 @@ Expr* SemanticTransformer::optimizeUnary(UnaryExpr* u) const {
   return u;
 }
 
-Expr* SemanticTransformer::optimizeTernary(TernaryExpr* t) const {
-  Expr* cond = t->condition = optimizeExpr(t->condition);
-  Expr* left = t->left = optimizeExpr(t->left);
-  Expr* right = t->right = optimizeExpr(t->right);
+Expr* SemanticTransformer::transformTernary(TernaryExpr* t) const {
+  Expr* cond = t->condition = transformExpr(t->condition);
+  Expr* left = t->left = transformExpr(t->left);
+  Expr* right = t->right = transformExpr(t->right);
+
+  if (ctx.getOptions().exprOptimizing) {
+    return t;
+  }
 
   switch (cond->nodeKind()) {
     case AST_BooleanLiteral: {
@@ -407,18 +419,71 @@ Expr* SemanticTransformer::optimizeTernary(TernaryExpr* t) const {
   }
 }
 
-Expr* SemanticTransformer::optimizeExpr(Expr* expr) const {
-  if (!ctx.getOptions().exprOptimizing) {
+Expr* SemanticTransformer::transformCallExpr(CallExpr* expr) const {
+  // 1. Inline/optimize arguments
+  const uint32 argCount = expr->arguments.size();
+  for (uint32 i = 0; i < argCount; i++) {
+    expr->arguments[i] = transformExpr(expr->arguments[i]);
+  }
+
+  // 2. Transform va args
+  const Expr* target = expr->target;
+
+  const FunctionSignature* sign = reinterpret_cast<FunctionSignature*>(target->resultType);
+  const uint32 arity = sign->getArgumentsLength();
+  const bool variadic = sign->isVariadic();
+
+  if (!variadic) {
     return expr;
   }
 
+  ScriptType* lastArgType = sign->getArgumentType(arity - 1);
+  const uint32 minArity = arity - variadic;
+  NoFreeAllocator& alloc = ctx.getAllocator();
+
+  if (argCount <= minArity) {
+    // Variadic arguments not used, append empty array literal
+    ArrayLiteral* lit = alloc.make<ArrayLiteral>();
+    lit->resultType = sign->getArgumentType(minArity);
+    expr->arguments.push_back(lit);
+    return expr;
+  }
+
+  if (argCount == arity) {
+    // Maybe convert to array literal, maybe not, last argument may already be array
+    const Expr* last = expr->arguments[argCount - 1];
+
+    // Last one already matches the type, do not wrap in array literal
+    if (last->resultType == lastArgType) {
+      return expr;
+    }
+  }
+
+  // More args than arity, we're using va args,
+  // => turn all variadic arguments into array literal
+  ArrayLiteral* literal = alloc.make<ArrayLiteral>();
+  literal->resultType = lastArgType;
+
+  for (const auto it = expr->arguments.cbegin() + minArity; it != expr->arguments.cend(); ) {
+    literal->values.push_back(*it);
+    expr->arguments.erase(it);
+  }
+
+  expr->arguments.push_back(literal);
+
+  return expr;
+}
+
+Expr* SemanticTransformer::transformExpr(Expr* expr) const {
   switch (expr->nodeKind()) {
     case AST_BinaryExpr:
-      return optimizeBinary(static_cast<BinaryExpr*>(expr));
+      return transformBinary(static_cast<BinaryExpr*>(expr));
     case AST_UnaryExpr:
-      return optimizeUnary(static_cast<UnaryExpr*>(expr));
+      return transformUnary(static_cast<UnaryExpr*>(expr));
     case AST_TernaryExpr:
-      return optimizeTernary(static_cast<TernaryExpr*>(expr));
+      return transformTernary(static_cast<TernaryExpr*>(expr));
+    case AST_CallExpr:
+      return transformCallExpr(static_cast<CallExpr*>(expr));
     default:
       return expr;
   }
@@ -535,7 +600,7 @@ static bool isPointlessStandalone(Expr* expr) {
   }
 }
 
-Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool emptyBlocksAsNull) {
+Statement* SemanticTransformer::transformStatement(Statement* stat, const bool emptyBlocksAsNull) {
   const CompilationOptions& opts = ctx.getOptions();
 
   switch (stat->nodeKind()) {
@@ -545,7 +610,7 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
 
       auto it = stats.begin();
       while (it != stats.end()) {
-        Statement* blockStat = optimizeStatement(*it, true);
+        Statement* blockStat = transformStatement(*it, true);
 
         if (!blockStat) {
           it = stats.erase(it);
@@ -567,11 +632,11 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
     }
     case AST_IfStatement: {
       IfStatement* ifStatement = static_cast<IfStatement*>(stat);
-      Expr* cond = ifStatement->condition = optimizeExpr(ifStatement->condition);
+      Expr* cond = ifStatement->condition = transformExpr(ifStatement->condition);
 
-      ifStatement->body = optimizeStatement(ifStatement->body, true);
+      ifStatement->body = transformStatement(ifStatement->body, true);
       if (ifStatement->elseBody) {
-        ifStatement->elseBody = optimizeStatement(ifStatement->elseBody, true);
+        ifStatement->elseBody = transformStatement(ifStatement->elseBody, true);
       }
 
       if (!isBooleanAssignableLiteral(cond) || !opts.statOptimizing) {
@@ -589,10 +654,10 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       ForStatement* forStat = static_cast<ForStatement*>(stat);
 
       LexicalDeclaration* first = forStat->first;
-      first->value = optimizeExpr(first->value);
+      first->value = transformExpr(first->value);
 
-      forStat->second = optimizeExpr(forStat->second);
-      forStat->third = optimizeExpr(forStat->third);
+      forStat->second = transformExpr(forStat->second);
+      forStat->third = transformExpr(forStat->third);
 
       if (forStat->third->nodeKind() == AST_UnaryExpr) {
         UnaryExpr* un = static_cast<UnaryExpr*>(forStat->third);
@@ -603,7 +668,7 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
         }
       }
 
-      forStat->loopBody = optimizeStatement(forStat->loopBody, true);
+      forStat->loopBody = transformStatement(forStat->loopBody, true);
       if (!forStat->loopBody) {
         return nullptr;
       }
@@ -615,13 +680,13 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
       if (!lex->value) {
         return stat;
       }
-      lex->value = optimizeExpr(lex->value);
+      lex->value = transformExpr(lex->value);
       return stat;
     }
     case AST_WhileStatement: {
       WhileStatement* whileLoop = static_cast<WhileStatement*>(stat);
-      whileLoop->condition = optimizeExpr(whileLoop->condition);
-      whileLoop->body = static_cast<Block*>(optimizeStatement(whileLoop->body, true));
+      whileLoop->condition = transformExpr(whileLoop->condition);
+      whileLoop->body = static_cast<Block*>(transformStatement(whileLoop->body, true));
       if (!whileLoop->body) {
         return nullptr;
       }
@@ -629,12 +694,12 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
     }
     case AST_FunctionDeclStatement: {
       FunctionDeclStatement* decl = static_cast<FunctionDeclStatement*>(stat);
-      optimizeStatement(decl->functionBody, false);
+      transformStatement(decl->functionBody, false);
       return decl;
     }
     case AST_ExprStatement: {
       ExprStatement* exprStat = static_cast<ExprStatement*>(stat);
-      Expr* expr = exprStat->expression = optimizeExpr(exprStat->expression);
+      Expr* expr = exprStat->expression = transformExpr(exprStat->expression);
 
       if (!opts.statOptimizing) {
         return exprStat;
@@ -663,10 +728,10 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
         return nullptr;
       }
 
-      assert->condition = optimizeExpr(assert->condition);
+      assert->condition = transformExpr(assert->condition);
 
       if (assert->message) {
-        assert->message = optimizeExpr(assert->message);
+        assert->message = transformExpr(assert->message);
       }
 
       if (!isBooleanAssignableLiteral(assert->condition) || !opts.statOptimizing) {
@@ -684,7 +749,7 @@ Statement* SemanticTransformer::optimizeStatement(Statement* stat, const bool em
     case AST_ReturnStatement: {
       ReturnStatement* ret = static_cast<ReturnStatement*>(stat);
       if (ret->value) {
-        ret->value = optimizeExpr(ret->value);
+        ret->value = transformExpr(ret->value);
       }
       return ret;
     }
@@ -760,16 +825,9 @@ void SemanticTransformer::removeZeroValues() {
   }
 }
 
-void SemanticTransformer::runOptimizer() {
-  const CompilationOptions& opts = ctx.getOptions();
-
-  // Don't run optimizer if we've explicitly been told not to change anything
-  if (!opts.statOptimizing && !opts.exprOptimizing && opts.includeAsserts) {
-    return;
-  }
-
+void SemanticTransformer::firstPassTransformations() {
   for (Statement* statement : sfs->statements) {
-    optimizeStatement(statement, false);
+    transformStatement(statement, false);
   }
 }
 
@@ -1442,7 +1500,7 @@ SemanticTransformer::SemanticTransformer(SemanticContext& _ctx, ScriptFileStatem
 }
 
 void SemanticTransformer::run() {
-  runOptimizer();
+  firstPassTransformations();
   removeZeroValues();
   createStructConstructors();
   createFileInitMethod();

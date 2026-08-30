@@ -6,19 +6,21 @@ class SemanticTransformer {
   SemanticContext& ctx;
   ScriptFileStatement* sfs;
 
-  Expr* optimizeExpr(Expr* expr) const;
+  Expr* transformExpr(Expr* expr) const;
 
   Expr* optimizeStringConcat(StringLiteral* lhs, Expr* rhs) const;
 
   Expr* optimizeStringRepeat(StringLiteral* lhs, Expr* rhs) const;
 
-  Expr* optimizeBinary(BinaryExpr* e) const;
+  Expr* transformBinary(BinaryExpr* e) const;
 
-  Expr* optimizeUnary(UnaryExpr* u) const;
+  Expr* transformUnary(UnaryExpr* u) const;
 
-  Expr* optimizeTernary(TernaryExpr* t) const;
+  Expr* transformTernary(TernaryExpr* t) const;
 
-  Statement* optimizeStatement(Statement* stat, bool emptyBlocksAsNull);
+  Expr* transformCallExpr(CallExpr* expr) const;
+
+  Statement* transformStatement(Statement* stat, bool emptyBlocksAsNull);
 
   Identifier* makeId(const std::string& string) const;
 
@@ -33,7 +35,7 @@ class SemanticTransformer {
   // 2. Inline as many expressions and function
   //    calls and constant accesses as possible
   //
-  void runOptimizer();
+  void firstPassTransformations();
 
   void createPropertyAssignStatements(StructDecl* decl, LocalVarSymbol* thisSym, Block* funcBlock) const;
 
