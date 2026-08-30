@@ -95,6 +95,30 @@ FunctionSignature* FunctionSignature::make(ScriptType* retType, const uint32 pCo
   return create(returnType, false, pCount, paramArray);
 }
 
+FunctionSignature* FunctionSignature::make(ScriptType* retType, bool variadic, uint32 pCount, ...) {
+  va_list list;
+  va_start(list, pCount);
+
+  ScriptType* paramArray[pCount];
+  ScriptType* returnType = retType;
+
+  if (!returnType) {
+    returnType = ConstTypes::VOID();
+  }
+
+  for (uint32 i = 0; i < pCount; i++) {
+    ScriptType* argType = va_arg(list, ScriptType*);
+    if (!argType) {
+      argType = ConstTypes::VOID();
+    }
+    paramArray[i] = argType;
+  }
+
+  va_end(list);
+
+  return create(returnType, variadic, pCount, paramArray);
+}
+
 void FunctionSignature::free(FunctionSignature* type) {
   std::free((void*) type);
 }
