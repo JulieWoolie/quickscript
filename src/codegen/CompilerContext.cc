@@ -299,7 +299,7 @@ RegisterIdOpt CompilerContext::acquireRegister() const {
 }
 
 bool CompilerContext::registerInUse(const RegisterId reg) const {
-  const uint64 m = 1L << reg;
+  const uint64 m = 1LL << reg;
   return *m_registersInUse & m;
 }
 
