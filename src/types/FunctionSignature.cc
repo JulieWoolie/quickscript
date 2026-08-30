@@ -116,6 +116,10 @@ FunctionSignature* FunctionSignature::make(ScriptType* retType, bool variadic, u
 
   va_end(list);
 
+  if (paramArray[pCount - 1]->kind() != TK_ARRAY) {
+    throw std::runtime_error("Last argument must be an array type");
+  }
+
   return create(returnType, variadic, pCount, paramArray);
 }
 
