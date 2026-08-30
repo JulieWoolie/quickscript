@@ -360,7 +360,9 @@ FunctionDeclStatement * Parser::funcDecl() {
   }
 
   FunctionDeclStatement* res = EMPLACE(decl);
-  res->functionBody->parentStatement = res;
+  if (res->functionBody) {
+    res->functionBody->parentStatement = res;
+  }
   for (FunctionParam* arg : res->arguments) {
     arg->parentStatement = res;
   }
