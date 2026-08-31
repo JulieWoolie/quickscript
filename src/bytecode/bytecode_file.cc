@@ -312,12 +312,19 @@ static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out)
     const uint32 typeIndex = reader.readU32();
     const TypeTableType entryType = reader.readU8();
 
+    if (typeIndex <= LAST_RESERVED_TYPE_INDEX) {
+      // Free the entries so we don't create a memory leak
+      for (TypeTableEntry* e : entries) {
+        freeTypeTableEntry(e);
+      }
+      return IR_RESULT_MALFORMED_TYPETABLE;
+    }
+
     switch (entryType) {
       case TYPE_TABLE_ARRAY: {
         const uint32 componentTypeIndex = reader.readU32();
 
         TypeTableArray* arr = TypeTableArray::create();
-        arr->type = entryType;
         arr->index = typeIndex;
         arr->componentType = componentTypeIndex;
 
@@ -330,6 +337,7 @@ static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out)
         const uint32 propCount = reader.readU32();
 
         TypeTableStruct* entry = TypeTableStruct::create(propCount);
+        entry->index = typeIndex;
         entry->nameOffset = nameOffset;
         entry->constructorFuncIndex = ctorFuncIdx;
         entry->propertyCount = propCount;
@@ -350,6 +358,7 @@ static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out)
         const bool variadic = reader.readU8();
 
         TypeTableFuncSign* entry = TypeTableFuncSign::create(argCount);
+        entry->index = typeIndex;
         entry->returnType = returnTypeIdx;
         entry->argumentCount = argCount;
         entry->varargs = variadic;
