@@ -54,6 +54,22 @@ void TypeTableStruct::destroy(TypeTableStruct* tt) {
   free(tt);
 }
 
+void freeTypeTableEntry(TypeTableEntry* entry)  {
+  switch (entry->type) {
+    case TYPE_TABLE_ARRAY:
+      TypeTableArray::destroy(static_cast<const TypeTableArray*>(entry));
+      break;
+    case TYPE_TABLE_STRUCT:
+      TypeTableStruct::destroy(static_cast<TypeTableStruct*>(entry));
+      break;
+    case TYPE_TABLE_SIGNATURE:
+      TypeTableFuncSign::destroy(static_cast<TypeTableFuncSign*>(entry));
+      break;
+    default:
+      break;
+  }
+}
+
 TypeTableEntry** createTypeTable(const uint32 entries) {
   if (entries == 0) {
     return nullptr;
