@@ -260,7 +260,7 @@ static void compileNativeFuncLookup(
   BytecodeWriter& writer = ctx.getWriter();
 
   const ScriptType* type = sym->getScriptType();
-  const typeindex idx = ctx.getSemantics().getTypes().findIndex(type);
+  const typeindex idx = ctx.getLocalTypeIndex(type);
   const StringPoolAddress addr = ctx.getStringPool().emplace(sym->getName());
 
   ctx.countTypeReference(type);
@@ -475,8 +475,11 @@ static void compileBinaryExpr(
     rpk = static_cast<PrimitiveScriptType*>(rtype)->getPrimitiveType();
   }
 
-  const typeindex leftIdx = ctx.getSemantics().getTypes().findIndex(ltype);
-  const typeindex rightIdx = ctx.getSemantics().getTypes().findIndex(rtype);
+  const typeindex leftIdx = ctx.getLocalTypeIndex(ltype);
+  const typeindex rightIdx = ctx.getLocalTypeIndex(rtype);
+
+  ctx.countTypeReference(ltype);
+  ctx.countTypeReference(rtype);
 
   switch (nonAssign) {
     case BOP_SHL:
@@ -510,8 +513,7 @@ static void compileBinaryExpr(
         writer.startInstr(OP_STRCONCAT);
         writer.appendU8(r1);
         writer.appendU8(r2);
-        const typeindex idx = ctx.getSemantics().getTypes().findIndex(rtype);
-        writer.appendU32(idx);
+        writer.appendU32(rightIdx);
         writer.appendU8(outReg);
         writer.endInstr();
         break;
@@ -693,7 +695,7 @@ static void compileArrayLiteral(ArrayLiteral* lit, const RegisterId out, Compile
   writer.startInstr(OP_ARRAYALLOC);
   writer.appendU8(out);
   writer.appendU32(count);
-  writer.appendU32(ctx.getSemantics().getTypes().findIndex(arrType));
+  writer.appendU32(ctx.getLocalTypeIndex(arrType));
   writer.endInstr();
 
   const RegisterId valueReg = ctx.acquireRegister();
@@ -763,9 +765,11 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
         memSize += forType->getProperty(i)->type->stackSizeBytes();
       }
 
+      ctx.countTypeReference(forType);
+
       writer.startInstr(OP_OBJALLOC);
       writer.appendU8(out);
-      writer.appendU32(ctx.getSemantics().getTypes().findIndex(forType));
+      writer.appendU32(ctx.getLocalTypeIndex(forType));
       writer.endInstr();
 
       return;
@@ -1609,6 +1613,8 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
       continue;
     }
 
+    typeindex localIndex = ctx.getLocalTypeIndex(type);
+
     switch (type->kind()) {
       case TK_STRUCT: {
         ScriptStructType* structType = static_cast<ScriptStructType*>(type);
@@ -1617,7 +1623,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
 
         TypeTableStruct* ttStruct = TypeTableStruct::create(propCount);
         ttStruct->type = TYPE_TABLE_STRUCT;
-        ttStruct->index = typeIdx;
+        ttStruct->index = localIndex;
         ttStruct->nameOffset = stringPool.emplaceString(name.data(), name.length());
         ttStruct->propertyCount = propCount;
 
@@ -1630,7 +1636,7 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
 
         for (uint32 j = 0; j < propCount; j++) {
           const StructProperty* prop = structType->getProperty(j);
-          const typeindex propType = types.findIndex(prop->type);
+          const typeindex propType = ctx.getLocalTypeIndex(prop->type);
           props[j] = {
             .nameOffset = stringPool.emplaceString(prop->name.data(), prop->name.length()),
             .valueOffset = off,
@@ -1646,11 +1652,11 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
       case TK_ARRAY: {
         ScriptArrayType* arrType = static_cast<ScriptArrayType*>(type);
         const ScriptType* componentType = arrType->getComponentType();
-        const typeindex cTypeIdx = types.findIndex(componentType);
+        const typeindex cTypeIdx = ctx.getLocalTypeIndex(componentType);
 
         TypeTableArray* arr = TypeTableArray::create();
         arr->type = TYPE_TABLE_ARRAY;
-        arr->index = typeIdx;
+        arr->index = localIndex;
         arr->componentType = cTypeIdx;
 
         entries[tableIndex++] = arr;
@@ -1662,12 +1668,12 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
 
         TypeTableFuncSign* tableSign = TypeTableFuncSign::create(argCount);
         tableSign->type = TYPE_TABLE_SIGNATURE;
-        tableSign->index = typeIdx;
+        tableSign->index = localIndex;
 
-        const typeindex retType = types.findIndex(sign->getReturnType());
+        const typeindex retType = ctx.getLocalTypeIndex(sign->getReturnType());
         typeindex* argIndexes = tableSign->argTypes;
         for (uint32 j = 0; j < argCount; j++) {
-          const typeindex argIndex = types.findIndex(sign->getArgumentType(j));
+          const typeindex argIndex = ctx.getLocalTypeIndex(sign->getArgumentType(j));
           argIndexes[j] = argIndex;
         }
 
@@ -1688,13 +1694,11 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
 
 static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
   std::vector<CompiledFunction>& compiledFuncs = ctx.getCompiledFunctions();
-  const TypeTable& types = ctx.getSemantics().getTypes();
-
   FunctionTableEntry* table = createFunctionTableArray(compiledFuncs.size());
 
   for (uint32 i = 0; i < compiledFuncs.size(); i++) {
     CompiledFunction& cfunc = compiledFuncs[i];
-    const uint64 tIndex = types.findIndex(cfunc.functionSymbol->getFunction()->getSignature());
+    const uint64 tIndex = ctx.getLocalTypeIndex(cfunc.functionSymbol->getFunction()->getSignature());
 
     table[i] = {
       .nameOffset = cfunc.poolId,

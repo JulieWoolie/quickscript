@@ -224,7 +224,10 @@ CompilerContext::CompilerContext(SemanticContext& ctx, RegisterBitSet* registryB
     m_semantics(ctx),
     m_registersInUse(registryBitset)
 {
-
+  const TypeTable& types = ctx.getTypes();
+  for (uint32 i = 0; i < FIRST_NON_RESERVED_TYPE_INDEX; i++) {
+    m_localTypeIndices[types.lookupByIndex(i)] = i;
+  }
 }
 
 void CompilerContext::enqueueFunction(FunctionDeclStatement* stat) {
@@ -393,4 +396,15 @@ void CompilerContext::countTypeReference(const ScriptType* type) const {
     default:
       break;
   }
+}
+
+typeindex CompilerContext::getLocalTypeIndex(const ScriptType* type) {
+  if (m_localTypeIndices.contains(type)) {
+    return m_localTypeIndices[type];
+  }
+
+  const typeindex idx = m_localTypeIndices.size();
+  m_localTypeIndices[type] = idx;
+
+  return idx;
 }

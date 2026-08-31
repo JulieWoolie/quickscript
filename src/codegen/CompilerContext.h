@@ -128,6 +128,8 @@ class CompilerContext {
   Scope* m_currentScope = nullptr;
   bool m_returned = false;
 
+  std::unordered_map<const ScriptType*, typeindex> m_localTypeIndices;
+
   public:
     CompilerContext(SemanticContext& ctx, RegisterBitSet* registryBitset);
 
@@ -163,6 +165,8 @@ class CompilerContext {
     void setReturnCalled(bool b);
 
     void countTypeReference(const ScriptType* type) const;
+
+    typeindex getLocalTypeIndex(const ScriptType* type);
 };
 
 
