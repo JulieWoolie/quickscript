@@ -1,0 +1,97 @@
+FILE_VERSION = 0
+GLOBAL_SCOPE_SIZE = 0
+ENTRYPOINT_FUNCTION_INDEX = 2
+CONST_STRING_POOL = {
+  [off=0 size=9]: fibonacci
+  [off=13 size=4]: main
+  [off=21 size=7]: <finit>
+}
+TYPE_TABLE = {
+  [14] {
+    type = FUNCSIGN
+    return_type = UINT32
+    variadic = 0
+    arguments = [UINT32]
+  }
+  [15] {
+    type = FUNCSIGN
+    return_type = INT32
+    variadic = 0
+    arguments = []
+  }
+  [16] {
+    type = ARRAY
+    component_type = STRING
+  }
+  [17] {
+    type = FUNCSIGN
+    return_type = INT32
+    variadic = 0
+    arguments = [16]
+  }
+}
+FUNCTION_TABLE = {
+  [0] {
+    name_offset = 0 # fibonacci
+    signature_index = 14
+    first_instruction = 0
+    stack_size = 16
+  }
+  [1] {
+    name_offset = 13 # main
+    signature_index = 15
+    first_instruction = 29
+    stack_size = 4
+  }
+  [2] {
+    name_offset = 21 # <finit>
+    signature_index = 17
+    first_instruction = 34
+    stack_size = 8
+  }
+}
+INSTRUCTIONS = {
+  # FUNCTION START: fibonacci
+  [   0] PUSHLINE      2
+  [   1] SREAD32       r02 0
+  [   2] LOADCONST8    r03 2
+  [   3] LTU32         r02 r03 r02
+  [   4] JMPI0         8 r02
+  [   5] PUSHLINE      2
+  [   6] SREAD32       rvr 0
+  [   7] RET          
+  [   8] PUSHLINE      3
+  [   9] LFUNCLOOKUP   0 r04
+  [  10] SREAD32       r05 0
+  [  11] LOADCONST8    r06 1
+  [  12] SUBU32        r05 r06 r05
+  [  13] SWRITE32      r05 12
+  [  14] SWRITE64      r03 4
+  [  15] INVOKE        r04
+  [  16] MOV           rvr r02
+  [  17] SREAD64       r03 4
+  [  18] LFUNCLOOKUP   0 r04
+  [  19] SREAD32       r05 0
+  [  20] LOADCONST8    r06 1
+  [  21] SUBU32        r05 r06 r05
+  [  22] SWRITE32      r05 12
+  [  23] SWRITE64      r02 4
+  [  24] INVOKE        r04
+  [  25] MOV           rvr r03
+  [  26] SREAD64       r02 4
+  [  27] ADDU32        r02 r03 rvr
+  [  28] RET          
+
+  # FUNCTION START: main
+  [  29] PUSHLINE      7
+  [  30] LFUNCLOOKUP   0 r02
+  [  31] STORECONST8   0 15
+  [  32] INVOKE        r02
+  [  33] RET          
+
+  # FUNCTION START: <finit>
+  [  34] PUSHLINE      0
+  [  35] LFUNCLOOKUP   1 r02
+  [  36] INVOKE        r02
+  [  37] RET          
+}
