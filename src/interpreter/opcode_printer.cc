@@ -258,6 +258,20 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
     case OP_INVOKE:
       fprintf(out, " %s", getRegistryName(*(buf + 2)));
       break;
+    case OP_FREAD:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " STRINGS[off=%llu] /* %.*s */", *reinterpret_cast<uint64*>(buf + 3), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 3)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 3)));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 11));
+      fprintf(out, "]");
+      break;
+    case OP_FWRITE:
+      fprintf(out, " %s", getRegistryName(*(buf + 2)));
+      fprintf(out, " STRINGS[off=%llu] /* %.*s */", *reinterpret_cast<uint64*>(buf + 3), *reinterpret_cast<uint32*>(strPool + *reinterpret_cast<uint64*>(buf + 3)), reinterpret_cast<char*>(strPool + sizeof(uint32) + *reinterpret_cast<uint64*>(buf + 3)));
+      fprintf(out, " TYPES[");
+      printTypeIndex(out, *reinterpret_cast<uint32*>(buf + 11));
+      fprintf(out, "]");
+      break;
     case OP_I8TU8:
     case OP_I8TI16:
     case OP_I8TU16:

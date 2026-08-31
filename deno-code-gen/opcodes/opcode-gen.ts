@@ -40,6 +40,7 @@ export function generateOpCodes(): OpCodeGenResult {
   closureOperations()
   heapOperations()
   functionCallOperations()
+  foreignSymbolOperations()
   conversionOperations()
   unaryOperations()
   integerBinaryOperations()
@@ -79,7 +80,7 @@ export function generateOpCodes(): OpCodeGenResult {
 }
 
 function generalOperations() {
-  currentCategory = "2.4.1 General Purpose OP Codes"
+  currentCategory = "General Purpose OP Codes"
 
   opCode("NOP", [], [])
 
@@ -101,7 +102,7 @@ function generalOperations() {
 }
 
 function stackOperations() {
-  currentCategory = "2.4.2 Stack Memory OP Codes"
+  currentCategory = "Stack Memory OP Codes"
 
   byteSizedOpCode("SREAD", [reg("out"), uint64("offset")], [
       "%REG:out% = READ_U%SIZE%(stack, READ_U%SIZE%ARG(%OFFSET:offset%));"
@@ -117,7 +118,7 @@ function stackOperations() {
 }
 
 function globalStackOperations() {
-  currentCategory = "2.4.3 Global Memory OP Codes"
+  currentCategory = "Global Memory OP Codes"
 
   byteSizedOpCode("GREAD", [reg("out"), uint64("offset")], [
     "%REG:out% = READ_U%SIZE%(global, READ_U%SIZE%ARG(%OFFSET:offset%));"
@@ -133,7 +134,7 @@ function globalStackOperations() {
 }
 
 function closureOperations() {
-  currentCategory = "2.4.4 Closure OP Codes"
+  currentCategory = "Closure OP Codes"
 
   opCode("GETSTACKPTR", [reg("out")], [
       "%REG:out% = reinterpret_cast<uint64>(stack);"
@@ -148,7 +149,7 @@ function closureOperations() {
 }
 
 function heapOperations() {
-  currentCategory = "2.4.5 Heap Memory OP Codes"
+  currentCategory = "Heap Memory OP Codes"
 
   opCode("OBJALLOC", [reg("out"), uint32("typeindex")])
   opCode("ARRAYALLOC", [reg("out"), uint32("count"), uint32("typeindex")])
@@ -197,7 +198,7 @@ function heapOperations() {
 }
 
 function functionCallOperations() {
-  currentCategory = "2.4.6 Function Call Instructions"
+  currentCategory = "Function Call Instructions"
 
   // opCode("SETARG", [uint32("index"), uint32("typeindex"), uint32("stackoffset")])
   opCode("LFUNCLOOKUP", [uint32("index"), reg("out")])
@@ -206,8 +207,14 @@ function functionCallOperations() {
   opCode("INVOKE", [reg("func")])
 }
 
+function foreignSymbolOperations() {
+  currentCategory = "Foreign Symbol OP Codes"
+  opCode("FREAD", [reg("out"), uint64("straddr"), uint32("typeindex")])
+  opCode("FWRITE", [reg("val"), uint64("straddr"), uint32("typeindex")])
+}
+
 function conversionOperations() {
-  currentCategory = "2.4.7 Conversion Instructions"
+  currentCategory = "Conversion Instructions"
 
   for (const f of NUMBER_TYPES) {
     for (const t of NUMBER_TYPES) {
@@ -231,7 +238,7 @@ function conversionOperations() {
 }
 
 function unaryOperations() {
-  currentCategory = "2.4.8 Unary Operations"
+  currentCategory = "Unary Operations"
 
   opCode("BNEGATE", UNARY_ARGS, ["%REG:out% = ~%REG:in%;"])
   opCode("LNEGATE", UNARY_ARGS, ["%REG:out% = %REG:in% ? 0 : 1;"])
@@ -260,7 +267,7 @@ function unaryOperations() {
 }
 
 function integerBinaryOperations() {
-  currentCategory = "2.4.9.1 Integer-only Binary Operations"
+  currentCategory = "Integer-only Binary Operations"
 
   const operations = [
     {code: "LSHIFT", operator: "<<"},
@@ -275,7 +282,7 @@ function integerBinaryOperations() {
 }
 
 function booleanBinaryOperations() {
-  currentCategory = "2.4.9.2 Boolean-only Binary Operations"
+  currentCategory = "Boolean-only Binary Operations"
 
   const operators = [
     {name: "AND", bitwiseOp: "&", logicOp: "&&"},
@@ -295,7 +302,7 @@ function booleanBinaryOperations() {
 }
 
 function mathOperations() {
-  currentCategory = "2.4.9.3 General Number Binary Operations"
+  currentCategory = "General Number Binary Operations"
 
   for (const mathOp of MATH_OPERATIONS) {
     for (const type of NUMBER_TYPES) {
@@ -316,7 +323,7 @@ function mathOperations() {
 }
 
 function comparisonOperators() {
-  currentCategory = "2.4.9.4 Comparison Operations"
+  currentCategory = "Comparison Operations"
 
   const equalityOperators = [
     {name: "EQ", operator: "=="},
@@ -363,7 +370,7 @@ function comparisonOperators() {
 }
 
 function stringArrayOperations() {
-  currentCategory = "2.4.9.5 String/Array Operations"
+  currentCategory = "String/Array Operations"
 
   opCode("STRCONCAT", [reg("lhs"), reg("rhs"), uint32("typeindex"), reg("out")])
   byteSizedOpCode("STRREP", BINARY_ARGS, [

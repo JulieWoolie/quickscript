@@ -76,6 +76,8 @@ conststring opcode_name(opcode code) {
     case OP_LFUNCLOOKUP: return "LFUNCLOOKUP";
     case OP_NFUNCLOOKUP: return "NFUNCLOOKUP";
     case OP_INVOKE: return "INVOKE";
+    case OP_FREAD: return "FREAD";
+    case OP_FWRITE: return "FWRITE";
     case OP_I8TU8: return "I8TU8";
     case OP_I8TI16: return "I8TI16";
     case OP_I8TU16: return "I8TU16";
@@ -641,6 +643,8 @@ uint8 getInstructionLength(const opcode code) {
     case OP_CWRITE64:
       return 10 + LENGTH_OPCODE;
     case OP_NFUNCLOOKUP:
+    case OP_FREAD:
+    case OP_FWRITE:
       return 13 + LENGTH_OPCODE;
     default:
       return 0;
