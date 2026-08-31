@@ -19,8 +19,41 @@
 #include "parse/print-visitor.h"
 #include "stdlib/qs_stdlib.h"
 
+#define QSFT_SOURCE 0
+#define QSFT_BINARY_IR 1
+typedef uint8 qsfiletype;
+
+static qsfiletype getFileType(const std::string& fileName) {
+  return fileName.ends_with(".qsir") ? QSFT_BINARY_IR : QSFT_SOURCE;
+}
+
 static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out, const BindingsObject* bindings) {
   std::string fname = std::string(settings.inputFile);
+  qsfiletype qsft = getFileType(fname);
+
+  if (qsft == QSFT_BINARY_IR) {
+    std::ifstream stream = std::ifstream(fname, std::ios::binary | std::ios::ate);
+    std::streamsize size = stream.tellg();
+    stream.seekg(0, std::ios::beg);
+
+    uint8 buf[size];
+    stream.read(reinterpret_cast<int8*>(buf), size);
+
+    BytecodeFile& bf = BytecodeFile::create();
+    BytecodeReadResult result = deserializeBytecodeFile(buf, size, bf);
+
+    if (result != IR_RESULT_OK) {
+      conststring errorMessage = getReadResultMessage(result);
+      fprintf(stderr, "Failed to read IR file: %s\n", errorMessage);
+
+      BytecodeFile::destroy(bf);
+      return false;
+    }
+
+    *out = &bf;
+    return true;
+  }
+
   std::ifstream file(fname);
 
   if (!file.is_open()) {
