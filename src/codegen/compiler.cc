@@ -223,6 +223,7 @@ static void compilePropertyAccess(
     writer.appendU8(targetReg);
     writer.appendU8(out);
     writer.appendU8(propertyOffset);
+    writer.endInstr();
   }
 
   if (addr) {
@@ -757,13 +758,6 @@ static void compileExpr(Expr* expr, const RegisterId out, AddrOutput* addr, Comp
     case AST_ObjectAllocExpr: {
       ObjectAllocExpr* allocExpr = static_cast<ObjectAllocExpr*>(expr);
       ScriptStructType* forType = static_cast<ScriptStructType*>(allocExpr->resultType);
-
-      const uint32 propCount = forType->getPropertyCount();
-      uint64 memSize = 0;
-
-      for (uint32 i = 0; i < propCount; i++) {
-        memSize += forType->getProperty(i)->type->stackSizeBytes();
-      }
 
       ctx.countTypeReference(forType);
 
