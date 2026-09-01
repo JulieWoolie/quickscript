@@ -407,10 +407,19 @@ static void compileBinaryExpr(
     AddrOutput out;
     compileNonReadingExpr(lhs, &out, ctx);
 
-    compileExpr(rhs, outReg, nullptr, ctx);
-
-    uint32 stackSize = rhs->resultType->stackSizeBytes();
-    compileWriteOperation(&out, stackSize, ctx, outReg);
+    switch (out.outptype) {
+      case OUTP_GLOBAL:
+        compileStoredExpr(bin->resultType, rhs, ctx, out.stackoffset, false);
+        break;
+      case OUTP_STACK:
+        compileStoredExpr(bin->resultType, rhs, ctx, out.stackoffset, true);
+        break;
+      default:
+        compileExpr(rhs, outReg, nullptr, ctx);
+        const uint32 stackSize = rhs->resultType->stackSizeBytes();
+        compileWriteOperation(&out, stackSize, ctx, outReg);
+        break;
+    }
 
     return;
   }
