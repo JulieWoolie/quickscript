@@ -261,6 +261,12 @@ static void rewriteInstructions(uint8* buf, const uint64 len, const InstructionR
         break;
       }
 
+      case OP_OBJALLOC: {
+        uint32* typeIdxPtr = reinterpret_cast<uint32*>(buf + i + LENGTH_OPCODE + 1);
+        *typeIdxPtr = rewrite.typeRewrites.findRewritten(*typeIdxPtr);
+        break;
+      }
+
       case OP_GTARR:
       case OP_GTEARR:
       case OP_LTARR:
@@ -568,6 +574,7 @@ void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
       }
 
       out.append("}");
+      return;
     }
 
     case TK_ARRAY: {
