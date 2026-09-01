@@ -83,12 +83,19 @@ GlobalMemorySpace::~GlobalMemorySpace() {
 }
 
 void GlobalMemorySpace::grow(const uint64 bytes) {
+  if (bytes == 0) {
+    return;
+  }
+
   const uint64 newSize = m_size + bytes;
   uint8* newData = static_cast<uint8*>(realloc(m_data, newSize));
 
   if (!newData) {
     throw std::runtime_error("Failed to grow global memory space");
   }
+
+  uint8* newArea = newData + m_size;
+  memset(newArea, 0, bytes);
 
   m_data = newData;
   m_size = newSize;
