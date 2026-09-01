@@ -1,0 +1,9 @@
+
+uint32 GLOBAL = 12
+
+void main() {
+  assert GLOBAL == 12 : "GLOBAL == 12: GLOBAL: " + GLOBAL
+
+  GLOBAL = 1
+  assert GLOBAL == 1 : "GLOBAL == 1: GLOBAL: " + GLOBAL
+}
