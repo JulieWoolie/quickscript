@@ -1,0 +1,25 @@
+
+struct vec2i {
+  int32 x = 0
+  int32 y = 0
+}
+
+int32 distanceSquared(vec2i a, vec2i b) {
+  const int32 dx = a.x - b.x
+  const int32 dy = a.y - b.y
+  return (dx ** 2) + (dy ** 2)
+}
+
+void main() {
+  vec2i first = {x = 1, y = 2}
+  vec2i second = {x = 3, y = 4}
+
+  assert first.x == 1 : "first.x == 1, first: " + first
+  assert first.y == 2 : "first.y == 2, first: " + first
+  assert second.x == 3 : "second.x == 3, second: " + second
+  assert second.y == 4 : "second.y == 4, second: " + second
+
+  int32 distSq = distanceSquared(first, second)
+
+  assert distSq == 8 : "distSq == 8, distSq: " + distSq
+}
