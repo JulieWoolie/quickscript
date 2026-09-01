@@ -184,7 +184,7 @@ async function writeOpCodeTxt(codes: Instruction[]): Promise<void> {
 }
 
 export async function opcodeMain(): Promise<void> {
-  const res = generateOpCodes()
+  const res = await generateOpCodes()
   const codes = res.codes
 
   console.log(`Generated ${codes.length} OP Codes, using ${res.baseType} (${res.opcodeSize} byte unsigned integer) as opcode type`)

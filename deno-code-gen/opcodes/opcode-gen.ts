@@ -1,10 +1,13 @@
 import {
-  BINARY_ARGS, getFittingType,
+  BINARY_ARGS,
+  getFittingType,
   Instruction,
   INSTRUCTION_LENGTH,
   InstructionParam,
   NUMBER_TYPES,
-  OpCodeGenResult, UNARY_ARGS
+  OpCodeGenResult,
+  UNARY_ARGS,
+  writeToFile
 } from "../common";
 
 interface BaseMathOp {
@@ -30,10 +33,80 @@ const MATH_OPERATIONS: MathOperation[] = [
   {name: "pow", type: "func", functionName: "std::pow"},
 ]
 
-let currentCategory: string = ""
-const opcodes: Instruction[] = []
+const EXISTING_OPCODE_JSON_PATH = "./existing-opcode-values.json"
 
-export function generateOpCodes(): OpCodeGenResult {
+let currentCategory: string = ""
+
+const opcodes: Instruction[] = []
+let existingValues: {[code: string]: number} = {}
+
+async function loadExistingValues() {
+  try {
+    // @ts-ignore
+    const jsonStr = await Deno.readTextFile(EXISTING_OPCODE_JSON_PATH)
+    existingValues = JSON.parse(jsonStr)
+  } catch (e) {
+    // Ignored
+  }
+}
+
+async function saveValues() {
+  await writeToFile(JSON.stringify(existingValues, null, 2), EXISTING_OPCODE_JSON_PATH)
+}
+
+function hex(n: number): string {
+  return `0x${n.toString(16).padStart(4, '0').toUpperCase()}`
+}
+
+function assignOpcodeValues(): number {
+  const lookup: {[code: string]: Instruction | undefined} = {}
+  for (const code of opcodes) {
+    lookup[code.opcode] = code
+  }
+
+  let newExistingValues: {[code: string]: number} = {}
+  let availableValues: number[] = []
+  let highestUsed = 0
+
+  for (const entry in existingValues) {
+    const val = existingValues[entry]
+
+    const instr = lookup[entry];
+    if (instr == undefined) {
+      availableValues.push(val)
+      continue
+    }
+
+    instr.value = hex(val)
+    newExistingValues[entry] = val
+    highestUsed = Math.max(highestUsed, val)
+  }
+
+  for (const code of opcodes) {
+    if (code.value.length != 0) {
+      continue
+    }
+
+    let val: number = 0
+    if (availableValues.length != 0) {
+      val = availableValues.pop()!
+      highestUsed = Math.max(highestUsed, val)
+    } else {
+      val = ++highestUsed
+    }
+
+    newExistingValues[code.opcode] = val
+    code.value = hex(val)
+  }
+
+  existingValues = newExistingValues
+
+  return highestUsed
+}
+
+export async function generateOpCodes(): Promise<OpCodeGenResult> {
+  await loadExistingValues()
+
   generalOperations()
   stackOperations()
   globalStackOperations()
@@ -49,7 +122,10 @@ export function generateOpCodes(): OpCodeGenResult {
   comparisonOperators()
   stringArrayOperations()
 
-  const fittingType = getFittingType(opcodes.length)
+  const highest = assignOpcodeValues()
+  await saveValues()
+
+  const fittingType = getFittingType(highest)
   if (fittingType == null) {
     throw "Too many OP Codes, no valid number type can represent all op codes"
   }
@@ -379,13 +455,11 @@ function stringArrayOperations() {
 }
 
 function opCode(name: string, params: InstructionParam[], source?: string[]) {
-  const numval = `0x${(opcodes.length).toString(16).toUpperCase().padStart(4, "0")}`
-
   let instr: Instruction = {
     opcode: name,
     padding: -1,
     params,
-    value: numval,
+    value: "",
     category: currentCategory,
   }
 
