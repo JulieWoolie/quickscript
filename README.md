@@ -2,6 +2,11 @@
 A programming language lexer, parser and interpreter written in C++ as an exercise in language 
 and compiler design.
 
+#### File suffixes:
+- `.qscr` - quickscript source files
+- `.qscr-ir` - Text representation of quickscript IR files
+- `.qsir` - Binary quickscript IR file
+
 ## Initial Goals
 - [x] Lexer
 - [x] Parser
