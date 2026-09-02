@@ -19,7 +19,6 @@ Basically, get the language to parse, check the types, compile it to an IR and t
 interpret that IR.
 
 ## TODO (Problems)
-- [X] Calling errors (Function stores something in a register, calls a function, function overwrites that register, data is lost)
 - [ ] Correct logic around passing object and array literals to functions  
       **Note on this:**  
       Since during semantic analysis, the system iterates over each argument and attempts to 
@@ -30,26 +29,6 @@ interpret that IR.
 - [ ] Correct closure handling in semantic transformer
 - [ ] Casting and assigning literals correct types
 - [ ] Proper reference counting which is added in compiler or semantic transformer.
-- [x] Correct "unused" symbol warnings
-- [x] `PUSHLINE` OP Code functionality
-- [X] `RET` OP Code functionality
-- [X] `JMP` OP Code functionality
-- [X] `JMPI0` OP Code functionality
-- [X] `JMPN0` OP Code functionality
-- [X] `LOADCONSTSTR` OP Code functionality
-- [x] `SETARGTYPE` OP Code functionality AND USE
-- [X] `LFUNCLOOKUP` OP Code functionality
-- [x] `NFUNCLOOKUP` OP Code functionality
-- [X] `INVOKE` OP Code functionality
-- [x] `EQARR` OP Code functionality
-- [x] `EQSTRUCT` OP Code functionality
-- [x] `NEQARR` OP Code functionality
-- [x] `NEQSTRUCT` OP Code functionality
-- [x] `GTARR` OP Code functionality
-- [x] `GTEARR` OP Code functionality
-- [x] `LTARR` OP Code functionality
-- [x] `LTEARR` OP Code functionality
-- [X] `STRCONCAT` OP Code functionality
 - [ ] Support for native bindings: structs, variables, constants and functions
 - [ ] Standard library
 - [x] Proper Unicode support
