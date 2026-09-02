@@ -20,6 +20,8 @@ class SemanticTransformer {
 
   Expr* transformCallExpr(CallExpr* expr) const;
 
+  Expr* transformIdentifier(Identifier* id) const;
+
   Statement* transformStatement(Statement* stat, bool emptyBlocksAsNull);
 
   Identifier* makeId(const std::string& string) const;

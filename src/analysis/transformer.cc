@@ -7,6 +7,19 @@
 
 #define IS_NUM_LITERAL(v) (v == AST_IntLiteral || v == AST_FloatLiteral)
 
+static bool isLiteral(Expr* node) {
+  switch (node->nodeKind()) {
+    case AST_FloatLiteral:
+    case AST_StringLiteral:
+    case AST_IntLiteral:
+    case AST_CharLiteral:
+    case AST_BooleanLiteral:
+      return true;
+    default:
+      return false;
+  }
+}
+
 Expr* SemanticTransformer::optimizeStringConcat(StringLiteral* lhs, Expr* rhs) const {
   StringTable& strings = ctx.getStrings();
 
@@ -113,7 +126,7 @@ Expr* SemanticTransformer::transformBinary(BinaryExpr* e) const {
   Expr* lhs = e->lhs = transformExpr(e->lhs);
   Expr* rhs = e->rhs = transformExpr(e->rhs);
 
-  if (ctx.getOptions().exprOptimizing) {
+  if (!ctx.getOptions().exprOptimizing) {
     return e;
   }
   
@@ -398,7 +411,7 @@ Expr* SemanticTransformer::transformTernary(TernaryExpr* t) const {
   Expr* left = t->left = transformExpr(t->left);
   Expr* right = t->right = transformExpr(t->right);
 
-  if (ctx.getOptions().exprOptimizing) {
+  if (!ctx.getOptions().exprOptimizing) {
     return t;
   }
 
@@ -475,6 +488,35 @@ Expr* SemanticTransformer::transformCallExpr(CallExpr* expr) const {
   return expr;
 }
 
+Expr* SemanticTransformer::transformIdentifier(Identifier* id) const {
+  Symbol* sym = ctx.getSymbolLookup()[id];
+  if (!sym || !(sym->getFlags() & SYMFLAG_CONST) || !ctx.getOptions().exprOptimizing) {
+    return id;
+  }
+
+  if (sym->stype() == SYM_LocalVar) {
+    LocalVarSymbol* lvs = static_cast<LocalVarSymbol*>(sym);
+    Statement* stat = lvs->getDecl();
+
+    if (stat->nodeKind() != AST_LexicalDeclaration) {
+      return id;
+    }
+
+    LexicalDeclaration* lexl = static_cast<LexicalDeclaration*>(stat);
+    if (!lexl->value) {
+      return id;
+    }
+
+    if (isLiteral(lexl->value)) {
+      return transformExpr(lexl->value);
+    }
+
+    return id;
+  }
+
+  return id;
+}
+
 Expr* SemanticTransformer::transformExpr(Expr* expr) const {
   switch (expr->nodeKind()) {
     case AST_BinaryExpr:
@@ -485,21 +527,10 @@ Expr* SemanticTransformer::transformExpr(Expr* expr) const {
       return transformTernary(static_cast<TernaryExpr*>(expr));
     case AST_CallExpr:
       return transformCallExpr(static_cast<CallExpr*>(expr));
+    case AST_Identifier:
+      return transformIdentifier(static_cast<Identifier*>(expr));
     default:
       return expr;
-  }
-}
-
-static bool isLiteral(Expr* node) {
-  switch (node->nodeKind()) {
-    case AST_FloatLiteral:
-    case AST_StringLiteral:
-    case AST_IntLiteral:
-    case AST_CharLiteral:
-    case AST_BooleanLiteral:
-      return true;
-    default:
-      return false;
   }
 }
 
