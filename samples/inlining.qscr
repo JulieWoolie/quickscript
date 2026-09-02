@@ -1,0 +1,6 @@
+
+const uint32 GLOBAL = 12
+
+void main() {
+  println("Hello " + GLOBAL)
+}
