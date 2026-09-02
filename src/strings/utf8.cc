@@ -1,5 +1,7 @@
 #include "utf8.h"
 
+#define IS_INVALID_CONTINUE_CODEUNIT(x) ((x & CONTINUE_TEST) != CONTINUE_MASK)
+
 CodeUnitType getCodeUnitType(const utf8char ch) {
   if ((ch & ONEBYTE_TEST) == 0) {
     return CHT_1BYTE;

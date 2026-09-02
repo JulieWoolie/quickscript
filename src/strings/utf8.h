@@ -24,8 +24,6 @@ typedef uint32 utf32char;
 #define MAX_3BYTE 0xFFFF
 #define MAX_4BYTE 0x10FFFF
 
-#define IS_INVALID_CONTINUE_CODEUNIT(x) ((x & CONTINUE_TEST) != CONTINUE_MASK)
-
 #define CHT_INVALID 0
 #define CHT_1BYTE 1
 #define CHT_2BYTE 2
