@@ -58,6 +58,19 @@ class SemanticTransformer {
   // Move every nested function to global space
   // and handle scope and symbol changes.
   //
+  // Do this by going through every function call in the nesting function and check
+  // if it matches a nested function, if it does, append the correct closure variable
+  // for it
+  //
+  // TODO:
+  //   x 1. Add a parameter to the function "#closure: Stack*" that points to the
+  //        stack frame of the nested function
+  //   _ 2. Replace every access of a variable from the nesting function with
+  //        an access to the closure.
+  //   x 3. Replace the function declaration with a LexDecl statement creating
+  //        the closure with the current stack frame's pointer as its value.
+  //   _ 3. In calls to the function, provide the closure.
+  //
   void flattenNestedFunctions();
 
   //

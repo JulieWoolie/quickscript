@@ -2,7 +2,6 @@
 
 #include <cmath>
 
-#include "../interpreter/registers.h"
 #include "../types/ConstTypes.h"
 
 #define IS_NUM_LITERAL(v) (v == AST_IntLiteral || v == AST_FloatLiteral)
@@ -1229,16 +1228,6 @@ void SemanticTransformer::flattenNestedFunctions() {
     if (!lf->isNested()) {
       continue;
     }
-
-    // TODO:
-    //   x 1. Add a parameter to the function "#closure: Stack*" that points to the
-    //        stack frame of the nested function
-    //   _ 2. Replace every access of a variable from the nesting function with
-    //        an access to the closure.
-    //   x 3. Replace the function declaration with a LexDecl statement creating
-    //        the closure with the current stack frame's pointer as its value.
-    //   _ 3. In calls to the function, provide the closure.
-    //
 
     stringid newName = getNestedFunctionName(lf, ctx);
 
