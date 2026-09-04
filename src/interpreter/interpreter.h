@@ -13,6 +13,7 @@
 #include "../common.h"
 #include "registers.h"
 #include "../nativeinterface.h"
+#include "../types/types.h"
 
 #define MAX_ARGS 128
 #define MAX_CALL_DEPTH 1024

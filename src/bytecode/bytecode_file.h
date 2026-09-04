@@ -3,8 +3,6 @@
 
 #include "bytecode_functable.h"
 #include "bytecode_typetable.h"
-#include "../common.h"
-#include "../types/types.h"
 
 #define IR_RESULT_OK 0
 #define IR_RESULT_INVALID_PREFIX 1
