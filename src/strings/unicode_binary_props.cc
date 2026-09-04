@@ -45130,329 +45130,165 @@ bool ucIsWhiteSpace(const utf32char ch) {
   return false;
 }
 bool ucIsAlphabetic(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x1;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x1;
 }
 
 bool ucIsCased(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x2;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x2;
 }
 
 bool ucIsCaseIgnorable(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x4;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x4;
 }
 
 bool ucChangesWhenCasefolded(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x8;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x8;
 }
 
 bool ucChangesWhenCasemapped(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x10;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x10;
 }
 
 bool ucChangesWhenLowercased(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x20;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x20;
 }
 
 bool ucChangesWhenTitlecased(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x40;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x40;
 }
 
 bool ucChangesWhenUppercased(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 0;
-  return PAGES[propStart] & 0x80;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 0] & 0x80;
 }
 
 bool ucIsDefaultIgnorableCodePoint(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x1;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x1;
 }
 
 bool ucIsDiacritic(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x2;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x2;
 }
 
 bool ucIsEmojiModifierBase(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x4;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x4;
 }
 
 bool ucIsEmojiComponent(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x8;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x8;
 }
 
 bool ucIsEmoji(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x10;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x10;
 }
 
 bool ucIsEmojiPresentation(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x20;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x20;
 }
 
 bool ucIsExtender(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x40;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x40;
 }
 
 bool ucIsExtendedPictographic(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 1;
-  return PAGES[propStart] & 0x80;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 1] & 0x80;
 }
 
 bool ucIsGraphemeBase(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x1;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x1;
 }
 
 bool ucIsGraphemeExtend(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x2;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x2;
 }
 
 bool ucIsGraphemeLink(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x4;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x4;
 }
 
 bool ucIsIdContinue(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x8;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x8;
 }
 
 bool ucIsIdeographic(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x10;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x10;
 }
 
 bool ucIsIdStart(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x20;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x20;
 }
 
 bool ucIsLowercase(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x40;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x40;
 }
 
 bool ucIsMath(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 2;
-  return PAGES[propStart] & 0x80;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 2] & 0x80;
 }
 
 bool ucIsNoncharacterCodePoint(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x1;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x1;
 }
 
 bool ucIsOtherAlphabetic(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x2;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x2;
 }
 
 bool ucIsOtherDefaultIgnorableCodePoint(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x4;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x4;
 }
 
 bool ucIsOtherGraphemeExtend(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x8;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x8;
 }
 
 bool ucIsOtherLowercase(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x10;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x10;
 }
 
 bool ucIsOtherMath(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x20;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x20;
 }
 
 bool ucIsOtherUppercase(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x40;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x40;
 }
 
 bool ucIsPatternSyntax(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 3;
-  return PAGES[propStart] & 0x80;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 3] & 0x80;
 }
 
 bool ucIsRadical(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x1;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x1;
 }
 
 bool ucIsSoftDotted(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x2;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x2;
 }
 
 bool ucIsSentenceTerminal(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x4;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x4;
 }
 
 bool ucIsTerminalPunctuation(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x8;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x8;
 }
 
 bool ucIsUnifiedIdeograph(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x10;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x10;
 }
 
 bool ucIsUppercase(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x20;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x20;
 }
 
 bool ucIsVariationSelector(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x40;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x40;
 }
 
 bool ucIsXidContinue(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 4;
-  return PAGES[propStart] & 0x80;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 4] & 0x80;
 }
 
 bool ucIsXidStart(const utf32char ch) {
-  const uint32 pageOffset = PAGE_STARTS[ch >> 8];
-  const uint32 codepointIndex = (ch & 0xff);
-  const uint32 bitsetStart = pageOffset + (codepointIndex * 6);
-  const uint32 propStart = bitsetStart + 5;
-  return PAGES[propStart] & 0x1;
+  return PAGES[((PAGE_STARTS[ch >> 8]) + ((ch & 0xff) * 6)) + 5] & 0x1;
 }

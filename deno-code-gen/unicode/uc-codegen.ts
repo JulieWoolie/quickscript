@@ -237,13 +237,7 @@ static const uint8 PAGES[${pageCount * pageSize}] = {`
     const bitIndex = bd.typeLocalIndex % 8
     const mask = 1 << bitIndex
 
-    let byteIndexStr = byteIndex == 0 ? "" : ` + ${byteIndex}`
-
-    out += `\n  const uint32 pageOffset = PAGE_STARTS[ch >> ${PAGE_SHIFT}];`
-    out += `\n  const uint32 codepointIndex = ${pageMaskString};`
-    out += `\n  const uint32 bitsetStart = pageOffset + (codepointIndex * ${pages.codepointBytes});`
-    out += `\n  const uint32 propStart = bitsetStart + ${byteIndex};`
-    out += `\n  return PAGES[propStart] & 0x${mask.toString(16)};`
+    out += `\n  return PAGES[((PAGE_STARTS[ch >> ${PAGE_SHIFT}]) + (${pageMaskString} * ${pages.codepointBytes})) + ${byteIndex}] & 0x${mask.toString(16)};`
     out += `\n}\n`
   }
 
