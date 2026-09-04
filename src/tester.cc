@@ -19,6 +19,8 @@
 #include "parse/parser.h"
 #include "parse/print-visitor.h"
 #include "parse/token.h"
+#include "strings/stringreader.h"
+#include "strings/strings.h"
 
 #define PRINT_FULL_ERRORS
 
@@ -71,81 +73,61 @@ struct KeyValuePair {
   uint32 end = 0;
 };
 
-static uint32 findTokenEnd(const std::string_view& view, const uint32 start) {
-  if (view[start] == '"' || view[start] == '\'') {
-    const int8 q = view[start];
+static void readUntilTokenEnd(StringReader& reader, std::string_view* out) {
+  if (reader.peek() == '"' || reader.peek() == '\'') {
+    const utf32char q = reader.next();
+    const uint32 start = reader.cursor();
 
-    for (uint32 i = start + 1; i < view.length(); i++) {
-      if (view[i] != q) {
+    while (reader.hasNext()) {
+      if (reader.peek() != q) {
+        reader.next();
         continue;
       }
-      return i + 1;
+
+      *out = reader.substring(start, reader.cursor());
+      reader.next();
+
+      return;
     }
 
-    return view.length();
+    *out = reader.substring(start, reader.cursor());
+    return;
   }
 
-  for (uint32 i = start; i < view.length(); i++) {
-    if (view[i] != ' ' && view[i] != '=') {
-      continue;
+  const uint32 start = reader.cursor();
+
+  while (reader.hasNext()) {
+    const utf32char p = reader.peek();
+
+    if (isWhitespace(p) || p == '=') {
+      break;
     }
-    return i;
+
+    reader.next();
   }
 
-  return view.length();
+  *out = reader.substring(start, reader.cursor());
 }
 
-static void skipWhitespace(const std::string_view& view, uint32& readIdx) {
-  while (readIdx < view.length() && view[readIdx] == ' ') {
-    readIdx++;
-  }
-}
+static bool parsePair(StringReader& reader, KeyValuePair* out) {
+  reader.skipWhitespace();
 
-static bool parsePair(const std::string_view& str, const uint32 off, KeyValuePair* out) {
-  uint32 readIdx = off;
-  skipWhitespace(str, readIdx);
+  readUntilTokenEnd(reader, &out->key);
+  reader.skipWhitespace();
 
-  const uint32 keyStart = readIdx;
-  const uint32 keyEnd = findTokenEnd(str, keyStart);
-
-  if (keyStart == keyEnd) {
+  if (out->key.length() == 0) {
     return false;
   }
 
-  readIdx = keyEnd;
-
-  if (str[keyEnd] == '=') {
-    readIdx++;
+  if (reader.peek() == '=') {
+    reader.next();
+    reader.skipWhitespace();
   } else {
     return false;
   }
 
-  const uint32 valStart = readIdx;
-  const uint32 valEnd = findTokenEnd(str, valStart);
-
-  if (valStart == valEnd) {
-    return false;
-  }
-
-  readIdx = valEnd;
-
-  const uint32 keyLen = keyEnd - keyStart;
-  const uint32 valLen = valEnd - valStart;
-
-  if (str[valStart] == '"' || str[valStart] == '\'') {
-    out->value = std::string_view(str.data() + valStart + 1, valLen - 2);
-  } else {
-    out->value = std::string_view(str.data() + valStart, valLen);
-  }
-
-  if (str[keyStart] == '"' || str[keyStart] == '\'') {
-    out->key = std::string_view(str.data() + keyLen + 1, keyLen - 2);
-  } else {
-    out->key = std::string_view(str.data() + keyStart, keyLen);
-  }
-
-  out->end = readIdx;
-  return true;
+  readUntilTokenEnd(reader, &out->value);
+  return out->value.length() != 0;
 }
 
 static bool startsWith(const std::string_view& view, const uint32 off, const conststring prefix) {
@@ -180,18 +162,13 @@ static int32 parseViewToInt(const std::string_view& sv) {
 
 static void parseExpectedAst(
   TestCase& out,
-  const std::string_view& view,
-  const uint32 start
+  StringReader& reader
 ) {
-  const uint32 len = view.length();
-  const conststring data = view.data();
-
   std::string& jsonString = out.expectedAst;
-  uint32 readIdx = start;
   bool inString = false;
 
-  while (readIdx < len) {
-    const char ch = data[readIdx++];
+  while (reader.hasNext()) {
+    const char ch = reader.next();
 
     if (!inString && (ch == ' ' || ch == '\n' || ch == '\r')) {
       continue;
@@ -205,103 +182,94 @@ static void parseExpectedAst(
   }
 }
 
-static testmode parseMode(const std::string_view& view, const uint32 readIdx) {
+static testmode parseMode(StringReader& reader) {
   for (uint32 i = 0; i < RUNMODE_COUNT; i++) {
     const RunModeDef def = RUNMODES[i];
-    if (startsWith(view, readIdx, def.value)) {
+
+    if (reader.consumeIfMatches(def.value)) {
       return def.mode;
     }
   }
+
   return TDIR_INVALID;
 }
 
-static TestDirective parseDirectivePrefix(const std::string_view& view, uint32& readIdx) {
+static TestDirective parseDirectivePrefix(StringReader& reader) {
   for (uint32 i = 0; i < DIRECTIVE_COUNT; i++) {
     TestDirectiveDef def = DIRECTIVES[i];
-    if (startsWith(view, readIdx, def.value)) {
-      readIdx += strlen(def.value);
-      return def.directive;
+
+    if (!reader.consumeIfMatches(def.value)) {
+      continue;
     }
+
+    return def.directive;
   }
   return TDIR_INVALID;
 }
 
-static void skipValueDelimiter(const std::string_view& view, uint32& cursor) {
-  skipWhitespace(view, cursor);
-  if (cursor < view.length() && (view[cursor] == ':' || view[cursor] == '=')) {
-    cursor++;
-    skipWhitespace(view, cursor);
+static void skipValueDelimiter(StringReader& reader) {
+  reader.skipWhitespace();
+  if (reader.peek() == ':' || reader.peek() == '=') {
+    reader.next();
+    reader.skipWhitespace();
   }
 }
 
-static bool parseBool(const std::string_view& view, uint32& cursor, const bool fallback) {
-  skipValueDelimiter(view, cursor);
+static void parseTestCommand(TestCase& out, StringReader& reader, const Token* t) {
+  reader.skipWhitespace();
 
-  if (startsWith(view, cursor, "true")) {
-    return true;
-  }
-  if (startsWith(view, cursor, "false")) {
-    return false;
-  }
-
-  return fallback;
-}
-
-static bool parseTestCommand(
-  TestCase& out,
-  const std::string_view& view,
-  ExpectedError& err,
-  const Token* t
-) {
-  uint32 readIdx = 0;
-  skipWhitespace(view, readIdx);
-
-  const TestDirective directive = parseDirectivePrefix(view, readIdx);
+  const TestDirective directive = parseDirectivePrefix(reader);
   if (directive == TDIR_INVALID) {
-    return false;
+    return;
   }
 
   switch (directive) {
     case TDIR_BREAKPOINT:
       out.breakpoint = true;
-      return false;
+      return;
     case TDIR_DISABLE_STAT_INLINING:
-      out.compilerOpts.statOptimizing = !parseBool(view, readIdx, true);
-      return false;
+      skipValueDelimiter(reader);
+      out.compilerOpts.statOptimizing = !reader.parseBool(true);
+      return;
     case TDIR_DISABLE_EXPR_INLINING:
-      out.compilerOpts.exprOptimizing = !parseBool(view, readIdx, true);
-      return false;
+      skipValueDelimiter(reader);
+      out.compilerOpts.exprOptimizing = !reader.parseBool(true);
+      return;
     case TDIR_DROP_ASSERTS:
-      out.compilerOpts.includeAsserts = !parseBool(view, readIdx, true);
-      return false;
+      skipValueDelimiter(reader);
+      out.compilerOpts.includeAsserts = !reader.parseBool(true);
+      return;
     case TDIR_MODE: {
-      skipValueDelimiter(view, readIdx);
-      const testmode mode = parseMode(view, readIdx);
+      skipValueDelimiter(reader);
+      const testmode mode = parseMode(reader);
       if (mode != TESTMODE_INVALID) {
         out.mode = mode;
       }
-      return false;
+      return;
     }
     case TDIR_EXPECTED_RUNTIME_ERROR: {
-      skipValueDelimiter(view, readIdx);
-      out.expectedRuntimeError = view.substr(readIdx);
-      return false;
+      skipValueDelimiter(reader);
+      out.expectedRuntimeError = reader.remainingView();
+      return;
     }
     case TDIR_EXPECT_AST: {
-      skipValueDelimiter(view, readIdx);
-      parseExpectedAst(out, view, readIdx);
-      return false;
+      skipValueDelimiter(reader);
+      parseExpectedAst(out, reader);
+      return;
     }
     default:
       break;
   }
 
   if (directive != TDIR_EXPECT_ERROR) {
-    return false;
+    return;
   }
 
+  ExpectedError err;
+  err.line = t->start.line + 1;
+
   KeyValuePair p;
-  while (parsePair(view, readIdx, &p)) {
+  while (parsePair(reader, &p)) {
     if (p.key == "name") {
       err.name = std::string(p.value);
     } else if (p.key == "message") {
@@ -313,10 +281,9 @@ static bool parseTestCommand(
         err.line = parseViewToInt(p.value);
       }
     }
-    readIdx = p.end;
   }
 
-  return true;
+  out.expectedErrors.push_back(err);
 }
 
 void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
@@ -334,15 +301,8 @@ void parseTestCase(TestCase& out, TokenList& list, StringTable& table) {
       continue;
     }
 
-    ExpectedError err;
-    err.line = t->start.line + 1;
-
-    bool errorParsed = parseTestCommand(out, content, err, t);
-    if (!errorParsed) {
-      continue;
-    }
-
-    out.expectedErrors.push_back(err);
+    StringReader reader = StringReader(content);
+    parseTestCommand(out, reader, t);
   }
 }
 
@@ -684,19 +644,34 @@ bool runTestCase(
   return checkErrors(tcase, errors, result);
 }
 
+static void collectTests(
+  const std::filesystem::path& path,
+  std::vector<std::filesystem::path>& testFiles
+) {
+  if (std::filesystem::is_regular_file(path)) {
+    testFiles.push_back(path);
+    return;
+  }
+
+  for (const auto& entry: std::filesystem::recursive_directory_iterator(path)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    testFiles.push_back(entry.path());
+  }
+}
+
 void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
   const std::filesystem::path dirpath = settings.inputFile;
+  std::vector<std::filesystem::path> testFiles;
+
+  collectTests(dirpath, testFiles);
 
   uint32 total = 0;
   uint32 failed = 0;
 
   try {
-    for (const auto& entry: std::filesystem::recursive_directory_iterator(dirpath)) {
-      if (!entry.is_regular_file()) {
-        continue;
-      }
-
-      const std::filesystem::path& path = entry.path();
+    for (const std::filesystem::path& path: testFiles) {
       TestCase testCase;
 
       if (!settings.testDumpDirectory.empty()) {
