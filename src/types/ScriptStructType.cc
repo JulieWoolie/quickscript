@@ -142,17 +142,7 @@ conststring ScriptStructType::getTypeName() const {
 }
 
 uint64 ScriptStructType::getHeapSize() const {
-  uint64 size = 0;
-  for (uint32 i = 0; i < m_propertyCount; i++) {
-    ScriptType* type = m_properties[i].type;
-    if (!type) {
-      // While this shouldn't happen, incomplete struct types (During type resolution)
-      // may have properties with null types
-      continue;
-    }
-    size += type->stackSizeBytes();
-  }
-  return size;
+  return m_heapSize;
 }
 
 void ScriptStructType::setHeapSize(const uint64 heapSize) {

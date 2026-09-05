@@ -1354,9 +1354,11 @@ void Interpreter::run() {
     case OP_OBJALLOC: {
       const uint32 typeIdx = READ_U32ARG(1);
       const ScriptStructType* structType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(typeIdx));
-      const uint64 memSize = structType->getHeapSize();
 
-      QsObject obj = m_vm.getHeap().allocObject(memSize);
+      const uint64 memSize = structType->getHeapSize();
+      const uint8 alignment = structType->getAlignment();
+
+      QsObject obj = m_vm.getHeap().allocObject(memSize, alignment);
 
       m_registers[args[0]] = obj.address();
       break;

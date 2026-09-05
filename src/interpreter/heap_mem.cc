@@ -1,10 +1,16 @@
-#include <cstdlib>
+#include <stdlib.h>
 #include "heap_mem.h"
 
 #include <cstring>
 
 void* HeapMemory::allocBytes(uint64 bytes) {
   void* result = malloc(bytes);
+  memset(result, 0, bytes);
+  return result;
+}
+
+void* HeapMemory::allocAlligned(const uint64 bytes, const uint8 alignment) {
+  void* result = _aligned_malloc(bytes, alignment);
   memset(result, 0, bytes);
   return result;
 }
@@ -46,9 +52,9 @@ QsArray HeapMemory::allocConstString(uint32 length) {
   return allocConstArray(length, 1);
 }
 
-QsObject HeapMemory::allocObject(const uint64 dataSize) {
+QsObject HeapMemory::allocObject(const uint64 dataSize, const uint8 alignment) {
   const uint64 memSize = REFCOUNT_PREFIX_SIZE + dataSize;
-  void* ptr = allocBytes(memSize);
+  void* ptr = allocAlligned(memSize, alignment);
 
   *static_cast<uint32*>(ptr) = REFCOUNT_MASK;
 
