@@ -50,6 +50,7 @@ struct GetStackPointer;
 #define DECLFLAG_NATIVE   0x1
 #define DECLFLAG_EXPORTED 0x2
 #define DECLFLAG_CONST    0x4
+#define DECLFLAG_PACKED   0x8
 typedef uint32 declflags;
 
 #define AST_NIL 0

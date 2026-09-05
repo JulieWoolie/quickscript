@@ -201,35 +201,23 @@ static void compilePropertyAccess(
     return;
   }
 
-  std::string_view view = ctx.getSemantics().getStrings().getview(prop->property->value);
-  ScriptStructType* structType = static_cast<ScriptStructType*>(type);
+  const std::string_view view = ctx.getSemantics().getStrings().getview(prop->property->value);
+  const ScriptStructType* structType = static_cast<ScriptStructType*>(type);
 
-  uint32 propertyOffset = 0;
-
-  for (uint32 p = 0; p < structType->getPropertyCount(); p++) {
-    const StructProperty* structProp = structType->getProperty(p);
-
-    if (structProp->name != view) {
-      propertyOffset += structProp->type->stackSizeBytes();
-      continue;
-    }
-
-    break;
-  }
+  const StructProperty* structProp = structType->getPropertyFromName(view);
 
   if (out != NO_REGISTER) {
-    BytecodeWriter& writer = ctx.getWriter();
-    writer.startInstr(OP_READOBJ32);
+    BYTEWIDTH_OPCODE(structProp->type->stackSizeBytes(), writer, OP_READOBJ)
     writer.appendU8(targetReg);
     writer.appendU8(out);
-    writer.appendU8(propertyOffset);
+    writer.appendU32(structProp->offset);
     writer.endInstr();
   }
 
   if (addr) {
     addr->outptype = OUTP_PROP;
     addr->objectRegister = targetReg;
-    addr->memoffset = propertyOffset;
+    addr->memoffset = structProp->offset;
   } else {
     ctx.freeRegister(targetReg);
   }
@@ -1210,7 +1198,6 @@ static void offsetAddressesToAccountForSpillSpace(
 
   const uint64 startAddr = start * LENGTH_INSTRUCTION;
   const uint64 endAddr = end * LENGTH_INSTRUCTION;
-  const uint64 appliedOffset = unusedSpillSpace;
 
   uint8* buffer = writer.getBuffer();
 
@@ -1629,23 +1616,23 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         ttStruct->index = localIndex;
         ttStruct->nameOffset = stringPool.emplaceString(name.data(), name.length());
         ttStruct->propertyCount = propCount;
+        ttStruct->heapSize = structType->getHeapSize();
+        ttStruct->alignment = structType->getAlignment();
 
         LocalFuncSymbol* lfs = ctx.getSemantics().getConstructors()[structType];
         const uint32 fIdx = ctx.findFunctionIndex(lfs);
         ttStruct->constructorFuncIndex = fIdx;
 
         TypeTableStructProperty* props = ttStruct->properties;
-        uint64 off = 0;
 
         for (uint32 j = 0; j < propCount; j++) {
           const StructProperty* prop = structType->getProperty(j);
           const typeindex propType = ctx.getLocalTypeIndex(prop->type);
           props[j] = {
             .nameOffset = stringPool.emplaceString(prop->name.data(), prop->name.length()),
-            .valueOffset = off,
+            .valueOffset = prop->offset,
             .type = propType
           };
-          off += prop->type->stackSizeBytes();
         }
 
         ttStruct->properties = props;

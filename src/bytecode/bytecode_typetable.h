@@ -41,6 +41,8 @@ struct TypeTableStructProperty {
 
 struct TypeTableStruct: TypeTableEntry {
   uint64 nameOffset = 0;
+  uint64 heapSize = 0;
+  uint8 alignment = 1;
   uint32 constructorFuncIndex = 0;
   uint32 propertyCount = 0;
   TypeTableStructProperty* properties = nullptr;

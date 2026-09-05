@@ -314,6 +314,9 @@ static void loadTypes(TypeTable& table, const BytecodeFile& file, TypeReindexLis
     }
 
     ScriptStructType* scriptType = ScriptStructType::create(nameString, nullptr, structType->propertyCount);
+    scriptType->setAlignment(structType->alignment);
+    scriptType->setHeapSize(structType->heapSize);
+
     const typeindex newIdx = table.emplaceType(scriptType);
 
     if (entry->index != newIdx) {
@@ -371,6 +374,7 @@ static void loadTypes(TypeTable& table, const BytecodeFile& file, TypeReindexLis
 
           prop->name = std::string(propNameData, propNameLen);
           prop->type = table.lookupByIndex(out.findRewritten(tableProp->type));
+          prop->offset = tableProp->valueOffset;
         }
 
         break;
@@ -546,7 +550,6 @@ void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
 
       QsObject obj = castToQsObject(TO_POINTER(value));
 
-      uint64 off = 0;
       const uint32 propCount = structType->getPropertyCount();
 
       for (uint32 i = 0; i < propCount; i++) {
@@ -561,6 +564,7 @@ void VirtualMachine::toString(std::string& out, typeindex type, uint64 value) {
         ScriptType* propType = prop->type;
         typeindex propTypeIndex = m_types.findIndex(propType);
 
+        const uint64 off = prop->offset;
         uint64 value;
         switch (propType->stackSizeBytes()) {
           case 1:
@@ -636,7 +640,6 @@ bool VirtualMachine::objectEquals(const uint64 leftPtr, const uint64 rightPtr, c
   }
 
   const uint32 props = structType->getPropertyCount();
-  uint64 off = 0;
 
   uint64 leftProp = 0;
   uint64 rightProp = 0;
@@ -654,14 +657,16 @@ bool VirtualMachine::objectEquals(const uint64 leftPtr, const uint64 rightPtr, c
     leftProp = 0;
     rightProp = 0;
 
+    const uint64 off = prop->offset;
+
     memcpy(&leftProp, left + off, memSize);
     memcpy(&rightProp, right + off, memSize);
 
-    if (!equals(leftProp, rightProp, propTypeIndex)) {
-      return false;
+    if (equals(leftProp, rightProp, propTypeIndex)) {
+      continue;
     }
 
-    off += memSize;
+    return false;
   }
 
   return true;
@@ -2358,7 +2363,7 @@ bool Interpreter::doStructEqualityCheck(const uint8 r1, const uint8 r2, const ui
   const uint64 lAddr = m_registers[r1];
   const uint64 rAddr = m_registers[r2];
 
-  ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
+  const ScriptStructType* sType = static_cast<ScriptStructType*>(m_vm.getTypes().lookupByIndex(ti));
   return m_vm.objectEquals(lAddr, rAddr, sType);
 }
 
@@ -2371,7 +2376,6 @@ int8 Interpreter::doArrayComparison(const uint8 lhs, const uint8 rhs, const uint
   }
 
   const ScriptArrayType* arrType = static_cast<ScriptArrayType*>(m_vm.getTypes().lookupByIndex(ti));
-  return m_vm.compareArray(lAddr, rAddr, arrType);
   return m_vm.compareArray(lAddr, rAddr, arrType);
 }
 

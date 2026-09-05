@@ -1159,6 +1159,8 @@ static void resolveMissingProperties(SemanticContext& ctx, const StructDecl* dec
     ctx.getSymbolLookup()[propDecl] = sym;
     ctx.getScopeLookup()[sym] = scope;
   }
+
+  type->setupMemoryProperties(decl->flags & DECLFLAG_PACKED);
 }
 
 

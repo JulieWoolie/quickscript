@@ -95,6 +95,8 @@ static void writeTypeTable(const BytecodeFile& file, BinaryWriter& writer) {
       case TYPE_TABLE_STRUCT: {
         TypeTableStruct* t = static_cast<TypeTableStruct*>(entry);
         writer.writeU64(t->nameOffset);
+        writer.writeU64(t->heapSize);
+        writer.writeU8(t->alignment);
         writer.writeU32(t->constructorFuncIndex);
         writer.writeU32(t->propertyCount);
         for (uint32 propIdx = 0; propIdx < t->propertyCount; propIdx++) {
@@ -333,6 +335,8 @@ static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out)
       }
       case TYPE_TABLE_STRUCT: {
         const uint64 nameOffset = reader.readU64();
+        const uint64 heapSize = reader.readU64();
+        const uint64 alignment = reader.readU8();
         const uint32 ctorFuncIdx = reader.readU32();
         const uint32 propCount = reader.readU32();
 
@@ -341,6 +345,8 @@ static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out)
         entry->nameOffset = nameOffset;
         entry->constructorFuncIndex = ctorFuncIdx;
         entry->propertyCount = propCount;
+        entry->alignment = alignment;
+        entry->heapSize = heapSize;
 
         for (uint32 i = 0; i < propCount; i++) {
           TypeTableStructProperty* prop = &entry->properties[i];
@@ -571,6 +577,8 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
         TypeTableStruct* str = static_cast<TypeTableStruct*>(entry);
         fprintf(printFile, "\n    name_offset = %llu # ", str->nameOffset);
         writePooledString(printFile, str->nameOffset, stringPool);
+        fprintf(printFile, "\n    alignment = %d", str->alignment);
+        fprintf(printFile, "\n    heap_size = %llu", str->heapSize);
         fprintf(printFile, "\n    constructor_entry = %d", str->constructorFuncIndex);
         fprintf(printFile, "\n    properties = [");
 

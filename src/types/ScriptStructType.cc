@@ -48,6 +48,67 @@ void ScriptStructType::free(ScriptStructType* type) {
   std::free(type);
 }
 
+void ScriptStructType::setupMemoryProperties(const bool packed) {
+  if (m_propertyCount == 0) {
+    m_alignment = 1;
+    m_heapSize = 0;
+  }
+
+  if (packed) {
+    uint64 offset = 0;
+    uint8 alignment = 1;
+
+    for (uint32 i = 0; i < m_propertyCount; i++) {
+      m_properties[i].offset = offset;
+
+      const uint8 size = m_properties[i].type->stackSizeBytes();
+
+      offset += size;
+
+      if (size > alignment) {
+        alignment = size;
+      }
+    }
+
+    m_heapSize = offset;
+    m_alignment = alignment;
+
+    return;
+  }
+
+  uint8 largestSize = 1;
+
+  for (uint32 i = 0; i < m_propertyCount; i++) {
+    const StructProperty* prop = getProperty(i);
+    if (!prop || !prop->type) {
+      continue;
+    }
+
+    const uint8 size = prop->type->stackSizeBytes();
+    if (size > largestSize) {
+      largestSize = size;
+    }
+  }
+
+  uint64 offset = 0;
+
+  for (uint32 i = 0; i < m_propertyCount; i++) {
+    StructProperty* prop = getProperty(i);
+    if (!prop || !prop->type) {
+      continue;
+    }
+
+    const int8 size = prop->type->stackSizeBytes();
+    const uint64 propOffset = (offset + size - 1) & -size;
+
+    prop->offset = propOffset;
+    offset = propOffset + size;
+  }
+
+  m_heapSize = offset + (offset % largestSize);
+  m_alignment = largestSize;
+}
+
 uint32 ScriptStructType::getPropertyCount() const {
   return m_propertyCount;
 }
@@ -57,6 +118,16 @@ StructProperty* ScriptStructType::getProperty(const uint32 idx) const {
     return nullptr;
   }
   return &m_properties[idx];
+}
+
+StructProperty* ScriptStructType::getPropertyFromName(const std::string_view& propertyName) const {
+  for (uint32 i = 0; i < m_propertyCount; i++) {
+    StructProperty* prop = &m_properties[i];
+    if (prop->name == propertyName) {
+      return prop;
+    }
+  }
+  return nullptr;
 }
 
 uint32 ScriptStructType::typeFlags() const {
@@ -90,6 +161,18 @@ uint64 ScriptStructType::getHeapSize() const {
     size += type->stackSizeBytes();
   }
   return size;
+}
+
+void ScriptStructType::setHeapSize(const uint64 heapSize) {
+  m_heapSize = heapSize;
+}
+
+uint64 ScriptStructType::getAlignment() const {
+  return m_alignment;
+}
+
+void ScriptStructType::setAlignment(const uint8 alignment) {
+  m_alignment = alignment;
 }
 
 const std::string& ScriptStructType::getNameString() const {
