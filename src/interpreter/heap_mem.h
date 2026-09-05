@@ -9,9 +9,9 @@
 #define PAGE_SIZE 1024
 #define PAGE_SHIFT 10
 
-// -----------------------------
+// -------------------------------------------------------------------------------------------------
 // Notes:
-// -----------------------------
+// -------------------------------------------------------------------------------------------------
 //
 // data divided into 'pages' and open space is tracked with FreeMemoryGap structs
 //
@@ -26,7 +26,7 @@
 //   uint64 size
 //   uint32 pageIndex
 // }
-//
+// -------------------------------------------------------------------------------------------------
 // To find a memory gap:
 //   Take 'required bytes' as a parameter of uint64
 //   Take 'alignment' as a parameter of uint8, default to a value of 1 if not specified
@@ -40,7 +40,7 @@
 //     If the gap's size is now greater  than or equal to the required bytes:
 //       Return the gap and the incremented starting address.
 //     Otherwise, move on to the next gap
-//
+// -------------------------------------------------------------------------------------------------
 // To allocate:
 //   Take 'required bytes' as a parameter of uint64
 //   Take 'alignment' as a parameter of uint8, default to 1, if not specified.
@@ -67,7 +67,7 @@
 //     Push the gap to the free memory block list
 //     Push an Allocation to the allocated memory list
 //     Return the pointer to the beginning of the created block.
-//
+// -------------------------------------------------------------------------------------------------
 // To free memory:
 //   Take 'pointer' as a parameter of void*, this is the pointer to the
 //     memory that must be freed.
@@ -90,7 +90,7 @@
 //       ends at the block's end.
 //
 //   Return.
-//
+// -------------------------------------------------------------------------------------------------
 
 struct MemoryRange {
   uint64 start;

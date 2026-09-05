@@ -120,8 +120,6 @@ HeapMemory::~HeapMemory() {
   }
 }
 
-void b() {}
-
 void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
   MemoryRange existingGap;
   uint32 idx = 0;
