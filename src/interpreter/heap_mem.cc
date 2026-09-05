@@ -24,40 +24,16 @@ void HeapPage::getRange(MemoryRange& out) const {
   out.end = out.start + pageSize;
 }
 
-
-static bool isInsidePage(const std::vector<HeapPage>& pages, const uint64 start, const uint64 end) {
-  const uint32 pageCount = pages.size();
-  MemoryRange range;
-
-  for (uint32 i = 0; i < pageCount; i++) {
-    const HeapPage& page = pages[i];
-    page.getRange(range);
-
-    if (range.isInside(start, end)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 int64 HeapMemory::findGap(const uint64 bytes, const uint8 alignment, MemoryRange& out, uint32& gapIndex) const {
   const uint32 size = m_gaps.size();
 
   for (uint32 i = 0; i < size; i++) {
     const MemoryRange& gap = m_gaps[i];
 
-    if (!isInsidePage(m_pages, gap.start, gap.end)) {
-      throw std::runtime_error("How the hell is a gap outside of the page");
-    }
-
     const uint64 start = NEXT_MULTIPLE_P2(gap.start, alignment);
     const uint64 end = start + bytes;
 
     if (!gap.isInside(start, end)) {
-      continue;
-    }
-    if (!isInsidePage(m_pages, start, end)) {
       continue;
     }
 
