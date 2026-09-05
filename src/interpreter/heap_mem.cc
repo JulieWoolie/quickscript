@@ -39,7 +39,6 @@ int64 HeapMemory::findGap(const uint64 bytes, const uint8 alignment, MemoryRange
 
     out.start = start;
     out.end = gap.end;
-    out.pageIndex = gap.pageIndex;
 
     gapIndex = i;
 
@@ -73,9 +72,6 @@ void HeapMemory::findSurroundingGaps(const MemoryRange& area, int32& beforeIdx, 
 
   for (uint32 i = 0; i < size; i++) {
     const MemoryRange& range = m_gaps[i];
-    if (range.pageIndex != area.pageIndex) {
-      continue;
-    }
 
     if (range.start == area.end) {
       afterIdx = i;
@@ -101,7 +97,6 @@ HeapMemory::HeapMemory(const uint64 initialHeapSize) {
   MemoryRange gap;
   gap.start = reinterpret_cast<uint64>(block);
   gap.end = gap.start + pagedSize;
-  gap.pageIndex = 0;
 
   m_gaps.push_back(gap);
 }
@@ -131,7 +126,6 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
     MemoryRange allocation;
     allocation.start = start;
     allocation.end = end;
-    allocation.pageIndex = existingGap.pageIndex;
     m_usedRanges.push_back(allocation);
 
     if (start == existingGap.start) {
@@ -155,7 +149,6 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
     MemoryRange afterGap;
     afterGap.start = end;
     afterGap.end = existingGap.end;
-    afterGap.pageIndex = existingGap.pageIndex;
 
     m_gaps[idx].end = start;
 
@@ -179,12 +172,11 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
 
   MemoryRange gap;
   page.getRange(gap);
-  gap.pageIndex = m_pages.size();
   gap.start += memSize;
 
   m_pages.push_back(page);
   m_gaps.push_back(gap);
-  m_usedRanges.emplace_back(addr, gap.start, gap.pageIndex);
+  m_usedRanges.emplace_back(addr, gap.start);
 
   return block;
 }

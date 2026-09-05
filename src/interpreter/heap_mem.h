@@ -12,7 +12,6 @@
 struct MemoryRange {
   uint64 start;
   uint64 end;
-  uint32 pageIndex;
 
   bool isInside(const MemoryRange& other) const;
 
