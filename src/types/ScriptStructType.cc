@@ -56,22 +56,14 @@ void ScriptStructType::setupMemoryProperties(const bool packed) {
 
   if (packed) {
     uint64 offset = 0;
-    uint8 alignment = 1;
 
     for (uint32 i = 0; i < m_propertyCount; i++) {
       m_properties[i].offset = offset;
-
-      const uint8 size = m_properties[i].type->stackSizeBytes();
-
-      offset += size;
-
-      if (size > alignment) {
-        alignment = size;
-      }
+      offset += m_properties[i].type->stackSizeBytes();
     }
 
     m_heapSize = offset;
-    m_alignment = alignment;
+    m_alignment = 1;
 
     return;
   }
