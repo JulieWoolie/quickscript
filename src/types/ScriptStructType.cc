@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include "../qs_math.h"
+
 ScriptStructType::ScriptStructType(std::string name, StructProperty* properties, const uint32 propCount)
   : ScriptType(TK_STRUCT,POINTER_SIZE),
     m_name(std::move(name)),
@@ -91,7 +93,7 @@ void ScriptStructType::setupMemoryProperties(const bool packed) {
     }
 
     const int8 size = prop->type->stackSizeBytes();
-    const uint64 propOffset = (offset + size - 1) & -size;
+    const uint64 propOffset = NEXT_MULTIPLE_P2(offset, size);
 
     prop->offset = propOffset;
     offset = propOffset + size;

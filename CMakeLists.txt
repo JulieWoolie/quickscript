@@ -101,4 +101,5 @@ add_executable(quickscript src/main.cpp
         src/bytecode/bytecode_typetable.h
         src/bytecode/bytecode_typetable.cc
         src/bytecode/bytecode_functable.h
-        src/bytecode/bytecode_functable.cc)
+        src/bytecode/bytecode_functable.cc
+        src/qs_math.h)
