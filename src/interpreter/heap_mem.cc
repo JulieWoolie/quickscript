@@ -147,12 +147,6 @@ HeapMemory::~HeapMemory() {
 void b() {}
 
 void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
-  const uint64 t = getTotalMemory();
-  if (t > 4000) {
-    b();
-  }
-  printf("malloc call: memory use %llu / %llu\n", getUsedMemory() + memSize, t);
-
   MemoryRange existingGap;
   uint32 idx = 0;
   const int64 start = findGap(memSize, alignment, existingGap, idx);
