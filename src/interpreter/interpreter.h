@@ -106,7 +106,7 @@ struct NativeScriptFunction: ScriptFunction {
 };
 
 class VirtualMachine {
-  HeapMemory m_heap;
+  HeapMemory m_heap = HeapMemory(PAGE_SIZE);
   StringPool m_stringPool;
   TypeTable m_types;
 
