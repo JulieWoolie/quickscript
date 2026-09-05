@@ -115,6 +115,7 @@
 #define TT_KEYW_VOID            5030
 #define TT_KEYW_ASSERT          5031
 #define TT_KEYW_NATIVE          5032
+#define TT_KEYW_PACKED          5033
 
 // =====================
 

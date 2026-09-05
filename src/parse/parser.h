@@ -12,6 +12,7 @@
 #define LFDL_LEX 1
 #define LFDL_FUNC 2
 #define LFDL_LABELLED_LOOP 3
+#define LFDL_STRUCT 4
 
 class Parser {
   TokenList* m_tokens;

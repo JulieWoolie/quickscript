@@ -1,0 +1,15 @@
+
+packed struct TestStruct {
+  uint8 x = 0
+  uint64 y = 0
+}
+
+void main() {
+  TestStruct t = {
+    x = 1,
+    y = 23
+  }
+  
+  assert t.x == 1 : "t.x == 1, t: " + t
+  assert t.y == 23 : "t.y == 23, t: " + t
+}

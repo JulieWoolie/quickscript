@@ -149,6 +149,8 @@ static declflags modifierFromTokenType(const tokentype ttype) {
       return DECLFLAG_EXPORTED;
     case TT_KEYW_NATIVE:
       return DECLFLAG_NATIVE;
+    case TT_KEYW_PACKED:
+      return DECLFLAG_PACKED;
     default:
       return 0;
   }
@@ -195,6 +197,10 @@ uint8 Parser::isLexOrFuncDecl() {
   }
 
   switch (tt) {
+    case TT_KEYW_STRUCT:
+      RESTORECURSOR
+      return LFDL_STRUCT;
+
     case TT_KEYW_BOOL:
     case TT_KEYW_UINT8:
     case TT_KEYW_INT8:
@@ -211,7 +217,9 @@ uint8 Parser::isLexOrFuncDecl() {
       canBeLabelled = false;
     case TT_ID:
       break;
+
     default:
+      RESTORECURSOR
       return LFDL_NONE;
   }
 
@@ -280,8 +288,6 @@ Statement* Parser::statement() {
       return returnStatement();
     case TT_LCURL:
       return block();
-    case TT_KEYW_STRUCT:
-      return structDecl();
     case TT_KEYW_ASSERT:
       return assertStatement();
 
@@ -295,6 +301,9 @@ Statement* Parser::statement() {
       }
       if (nextType == LFDL_LABELLED_LOOP) {
         return labelledStatement();
+      }
+      if (nextType == LFDL_STRUCT) {
+        return structDecl();
       }
 
       Expr* e = expr();

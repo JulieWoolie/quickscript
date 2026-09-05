@@ -61,5 +61,6 @@ string, TT_KEYW_STRING
 const, TT_KEYW_CONST
 void, TT_KEYW_VOID
 assert, TT_KEYW_ASSERT
-native, TT_KEYW_NATIVE
+native, TT_KEYW_NATIVE,
+packed, TT_KEYW_PACKED
 %%

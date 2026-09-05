@@ -41,7 +41,7 @@ struct keyword {
 #line 11 "qs-keywords.gperf"
 struct keyword;
 
-#define TOTAL_KEYWORDS 45
+#define TOTAL_KEYWORDS 46
 #define MIN_WORD_LENGTH 2
 #define MAX_WORD_LENGTH 8
 #define MIN_HASH_VALUE 4
@@ -69,9 +69,9 @@ hash (conststring str, uint32 len)
       72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
       72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
       72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
-      72, 72, 72, 72, 72, 72, 72, 55, 15, 25,
-      10, 10,  5, 35, 72,  5, 72, 50,  0, 35,
-       5,  5, 72, 72, 20, 30,  0,  0, 20, 50,
+      72, 72, 72, 72, 72, 72, 72, 60, 15, 25,
+      10, 10,  5, 35, 72,  5, 72, 50,  0, 45,
+       5,  5, 35, 72, 20, 30,  0,  0, 20, 50,
       72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
       72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
       72, 72, 72, 72, 72, 72, 72, 72, 72, 72,
@@ -99,7 +99,7 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
        4,  5,  6,  2,  8,  4,  5,  6,  0,  0,  4,  5,  6,  7,
        3,  4,  5,  6,  0,  0,  4,  5,  6,  0,  0,  4,  5,  6,
        0,  8,  0,  5,  6,  7,  0,  4,  5,  6,  7,  0,  0,  5,
-       6,  0,  0,  4,  5,  6,  0,  0,  0,  5,  0,  0,  0,  0,
+       6,  0,  0,  4,  5,  6,  0,  0,  0,  5,  6,  0,  0,  0,
        5,  6
     };
   static const struct keyword wordlist[] =
@@ -137,7 +137,7 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
 #line 21 "qs-keywords.gperf"
       {"false", TT_KEYW_FALSE},
 #line 64 "qs-keywords.gperf"
-      {"native", TT_KEYW_NATIVE},
+      {"native", TT_KEYW_NATIVE,},
       {""}, {""},
 #line 24 "qs-keywords.gperf"
       {"else", TT_KEYW_ELSE},
@@ -184,8 +184,8 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
       {"char", TT_KEYW_UINT8},
 #line 55 "qs-keywords.gperf"
       {"int32", TT_KEYW_INT32},
-#line 32 "qs-keywords.gperf"
-      {"module", TT_KEYW_MODULE},
+#line 65 "qs-keywords.gperf"
+      {"packed", TT_KEYW_PACKED},
 #line 58 "qs-keywords.gperf"
       {"float32", TT_KEYW_FLOAT32},
       {""}, {""},
@@ -198,12 +198,14 @@ tokentype tokenTypeFromString (conststring str, uint32 len)
       {"int8", TT_KEYW_INT8},
 #line 53 "qs-keywords.gperf"
       {"int16", TT_KEYW_INT16},
-#line 63 "qs-keywords.gperf"
-      {"assert", TT_KEYW_ASSERT},
+#line 32 "qs-keywords.gperf"
+      {"module", TT_KEYW_MODULE},
       {""}, {""}, {""},
 #line 28 "qs-keywords.gperf"
       {"while", TT_KEYW_WHILE},
-      {""}, {""}, {""}, {""},
+#line 63 "qs-keywords.gperf"
+      {"assert", TT_KEYW_ASSERT},
+      {""}, {""}, {""},
 #line 25 "qs-keywords.gperf"
       {"break", TT_KEYW_BREAK},
 #line 60 "qs-keywords.gperf"
