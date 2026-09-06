@@ -1159,10 +1159,10 @@ void Interpreter::moveExecutionTo(const LocalScriptFunction& func) {
   if (!oldFrame || oldFrame->type == FRAME_TYPE_NATIVE) {
     frame->returnAddr = NO_RETURN_ADDR;
   } else {
-    frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
+    frame->returnAddr = m_registers[INSTR_COUNTER_REGISTER] + 1;
   }
 
-  m_registers[REGISTER_INSTR_COUNTER] = func.firstInstrIndex;
+  m_registers[INSTR_COUNTER_REGISTER] = func.firstInstrIndex;
 }
 
 int32 Interpreter::beginExecution(const LocalScriptFunction& func, const uint64 argsArrayAddr) {
@@ -1176,7 +1176,7 @@ int32 Interpreter::beginExecution(const LocalScriptFunction& func, const uint64 
 
   run();
 
-  return m_registers[REGISTER_RETURN_VALUE];
+  return m_registers[RETURN_VALUE_REGISTER];
 }
 
 static uint64 stringRepeat(void* strAddr, const uint32 repeats, HeapMemory& heap) {
@@ -1217,7 +1217,7 @@ uint64 Interpreter::strConcat(QsArray& lString, const uint64 rightObj, typeindex
 uint64 Interpreter::runScriptFunction(const LocalScriptFunction& func) {
   moveExecutionTo(func);
   run();
-  return m_registers[REGISTER_RETURN_VALUE];
+  return m_registers[RETURN_VALUE_REGISTER];
 }
 
 void Interpreter::run() {
@@ -1231,7 +1231,7 @@ void Interpreter::run() {
   const InstructionBuf& instrBuf = m_vm.getInstructions();
 
   begin:
-  instrBuf.getInstruction(&code, args, m_registers[REGISTER_INSTR_COUNTER]);
+  instrBuf.getInstruction(&code, args, m_registers[INSTR_COUNTER_REGISTER]);
   frame = getCallFrame();
 
   if (!frame) {
@@ -1246,7 +1246,7 @@ void Interpreter::run() {
         popCallFrame();
         return;
       }
-      m_registers[REGISTER_INSTR_COUNTER] = frame->returnAddr;
+      m_registers[INSTR_COUNTER_REGISTER] = frame->returnAddr;
       popCallFrame();
       goto begin;
 
@@ -1254,19 +1254,19 @@ void Interpreter::run() {
       frame->line = READ_U32ARG(0);
       break;
     case OP_JMP:
-      m_registers[REGISTER_INSTR_COUNTER] = READ_U32ARG(0);
+      m_registers[INSTR_COUNTER_REGISTER] = READ_U32ARG(0);
       goto begin;
     case OP_JMPI0:
       if (m_registers[args[4]]) {
         break;
       }
-      m_registers[REGISTER_INSTR_COUNTER] = READ_U32ARG(0);
+      m_registers[INSTR_COUNTER_REGISTER] = READ_U32ARG(0);
       goto begin;
     case OP_JMPN0:
       if (!m_registers[args[4]]) {
         break;
       }
-      m_registers[REGISTER_INSTR_COUNTER] = READ_U32ARG(0);
+      m_registers[INSTR_COUNTER_REGISTER] = READ_U32ARG(0);
       goto begin;
 
     case OP_LFUNCLOOKUP:
@@ -2355,7 +2355,7 @@ void Interpreter::run() {
       break;
   }
 
-  ++m_registers[REGISTER_INSTR_COUNTER];
+  ++m_registers[INSTR_COUNTER_REGISTER];
   goto begin;
 }
 
@@ -2433,7 +2433,7 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   frame->allocatedSize = 0;
   frame->stackBase = nullptr;
   frame->line = 0;
-  frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
+  frame->returnAddr = m_registers[INSTR_COUNTER_REGISTER] + 1;
   frame->type = FRAME_TYPE_NATIVE;
 
   NativeCall call = NativeCall(argumentTypes, argumentValues, 0);
@@ -2441,5 +2441,5 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
 
   popCallFrame();
 
-  m_registers[REGISTER_RETURN_VALUE] = call.getReturnValue();
+  m_registers[RETURN_VALUE_REGISTER] = call.getReturnValue();
 }

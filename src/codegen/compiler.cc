@@ -445,7 +445,7 @@ static void compileBinaryExpr(
 
   RegisterId r1;
 
-  if (outReg == REGISTER_RETURN_VALUE) {
+  if (outReg == RETURN_VALUE_REGISTER) {
     r1 = ctx.acquireRegister();
   } else {
     r1 = outReg;
@@ -456,7 +456,7 @@ static void compileBinaryExpr(
   compileExpr(lhs, r1, &out, ctx);
   compileExpr(rhs, r2, nullptr, ctx);
 
-  if (outReg == REGISTER_RETURN_VALUE) {
+  if (outReg == RETURN_VALUE_REGISTER) {
     ctx.freeRegister(r1);
   }
 
@@ -573,9 +573,9 @@ static void compileFuncCall(
   writer.appendU8(funcReg);
   writer.endInstr();
 
-  if (out != REGISTER_RETURN_VALUE && !ignoreReturn) {
+  if (out != RETURN_VALUE_REGISTER && !ignoreReturn) {
     writer.startInstr(OP_MOV);
-    writer.appendU8(REGISTER_RETURN_VALUE);
+    writer.appendU8(RETURN_VALUE_REGISTER);
     writer.appendU8(out);
     writer.endInstr();
   }
@@ -1398,7 +1398,7 @@ static void compileReturn(const ReturnStatement* ret, CompilerContext& ctx) {
   BytecodeWriter& writer = ctx.getWriter();
 
   if (ret->value) {
-    compileRValue(ret->value->resultType, ret->value, ctx, REGISTER_RETURN_VALUE);
+    compileRValue(ret->value->resultType, ret->value, ctx, RETURN_VALUE_REGISTER);
   }
 
   writer.startInstr(OP_RET);
@@ -1721,15 +1721,15 @@ BytecodeFile& compile(SemanticContext& ctx) {
   constexpr uint64 initialCap = LENGTH_INSTRUCTION * 1024;
   cctx.getWriter().reserveSpace(initialCap);
 
-  cctx.useRegister(REGISTER_RETURN_VALUE);
-  cctx.useRegister(REGISTER_INSTR_COUNTER);
+  cctx.useRegister(RETURN_VALUE_REGISTER);
+  cctx.useRegister(INSTR_COUNTER_REGISTER);
 
   for (const LocalFunction* lf : ctx.getLocalFunctions()) {
     compileLocalFunction(lf, cctx);
   }
 
-  cctx.freeRegister(REGISTER_RETURN_VALUE);
-  cctx.freeRegister(REGISTER_INSTR_COUNTER);
+  cctx.freeRegister(RETURN_VALUE_REGISTER);
+  cctx.freeRegister(INSTR_COUNTER_REGISTER);
 
 #ifdef RUNTIME_CHECKS
   if (registerBitSet != 0) {
