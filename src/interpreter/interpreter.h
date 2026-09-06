@@ -23,8 +23,13 @@
 #define LEFT_EQ_RIGHT 0
 #define LEFT_LT_RIGHT (-1)
 
+#define FRAME_TYPE_QS 0
+#define FRAME_TYPE_NATIVE 1
+typedef uint8 frametype;
+
 struct CallFrame {
   uint32 line = 0;
+  frametype type = FRAME_TYPE_QS;
 
   std::string name;
   std::string filename;
@@ -175,6 +180,8 @@ class Interpreter {
     VirtualMachine& getVirtualMachine() const;
 
     uint64 strConcat(QsArray& lString, uint64 rightObj, typeindex rType);
+
+    uint64 runScriptFunction(const LocalScriptFunction& func);
 
     void moveExecutionTo(const LocalScriptFunction& func);
 

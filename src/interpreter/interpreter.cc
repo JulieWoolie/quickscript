@@ -34,7 +34,7 @@ void InstructionBuf::insertInstructions(const uint8* instrBuf, const uint64 len)
   m_len = newLen;
 }
 
-void InstructionBuf::getInstruction(opcode* code, uint8 args[], uint32 instrIndex) const {
+void InstructionBuf::getInstruction(opcode* code, uint8 args[], const uint32 instrIndex) const {
   uint64 offset = instrIndex;
   offset *= LENGTH_INSTRUCTION;
 
@@ -1062,6 +1062,7 @@ CallFrame* Interpreter::pushNewFrame() {
   frame->stackBase = nullptr;
   frame->filename = "";
   frame->name = "";
+  frame->type = FRAME_TYPE_QS;
 
   return frame;
 }
@@ -1127,7 +1128,9 @@ void Interpreter::moveExecutionTo(const LocalScriptFunction& func) {
     throwScriptError("Maximum call depth reached");
   }
 
+  frame->type = FRAME_TYPE_QS;
   frame->name = std::string(nameContent, nameLen);
+
   if (!func.filename.empty()) {
     frame->filename = func.filename;
   }
@@ -1153,7 +1156,7 @@ void Interpreter::moveExecutionTo(const LocalScriptFunction& func) {
   frame->allocatedSize = allocationSize;
   frame->stackFrameSize = frameSize;
 
-  if (!oldFrame) {
+  if (!oldFrame || oldFrame->type == FRAME_TYPE_NATIVE) {
     frame->returnAddr = NO_RETURN_ADDR;
   } else {
     frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
@@ -1211,6 +1214,12 @@ uint64 Interpreter::strConcat(QsArray& lString, const uint64 rightObj, typeindex
   return result.address();
 }
 
+uint64 Interpreter::runScriptFunction(const LocalScriptFunction& func) {
+  moveExecutionTo(func);
+  run();
+  return m_registers[REGISTER_RETURN_VALUE];
+}
+
 void Interpreter::run() {
   opcode code = OP_NOP;
   uint8 args[LENGTH_ARGS];
@@ -1219,9 +1228,10 @@ void Interpreter::run() {
   uint8* global = m_vm.getGlobalMemory().getData();
 
   CallFrame* frame = nullptr;
+  const InstructionBuf& instrBuf = m_vm.getInstructions();
 
   begin:
-  m_vm.getInstructions().getInstruction(&code, args, m_registers[REGISTER_INSTR_COUNTER]);
+  instrBuf.getInstruction(&code, args, m_registers[REGISTER_INSTR_COUNTER]);
   frame = getCallFrame();
 
   if (!frame) {
@@ -2424,6 +2434,7 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   frame->stackBase = nullptr;
   frame->line = 0;
   frame->returnAddr = m_registers[REGISTER_INSTR_COUNTER] + 1;
+  frame->type = FRAME_TYPE_NATIVE;
 
   NativeCall call = NativeCall(argumentTypes, argumentValues, 0);
   nFunc->callback(call);
