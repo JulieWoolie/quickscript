@@ -1390,6 +1390,37 @@ void Interpreter::run() {
       break;
     }
 
+    case OP_INCREFC: {
+      uint64 objPtr = m_registers[args[0]];
+      uint32* refCountPointer = reinterpret_cast<uint32*>(objPtr);
+      uint32 refCount = *refCountPointer;
+
+      if (refCount & REFCOUNT_MASK) {
+        break;
+      }
+      
+      *refCountPointer = refCount + 1;
+      break;
+    }
+
+    case OP_DECREFC: {
+      uint64 objPtr = m_registers[args[0]];
+      uint32* refCountPointer = reinterpret_cast<uint32*>(objPtr);
+      uint32 refCount = *refCountPointer;
+
+      if (refCount & REFCOUNT_MASK) {
+        break;
+      }
+
+      if (refCount <= 1) {
+        m_vm.getHeap().freeMemory(refCountPointer);
+        break;
+      }
+
+      *refCountPointer = refCount - 1;
+      break;
+    }
+
     case OP_STRCONCAT: {
       QsArray lString = castToQsArray(REG_AS(args[0], void*));
       m_registers[args[6]] = strConcat(lString, m_registers[args[1]], READ_U32ARG(2));
