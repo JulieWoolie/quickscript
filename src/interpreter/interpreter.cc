@@ -1395,11 +1395,11 @@ void Interpreter::run() {
       uint32* refCountPointer = reinterpret_cast<uint32*>(objPtr);
       uint32 refCount = *refCountPointer;
 
-      if (refCount & REFCOUNT_MASK) {
+      if (!(refCount & REFCOUNT_MASK)) {
         break;
       }
-      
-      *refCountPointer = refCount + 1;
+
+      *refCountPointer = ((refCount & ~REFCOUNT_MASK) + 1) | REFCOUNT_MASK;
       break;
     }
 
@@ -1408,16 +1408,18 @@ void Interpreter::run() {
       uint32* refCountPointer = reinterpret_cast<uint32*>(objPtr);
       uint32 refCount = *refCountPointer;
 
-      if (refCount & REFCOUNT_MASK) {
+      if (!(refCount & REFCOUNT_MASK)) {
         break;
       }
+
+      refCount &= ~REFCOUNT_MASK;
 
       if (refCount <= 1) {
         m_vm.getHeap().freeMemory(refCountPointer);
         break;
       }
 
-      *refCountPointer = refCount - 1;
+      *refCountPointer = (refCount - 1) | REFCOUNT_MASK;
       break;
     }
 
