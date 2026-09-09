@@ -12,6 +12,10 @@ bool MemoryRange::isInside(const uint64 oStart, const uint64 oEnd) const {
   return oStart >= start && oEnd <= end;
 }
 
+uint64 MemoryRange::size() const {
+  return end - start;
+}
+
 HeapPage::HeapPage() {
 
 }
@@ -49,19 +53,21 @@ int64 HeapMemory::findGap(const uint64 bytes, const uint8 alignment, MemoryRange
 }
 
 bool HeapMemory::popAllocation(const uint64 ptr, MemoryRange& out) {
-  for (auto it = m_usedRanges.cbegin(); it != m_usedRanges.cend(); ++it) {
-    const MemoryRange& area = *it;
-
-    if (area.start != ptr) {
-      continue;
-    }
-
-    out = area;
-    m_usedRanges.erase(it);
-
-    return true;
+  if (!m_usedRanges.contains(ptr)) {
+    return false;
   }
-  return false;
+
+  out = m_usedRanges[ptr];
+  m_usedRanges.erase(ptr);
+
+  m_usedMemory -= out.size();
+
+  return true;
+}
+
+void HeapMemory::pushAllocation(const MemoryRange range) {
+  m_usedRanges[range.start] = range;
+  m_usedMemory += range.size();
 }
 
 void HeapMemory::findSurroundingGaps(const MemoryRange& area, int32& beforeIdx, int32& afterIdx) const {
@@ -126,7 +132,7 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
     MemoryRange allocation;
     allocation.start = start;
     allocation.end = end;
-    m_usedRanges.push_back(allocation);
+    pushAllocation(allocation);
 
     if (start == existingGap.start) {
       existingGap.start += memSize;
@@ -166,6 +172,8 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
 
   const uint64 addr = reinterpret_cast<uint64>(block);
 
+  m_totalMemory += pagedSize;
+
   HeapPage page;
   page.data = block;
   page.pageSize = pagedSize;
@@ -176,7 +184,7 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
 
   m_pages.push_back(page);
   m_gaps.push_back(gap);
-  m_usedRanges.emplace_back(addr, gap.start);
+  pushAllocation({.start = addr, .end = gap.start});
 
   return block;
 }
@@ -262,24 +270,9 @@ QsObject HeapMemory::allocObject(const uint64 dataSize, const uint8 alignment) {
 }
 
 uint64 HeapMemory::getTotalMemory() const {
-  const uint32 pages = m_pages.size();
-  uint64 result = 0;
-
-  for (uint32 i = 0; i < pages; i++) {
-    result += m_pages[i].pageSize;
-  }
-
-  return result;
+  return m_totalMemory;
 }
 
 uint64 HeapMemory::getUsedMemory() const {
-  const uint32 objects = m_usedRanges.size();
-  uint64 result = 0;
-
-  for (uint32 i = 0; i < objects; i++) {
-    const MemoryRange& range = m_usedRanges[i];
-    result += (range.end - range.start);
-  }
-
-  return result;
+  return m_usedMemory;
 }

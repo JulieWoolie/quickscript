@@ -2,6 +2,7 @@
 #define QUICKSCRIPT_HEAP_MEM_H
 
 #include <vector>
+#include <unordered_map>
 
 #include "../objects.h"
 #include "../common.h"
@@ -16,6 +17,8 @@ struct MemoryRange {
   bool isInside(const MemoryRange& other) const;
 
   bool isInside(uint64 oStart, uint64 oEnd) const;
+
+  uint64 size() const;
 };
 
 struct HeapPage {
@@ -29,13 +32,18 @@ struct HeapPage {
 };
 
 class HeapMemory {
-  std::vector<MemoryRange> m_usedRanges;
+  std::unordered_map<uint64, MemoryRange> m_usedRanges;
   std::vector<MemoryRange> m_gaps;
   std::vector<HeapPage> m_pages;
+
+  uint64 m_totalMemory = 0;
+  uint64 m_usedMemory = 0;
 
   int64 findGap(uint64 bytes, uint8 alignment, MemoryRange& out, uint32& gapIndex) const;
 
   bool popAllocation(uint64 ptr, MemoryRange& out);
+
+  void pushAllocation(MemoryRange range);
 
   void findSurroundingGaps(const MemoryRange& area, int32& beforeIdx, int32& afterIdx) const;
 
