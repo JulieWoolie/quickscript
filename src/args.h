@@ -42,6 +42,7 @@ struct ProgramSettings {
 
   bool compileToBinary = true;
   bool omitPassedTests = false;
+  bool printTestTimings = false;
 
   ProgramArgs runArgs;
   CompilationOptions compilationOptions;

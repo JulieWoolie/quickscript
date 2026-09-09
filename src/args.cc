@@ -13,6 +13,7 @@
 #define FLAG_TEST_DUMP_DIR 6
 #define FLAG_NO_STAT_INLINING 7
 #define FLAG_NO_EXPR_INLINING 8
+#define FLAG_PRINT_TEST_TIMINGS 9
 typedef uint8 FlagType;
 
 struct FlagDef {
@@ -32,7 +33,9 @@ static const FlagDef FLAG_DEFS[] = {
   {.type = FLAG_IGNORE_ASSERTS, .value = "-ia"},
   {.type = FLAG_TEST_DUMP_DIR, .value = "--test-dump-dir"},
   {.type = FLAG_NO_STAT_INLINING, .value = "--no-stat-inlining"},
-  {.type = FLAG_NO_EXPR_INLINING, .value = "--no-expr-inlining"}
+  {.type = FLAG_NO_EXPR_INLINING, .value = "--no-expr-inlining"},
+  {.type = FLAG_PRINT_TEST_TIMINGS, .value = "--print-test-timings"},
+  {.type = FLAG_PRINT_TEST_TIMINGS, .value = "-ptt"}
 };
 
 struct CommandDef {
@@ -72,6 +75,7 @@ void showHelpMessage() {
   printf("                                  (Ignored when using 'test' command)\n");
   printf("    --no-expr-inlining            Do not inline expressions.\n");
   printf("                                  (Ignored when using 'test' command)\n");
+  printf("    --print-test-timings -ptt     Print test timings.\n");
   printf("\n");
   printf("COMMANDS\n");
   printf("    help                                Display this help message.\n");
@@ -160,6 +164,9 @@ static bool parseFlag(const ArgPair& pair, ProgramSettings& out) {
         break;
       case FLAG_NO_STAT_INLINING:
         out.compilationOptions.statOptimizing = false;
+        break;
+      case FLAG_PRINT_TEST_TIMINGS:
+        out.printTestTimings = true;
         break;
       default:
         return false;
