@@ -2472,6 +2472,11 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   NativeCall call = NativeCall(argumentTypes, argumentValues, 0);
   nFunc->callback(call);
 
+  if (call.isFailedCall()) {
+    throwScriptError(call.getErrorMessage());
+    return;
+  }
+
   popCallFrame();
 
   m_registers[RETURN_VALUE_REGISTER] = call.getReturnValue();
