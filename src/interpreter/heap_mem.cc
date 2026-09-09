@@ -62,6 +62,7 @@ bool HeapMemory::popAllocation(const uint64 ptr, MemoryRange& out) {
   out.end = rangeEnd;
 
   m_usedRanges.erase(ptr);
+  m_usedMemory -= out.size();
 
   return true;
 }
