@@ -32,7 +32,7 @@ struct HeapPage {
 };
 
 class HeapMemory {
-  std::unordered_map<uint64, MemoryRange> m_usedRanges;
+  std::unordered_map<uint64, uint64> m_usedRanges;
   std::vector<MemoryRange> m_gaps;
   std::vector<HeapPage> m_pages;
 
@@ -43,7 +43,7 @@ class HeapMemory {
 
   bool popAllocation(uint64 ptr, MemoryRange& out);
 
-  void pushAllocation(MemoryRange range);
+  void pushAllocation(uint64 start, uint64 end);
 
   void findSurroundingGaps(const MemoryRange& area, int32& beforeIdx, int32& afterIdx) const;
 

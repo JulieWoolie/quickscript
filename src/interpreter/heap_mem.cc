@@ -57,17 +57,18 @@ bool HeapMemory::popAllocation(const uint64 ptr, MemoryRange& out) {
     return false;
   }
 
-  out = m_usedRanges[ptr];
-  m_usedRanges.erase(ptr);
+  const uint64 rangeEnd = m_usedRanges[ptr];
+  out.start = ptr;
+  out.end = rangeEnd;
 
-  m_usedMemory -= out.size();
+  m_usedRanges.erase(ptr);
 
   return true;
 }
 
-void HeapMemory::pushAllocation(const MemoryRange range) {
-  m_usedRanges[range.start] = range;
-  m_usedMemory += range.size();
+void HeapMemory::pushAllocation(const uint64 start, const uint64 end) {
+  m_usedRanges[start] = end;
+  m_usedMemory += end - start;
 }
 
 void HeapMemory::findSurroundingGaps(const MemoryRange& area, int32& beforeIdx, int32& afterIdx) const {
@@ -130,10 +131,7 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
   if (start != -1) {
     const uint64 end = start + memSize;
 
-    MemoryRange allocation;
-    allocation.start = start;
-    allocation.end = end;
-    pushAllocation(allocation);
+    pushAllocation(start, end);
 
     if (start == existingGap.start) {
       existingGap.start += memSize;
@@ -185,7 +183,7 @@ void* HeapMemory::allocate(const uint64 memSize, const uint8 alignment) {
 
   m_pages.push_back(page);
   m_gaps.push_back(gap);
-  pushAllocation({.start = addr, .end = gap.start});
+  pushAllocation(addr, gap.start);
 
   return block;
 }
@@ -197,9 +195,8 @@ void HeapMemory::freeMemory(void* ptr) {
   }
 
   // Zero the memory
-  uint8* dataPtr = reinterpret_cast<uint8*>(area.start);
-  const uint64 dataSize = area.end - area.start;
-  memset(dataPtr, 0, dataSize);
+  const uint64 dataSize = area.size();
+  memset(ptr, 0, dataSize);
 
   int32 beforeIdx;
   int32 afterIdx;
