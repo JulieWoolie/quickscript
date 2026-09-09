@@ -105,6 +105,7 @@ HeapMemory::HeapMemory(const uint64 initialHeapSize) {
   gap.end = gap.start + pagedSize;
 
   m_gaps.push_back(gap);
+  m_totalMemory = initialHeapSize;
 }
 
 HeapMemory::~HeapMemory() {
