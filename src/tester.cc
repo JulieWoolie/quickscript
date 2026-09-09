@@ -1,10 +1,9 @@
 #include "tester.h"
 
-#include <charconv>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <vector>
+#include <chrono>
 
 #include "allocator.h"
 #include "errors.h"
@@ -35,6 +34,73 @@
 #define TDIR_BREAKPOINT 8
 #define TDIR_EXPECTED_RUNTIME_ERROR 9
 typedef uint8 TestDirective;
+
+#define TESTMODE_INVALID 0
+#define TESTMODE_RUN 1
+#define TESTMODE_EXPR 2
+#define TESTMODE_VALIDATE 3
+typedef uint8 testmode;
+
+struct ExpectedError {
+  int32 line = -1;
+  std::string message;
+  std::string name;
+};
+
+struct TestCase {
+  testmode mode = TESTMODE_RUN;
+  bool breakpoint = false;
+  std::vector<ExpectedError> expectedErrors;
+  std::string expectedAst;
+  std::string expectedRuntimeError;
+  std::filesystem::path dumpDirectory;
+  CompilationOptions compilerOpts;
+};
+
+
+struct TestTiming {
+  uint64 totalTime = 0;
+  uint32 count = 0;
+
+  void account(const uint64 start, const uint64 end) {
+    if (end <= start) {
+      return;
+    }
+
+    count++;
+    totalTime += end - start;
+  }
+
+  void printTiming(const conststring name) const {
+    const float64 avgNs = static_cast<float64>(totalTime) / static_cast<float64>(count);
+    const float64 avgMs = avgNs / 1.0E+6;
+
+    printf("  %s timings sampled %d times: average=%.2f ns (%.2f ms)\n", name, count, avgNs, avgMs);
+  }
+};
+
+struct TestTimings {
+  TestTiming lexTimings = TestTiming();
+  TestTiming parseTimings = TestTiming();
+  TestTiming analysisTimings = TestTiming();
+  TestTiming transformTimings = TestTiming();
+  TestTiming execTimings = TestTiming();
+
+  void printTimings() {
+    printf("Test Timings:\n");
+    lexTimings.printTiming("Lex");
+    parseTimings.printTiming("Parse");
+    analysisTimings.printTiming("Semantic Analysis");
+    transformTimings.printTiming("Semantic Transformation");
+    execTimings.printTiming("Script Execution");
+  }
+};
+
+struct TestContext {
+  TestTimings timings;
+  const ProgramSettings& settings;
+  const BindingsObject* bindings;
+};
 
 struct TestDirectiveDef {
   TestDirective directive;
@@ -492,12 +558,11 @@ static void dumpAst(const conststring fileName, const TestCase& tcase, Node* res
   jsonStream << jsonString;
 }
 
-bool runTestCase(
-  TestCase& tcase,
-  const std::filesystem::path& filePath,
-  const ProgramSettings& settings,
-  const BindingsObject* bindings
-) {
+static int64 getTime() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, TestContext& tctx) {
   std::ifstream instream(filePath);
 
   if (!instream.is_open()) {
@@ -521,14 +586,23 @@ bool runTestCase(
 
   bool stepFailed = false;
 
+  int64 lexStart = getTime();
+  int64 lexEnd = -1;
+
   try {
     l.next();
     l.lex();
+
+    lexEnd = getTime();
+
     parseTestCase(tcase, tlist, table);
   } catch (std::runtime_error& err) {
+    lexEnd = getTime();
     parseTestCase(tcase, tlist, table);
     stepFailed = true;
   }
+
+  tctx.timings.lexTimings.account(lexStart, lexEnd);
 
   dumpTestCaseToJson(tcase);
 
@@ -544,19 +618,27 @@ bool runTestCase(
   Parser p = Parser(&tlist, &allocator, &errors, &table);
   Node* result = nullptr;
 
+  int64 parseStart = 0;
+  int64 parseEnd = 0;
+
   if (tcase.mode == TESTMODE_RUN || tcase.mode == TESTMODE_VALIDATE) {
     try {
+      parseStart = getTime();
       result = p.parse();
     } catch (std::runtime_error& e) {
       stepFailed = true;
     }
   } else {
     try {
+      parseStart = getTime();
       result = p.expr();
     } catch (std::runtime_error& e) {
       stepFailed = true;
     }
   }
+
+  parseEnd = getTime();
+  tctx.timings.parseTimings.account(parseStart, parseEnd);
 
   if (stepFailed) {
     return checkErrors(tcase, errors, result);
@@ -567,8 +649,13 @@ bool runTestCase(
   TypeTable lookup = TypeTable();
 
   if (result->nodeKind() == AST_ScriptFileStatement) {
-    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tcase.compilerOpts, bindings);
+    int64 analysisStart = getTime();
+
+    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tcase.compilerOpts, tctx.bindings);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
+
+    int64 analysisEnd = getTime();
+    tctx.timings.analysisTimings.account(analysisStart, analysisEnd);
 
     if (!checkErrors(tcase, errors, result)) {
       return false;
@@ -578,8 +665,13 @@ bool runTestCase(
       return true;
     }
 
+    int64 transformStart = getTime();
+
     runSemanticTransformer(ctx, static_cast<ScriptFileStatement*>(result));
     BytecodeFile& bfile = compile(ctx);
+
+    int64 transformEnd = getTime();
+    tctx.timings.transformTimings.account(transformStart, transformEnd);
 
     dumpAst("post-transform-ast.json", tcase, result);
 
@@ -605,13 +697,21 @@ bool runTestCase(
     }
 
     VirtualMachine vm = VirtualMachine();
-    vm.addBindings(bindings);
+    vm.addBindings(tctx.bindings);
 
     uint32 entryPoint = vm.addBytecodeFile(bfile, pathString);
 
+    int64 execStart = getTime();
+    int64 execEnd = execStart;
+
     try {
-      vm.beginExecution(entryPoint, settings.runArgs);
+      vm.beginExecution(entryPoint, tctx.settings.runArgs);
+      execEnd = getTime();
+      tctx.timings.execTimings.account(execStart, execEnd);
     } catch (ScriptError& exc) {
+      execEnd = getTime();
+      tctx.timings.execTimings.account(execStart, execEnd);
+
       if (!tcase.expectedRuntimeError.empty()) {
         if (tcase.expectedRuntimeError == exc.getMessage()) {
           return true;
@@ -636,7 +736,7 @@ bool runTestCase(
     return true;
   }
 
-  if (settings.printAst & PRINTAST_AFTER_TRANSFORM) {
+  if (tctx.settings.printAst & PRINTAST_AFTER_TRANSFORM) {
     PrintingVisitor pv = PrintingVisitor(&table, fileName);
     result->acceptVisit(&pv);
   }
@@ -670,6 +770,12 @@ void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
   uint32 total = 0;
   uint32 failed = 0;
 
+  TestContext ctx = {
+    .timings = TestTimings(),
+    .settings = settings,
+    .bindings = bindings
+  };
+
   try {
     for (const std::filesystem::path& path: testFiles) {
       TestCase testCase;
@@ -680,7 +786,7 @@ void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
         testCase.dumpDirectory = dumpDir;
       }
 
-      bool success = runTestCase(testCase, path, settings, bindings);
+      bool success = runTestCase(testCase, path, ctx);
 
       total++;
 
@@ -699,4 +805,8 @@ void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
   }
 
   fprintf(stdout, "[TESTING] Ran %i tests, %i failed\n", total, failed);
+
+  if (settings.printTestTimings) {
+    ctx.timings.printTimings();
+  }
 }
