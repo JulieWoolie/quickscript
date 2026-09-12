@@ -382,6 +382,7 @@ AST_TYPE(LexicalDeclaration, Statement,
   Identifier* variableName = nullptr;
   Expr* value = nullptr;
   declflags flags = 0;
+  stringid docComment = EMPTY_STRING;
 )
 
 AST_TYPE(WhileStatement, Statement,
@@ -425,6 +426,7 @@ AST_TYPE(FunctionDeclStatement, Statement,
   TypeExpr* returnType = nullptr;
   FunctionSignature* signature = nullptr;
   declflags flags = 0;
+  stringid docComment = EMPTY_STRING;
 )
 
 AST_TYPE(StructPropertyDecl, Statement,
@@ -432,6 +434,7 @@ AST_TYPE(StructPropertyDecl, Statement,
   Identifier* name = nullptr;
   Expr* value = nullptr;
   StructDecl* structDeclStatement = nullptr;
+  stringid docComment = EMPTY_STRING;
 )
 
 AST_TYPE(StructDecl, Statement,
@@ -439,6 +442,7 @@ AST_TYPE(StructDecl, Statement,
   std::vector<StructPropertyDecl*> properties;
   ScriptStructType* type = nullptr;
   declflags flags = 0;
+  stringid docComment = EMPTY_STRING;
 )
 
 AST_TYPE(ExprStatement, Statement,
