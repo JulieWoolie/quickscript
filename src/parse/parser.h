@@ -124,6 +124,8 @@ class Parser {
     ObjectLiteral* objectLiteral();
     ArrayLiteral* arrayLiteral();
     Identifier* id();
+
+    stringid getDocComment() const;
 };
 
 #endif //QUICKSCRIPT_PARSER_H

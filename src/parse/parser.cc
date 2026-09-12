@@ -48,14 +48,14 @@ Parser::Parser(TokenList *tokens, NoFreeAllocator *pool, CompilerErrors *errors,
   m_nameTable = table;
 }
 
-Token* Parser::gettoken(uint32 idx) const {
+Token* Parser::gettoken(const uint32 idx) const {
   if (idx >= m_tokens->size()) {
     return m_tokens->get(m_tokens->size() - 1);
   }
   return m_tokens->get(idx);
 }
 
-#define IS_COMMENT(ttype) (ttype == TT_LCOMMENT || ttype == TT_BCOMMENT)
+#define IS_COMMENT(ttype) (ttype == TT_LCOMMENT || ttype == TT_BCOMMENT || ttype == TT_DOCCOMMENT)
 
 uint32 skipComments(TokenList* l, uint32 cursor) {
   while (cursor < l->size()) {
@@ -335,6 +335,7 @@ FunctionParam * Parser::funcParam() {
 }
 
 FunctionDeclStatement * Parser::funcDecl() {
+  const stringid comment = getDocComment();
   const declflags flags = parseDeclFlags();
 
   TypeExpr* retType = typeExpr();
@@ -345,6 +346,7 @@ FunctionDeclStatement * Parser::funcDecl() {
   decl.name = funcName;
   decl.returnType = retType;
   decl.flags = flags;
+  decl.docComment = comment;
 
   expect(TT_LBRACKET);
 
@@ -540,6 +542,7 @@ WhileStatement* Parser::whileStatement(Identifier* label) {
 }
 
 LexicalDeclaration * Parser::lexDecl() {
+  const stringid comment = getDocComment();
   Location loc = peek()->start;
 
   const declflags flags = parseDeclFlags();
@@ -565,6 +568,7 @@ LexicalDeclaration * Parser::lexDecl() {
   lex.variableName = name;
   lex.value = val;
   lex.flags = flags;
+  lex.docComment = comment;
 
   return EMPLACE(lex);
 }
@@ -588,6 +592,7 @@ ReturnStatement* Parser::returnStatement() {
 }
 
 StructDecl* Parser::structDecl() {
+  const stringid docComment = getDocComment();
   const declflags flags = parseDeclFlags();
 
   Token* t = expect(TT_KEYW_STRUCT);
@@ -595,6 +600,7 @@ StructDecl* Parser::structDecl() {
   decl.location = t->start;
   decl.name = id();
   decl.flags = flags;
+  decl.docComment = docComment;
 
   expect(TT_LCURL);
 
@@ -614,12 +620,14 @@ StructDecl* Parser::structDecl() {
 }
 
 StructPropertyDecl* Parser::structProperty() {
+  const stringid docComment = getDocComment();
   TypeExpr* t = typeExpr();
 
   StructPropertyDecl prop;
   prop.location = t->location;
   prop.propertyType = t;
   prop.name = id();
+  prop.docComment = docComment;
 
   if (is(TT_ASSIGN)) {
     next();
@@ -1286,6 +1294,20 @@ Identifier* Parser::id() {
   id->location = t->start;
   id->value = t->valueId;
   return id;
+}
+
+stringid Parser::getDocComment() const {
+  const int32 c = m_tokenCursor - 1;
+  if (c < 0) {
+    return EMPTY_STRING;
+  }
+
+  const Token* t = gettoken(c);
+  if (t->ttype == TT_DOCCOMMENT) {
+    return t->valueId;
+  }
+
+  return EMPTY_STRING;
 }
 
 
