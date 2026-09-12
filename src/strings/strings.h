@@ -13,6 +13,6 @@ bool isIdentifierPart(const utf32char ch);
 
 bool isHexChar(const utf32char ch);
 
-bool isWhitespace(const int8 ch);
+bool isWhitespace(const utf32char ch);
 
 #endif //QUICKSCRIPT_STRINGS_H

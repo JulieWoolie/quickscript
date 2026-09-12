@@ -22,7 +22,7 @@ bool isHexChar(const utf32char ch) {
       || (ch >= 'A' && ch <= 'F');
 }
 
-bool isWhitespace(const int8 ch) {
+bool isWhitespace(const utf32char ch) {
   return ch == ' '
       || ch == '\t'
       || ch == LF
