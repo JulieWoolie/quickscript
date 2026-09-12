@@ -45,8 +45,7 @@ class Lexer {
 
     void lex();
 
-    utf32char peek(int32 ahead) const;
-    utf32char peek() const;
+    utf32char peek(int32 ahead = 0) const;
 
     utf32char next();
 
@@ -66,6 +65,7 @@ class Lexer {
 
     Token* readBlockComment();
     Token* readLineComment();
+    Token* readDocComment();
 
     Token* eoftoken();
 

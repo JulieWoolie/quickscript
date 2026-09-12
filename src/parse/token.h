@@ -13,6 +13,7 @@
 // Comment types, only parsed if lexer's comment skipping is disabled
 #define TT_LCOMMENT             0001
 #define TT_BCOMMENT             0002
+#define TT_DOCCOMMENT           0003
 
 // IDs
 #define TT_ID                   1001

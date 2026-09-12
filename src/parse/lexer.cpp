@@ -60,10 +60,6 @@ utf32char Lexer::peek(const int32 ahead) const {
   return ch;
 }
 
-utf32char Lexer::peek() const {
-  return peek(0);
-}
-
 utf32char Lexer::next() {
   if (idx >= m_input.length()) {
     currentChar = EOF;
@@ -205,6 +201,10 @@ Token * Lexer::readToken() {
     if (currentChar == COMMENT_CHAR && p == STAR_CHAR) {
       return readBlockComment();
     }
+  }
+
+  if (currentChar == COMMENT_CHAR && p == STAR_CHAR && peek(1) == STAR_CHAR) {
+    return readDocComment();
   }
 
   switch (currentChar) {
@@ -491,6 +491,29 @@ Token* Lexer::readLineComment() {
   }
 
   return valueToken(TT_LCOMMENT);
+}
+
+Token* Lexer::readDocComment() {
+  next(); // Skip '/'
+  next(); // Skip '*'
+  next(); // Skip '*'
+
+  clearReadBuf();
+  while (true) {
+    if (currentChar == STAR_CHAR && peek() == COMMENT_CHAR) {
+      next();
+      next();
+      break;
+    }
+    if (currentChar == EOF) {
+      break;
+    }
+
+    appendToReadBuf();
+    next();
+  }
+
+  return valueToken(TT_DOCCOMMENT);
 }
 
 Token* Lexer::eoftoken() {
