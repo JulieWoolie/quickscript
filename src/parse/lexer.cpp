@@ -140,7 +140,7 @@ void Lexer::skipEmptyContent() {
       break;
     }
 
-    if (isWhitespace(currentChar)) {
+    if (ucIsWhiteSpace(currentChar)) {
       next();
       continue;
     }

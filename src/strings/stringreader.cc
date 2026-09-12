@@ -1,6 +1,7 @@
 #include "stringreader.h"
 
 #include "strings.h"
+#include "unicode_binary_props.h"
 StringReader::StringReader(const std::string_view& view)
     : m_buf(reinterpret_cast<const utf8char*>(view.data())),
       m_len(view.length())
@@ -52,7 +53,7 @@ bool StringReader::hasNext() const {
 
 void StringReader::skipWhitespace() {
   utf32char p;
-  while (hasNext() && isWhitespace(p = peek())) {
+  while (hasNext() && ucIsWhiteSpace(p = peek())) {
     m_cursor += getUtf8ByteLength(p);
   }
 }
