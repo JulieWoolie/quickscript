@@ -1,0 +1,25 @@
+#include "qs/types/ScriptStringType.hpp"
+#include "qs/types/ConstTypes.hpp"
+
+ScriptStringType::ScriptStringType() : ScriptType(TK_STRING, POINTER_SIZE) {
+
+}
+
+uint32 ScriptStringType::typeFlags() const {
+  return TFLAG_INDEXABLE | TFLAG_PROPERTY_HOLDER;
+}
+
+ScriptType* ScriptStringType::getIndexReturnType() const {
+  return ConstTypes::UINT8();
+}
+
+ScriptType* ScriptStringType::getPropertyType(std::string_view propertyName) const {
+  if (propertyName == "length") {
+    return ConstTypes::UINT32();
+  }
+  return nullptr;
+}
+
+conststring ScriptStringType::getTypeName() const {
+  return "string";
+}

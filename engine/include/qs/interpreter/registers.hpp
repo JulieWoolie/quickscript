@@ -1,0 +1,19 @@
+#ifndef QS_REGISTERS_H
+#define QS_REGISTERS_H
+
+#define RETURN_VALUE_REGISTER  0
+#define INSTR_COUNTER_REGISTER 1
+#define FIRST_NON_RESERVED_REGISTER 2
+#define REGISTER_COUNT 64
+#define REGISTER_SIZE_BITS 64
+#define REGISTER_SIZE_BYTES 8
+#define REGISTERS_MEMSIZE (REGISTER_COUNT * REGISTER_SIZE_BYTES)
+
+#define REGISTRY_MASK(x) (1LL << x)
+
+typedef uint8 RegisterId;
+typedef int8 RegisterIdOpt;
+typedef uint64 RegisterBitSet;
+typedef uint64 RegisterValue;
+
+#endif //QS_REGISTERS_H
