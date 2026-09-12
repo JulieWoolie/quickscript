@@ -52,37 +52,39 @@ static const CommandDef COMMANDS[] = {
 };
 
 void showHelpMessage() {
-  printf("Quickscript Interpreter\n");
-  printf("\n");
-  printf("USAGE\n");
-  printf("    quickscript [OPTIONS] [COMMAND]\n");
-  printf("\n");
-  printf("OPTIONS\n");
-  printf("    --print-ast -p                Print the AST of parsed source files after semantic transformation.\n");
-  printf("    --print-ast=<when> -p=<when>  Set a flag to print the AST after a certain compilation step\n");
-  printf("                                  (One of: after-parse, after-analysis, after-transform.)\n");
-  printf("    --loglevel=<level>            Set the logger level.\n");
-  printf("                                  (One of: error, warn, info)\n");
-  printf("    --text-compile -tc            Compile to a text based IR instead of binary.\n");
-  printf("                                  (Only used for the 'compile' command)\n");
-  printf("    --omit-ok-tests -oot          Do not log tests that passed.\n");
-  printf("                                  (Only used for the 'test' command)\n");
-  printf("    --test-dump-dir=<dir>         Directory to dump random test-related debug info to.\n");
-  printf("                                  (Only used for the 'test' command)\n");
-  printf("    --ignore-asserts -ia          Do not compile assert statements.\n");
-  printf("                                  (Ignored when using 'test' command)\n");
-  printf("    --no-stat-inlining            Do not inline statements.\n");
-  printf("                                  (Ignored when using 'test' command)\n");
-  printf("    --no-expr-inlining            Do not inline expressions.\n");
-  printf("                                  (Ignored when using 'test' command)\n");
-  printf("    --print-test-timings -ptt     Print test timings.\n");
-  printf("\n");
-  printf("COMMANDS\n");
-  printf("    help                                Display this help message.\n");
-  printf("    run <file> [program arguments]      Run an IR or source file.\n");
-  printf("    test <directory>                    Run script files in a directory and treat them as test cases.\n");
-  printf("    compile <input file> <output file>  Compile a source file to IR.\n");
-  printf("\n");
+  printf("Quickscript Interpreter\n"
+    "\n"
+    "USAGE\n"
+    "    quickscript [OPTIONS] [COMMAND]\n"
+    "\n"
+    "GENERAL OPTIONS\n"
+    "    --print-ast -p                Print the AST of parsed source files after semantic transformation.\n"
+    "    --print-ast=<when> -p=<when>  Set a flag to print the AST after a certain compilation step\n"
+    "                                  (One of: after-parse, after-analysis, after-transform.)\n"
+    "    --loglevel=<level>            Set the logger level.\n"
+    "                                  (One of: error, warn, info)\n"
+    "\n"
+    "COMPILER OPTIONS\n"
+    "    --text-compile -tc            Compile to a text based IR instead of binary.\n"
+    "    --ignore-asserts -ia          Do not compile assert statements.\n"
+    "                                  (Ignored when using 'test' command)\n"
+    "    --no-stat-inlining            Do not inline statements.\n"
+    "                                  (Ignored when using 'test' command)\n"
+    "    --no-expr-inlining            Do not inline expressions.\n"
+    "                                  (Ignored when using 'test' command)\n"
+    "\n"
+    "TEST OPTIONS\n"
+    "    --omit-ok-tests -oot          Do not log tests that passed.\n"
+    "    --test-dump-dir=<dir>         Directory to dump random test-related debug info to.\n"
+    "    --print-test-timings -ptt     Print test timings.\n"
+    "\n"
+    "COMMANDS\n"
+    "    help                                Display this help message.\n"
+    "    run <file> [program arguments]      Run an IR or source file.\n"
+    "    test <directory>                    Run script files in a directory and treat them as test cases.\n"
+    "    compile <input file> <output file>  Compile a source file to IR.\n"
+    "\n"
+  );
 }
 
 static int32 indexOf(conststring str, uint32 len, int8 ch) {
