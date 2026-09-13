@@ -306,7 +306,3 @@ boolean qsc_compileSourceFile(conststring sourceName, conststring source, QsEnv 
 
   return true;
 }
-
-void qs_onLoadNativeModule(QsVirtualMachine vm) {
-
-}
