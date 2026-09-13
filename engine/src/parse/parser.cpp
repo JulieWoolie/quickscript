@@ -201,6 +201,10 @@ uint8 Parser::isLexOrFuncDecl() {
       RESTORECURSOR
       return LFDL_STRUCT;
 
+    case TT_KEYW_MODULE:
+      RESTORECURSOR
+      return LFDL_MODULE;
+
     case TT_KEYW_BOOL:
     case TT_KEYW_UINT8:
     case TT_KEYW_INT8:
@@ -290,20 +294,19 @@ Statement* Parser::statement() {
       return block();
     case TT_KEYW_ASSERT:
       return assertStatement();
+    case TT_KEYW_IMPORT:
+      return importStatement();
 
     default:
       const uint8 nextType = isLexOrFuncDecl();
-      if (nextType == LFDL_LEX) {
-        return lexDecl();
-      }
-      if (nextType == LFDL_FUNC) {
-        return funcDecl();
-      }
-      if (nextType == LFDL_LABELLED_LOOP) {
-        return labelledStatement();
-      }
-      if (nextType == LFDL_STRUCT) {
-        return structDecl();
+      switch (nextType) {
+        case LFDL_LEX:  return lexDecl();
+        case LFDL_FUNC: return funcDecl();
+        case LFDL_LABELLED_LOOP: return labelledStatement();
+        case LFDL_STRUCT: return structDecl();
+        case LFDL_MODULE: return moduleDecl();
+        default:
+          break;
       }
 
       Expr* e = expr();
@@ -766,6 +769,89 @@ PrimitiveTypeExpr* Parser::primitiveType() {
   pte.location = t->start;
   pte.primType = pt;
   return EMPLACE(pte);
+}
+
+static bool isFromKeyword(const Token* t) {
+  if (t->ttype != TT_ID) {
+    return false;
+  }
+  const stringid v = t->valueId;
+  if (v->len != 4) {
+    return false;
+  }
+
+  const conststring data = v->data;
+
+  return data[0] == 'f'
+      && data[1] == 'r'
+      && data[2] == 'o'
+      && data[3] == 'm';
+}
+
+ModuleDeclaration* Parser::moduleDecl() {
+  ModuleDeclaration decl;
+
+  if (is(TT_KEYW_NATIVE)) {
+    decl.location = next()->start;
+    decl.nativeModule = true;
+  } else if (is(TT_KEYW_MODULE)) {
+    decl.location = peek()->start;
+  }
+
+  expect(TT_KEYW_MODULE);
+
+  decl.modulePath = modulePath();
+
+  if (is(decl.nativeModule)) {
+    if (!isFromKeyword(peek())) {
+      ERROR(peek()->start,
+        "Expected native module declaration to be followed by 'from' with module library name"
+      );
+    } else {
+      next();
+      decl.nativeImportPath = stringLiteral();
+    }
+  }
+
+  return EMPLACE(decl);
+}
+
+ImportStatement* Parser::importStatement() {
+  ImportStatement imp;
+  imp.location = expect(TT_KEYW_IMPORT)->start;
+  imp.modulePath = modulePath();
+  return EMPLACE(imp);
+}
+
+stringid Parser::modulePath() {
+  if (!is(TT_ID)) {
+    ERROR(peek()->start, "Invalid module path");
+    return EMPTY_STRING;
+  }
+
+  std::string path = "";
+
+  while (is(TT_ID)) {
+    const Token* idTok = next();
+
+    const stringid v = idTok->valueId;
+    path.append(v->data, v->len);
+
+    const int32 end = idTok->end.index;
+
+    if (is(TT_DOT) && peek()->start.index == end) {
+      next();
+
+      if (!is(TT_ID)) {
+        ERROR(peek()->start, "Expected module separator '.' to be followed by module name element");
+        break;
+      }
+
+      path.push_back('.');
+    }
+  }
+
+  return m_nameTable->allocate(path);
 }
 
 Expr* Parser::loopConditionExpr() {

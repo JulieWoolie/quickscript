@@ -13,6 +13,7 @@
 #define LFDL_FUNC 2
 #define LFDL_LABELLED_LOOP 3
 #define LFDL_STRUCT 4
+#define LFDL_MODULE 5
 
 class Parser {
   TokenList* m_tokens;
@@ -87,6 +88,12 @@ class Parser {
     TypeExpr* typeName();
 
     PrimitiveTypeExpr* primitiveType();
+
+    ModuleDeclaration* moduleDecl();
+
+    ImportStatement* importStatement();
+
+    stringid modulePath();
 
     // Expressions
 
