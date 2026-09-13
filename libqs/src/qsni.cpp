@@ -1,4 +1,3 @@
-#define _QS_IMPL_
 #include "qsni.h"
 
 #include "qs/compiler_opts.hpp"
