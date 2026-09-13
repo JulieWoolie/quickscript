@@ -385,6 +385,23 @@ struct PrintingVisitor: Visitor {
       PRINTNODEBASE
       printf(")");
     }
+
+    void acceptModuleDeclaration(ModuleDeclaration* v) override {
+      PRINTNODEBASE
+      printf("native=%s path='%.*s'",
+        v->nativeModule ? "true" : "false",
+        v->modulePath->len, v->modulePath->data
+      );
+      if (v->nativeImportPath != EMPTY_STRING) {
+        printf(" native_path='%.*s'", v->nativeImportPath->len, v->nativeImportPath->data);
+      }
+      printf(")");
+    }
+
+    void acceptImportStatement(ImportStatement* v) override {
+      PRINTNODEBASE
+      printf("path='%.*s')", v->modulePath->len, v->modulePath->data);
+    }
 };
 
 #endif //QS_PRINT_VISITOR_H
