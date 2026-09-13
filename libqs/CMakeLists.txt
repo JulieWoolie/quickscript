@@ -8,5 +8,5 @@ add_library(libqs SHARED
         src/qsni.cpp)
 
 target_include_directories(libqs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
+target_compile_definitions(libqs PRIVATE _QS_IMPL_)
 target_link_libraries(libqs PRIVATE qsengine)
