@@ -291,7 +291,12 @@ function getNativeFunctionName(sym: Func): string {
 }
 
 function signatureToString(f: Func): string {
-  let pStr = f.params.map(v => `${v.tn} ${v.pname}`).join(", ")
+  let pStr = f.params.map(v => v.tn).join(",")
+
+  if (f.stype == "void") {
+    return `(${pStr})`
+  }
+
   return `(${pStr})=>${f.stype}`
 }
 
@@ -304,69 +309,45 @@ async function generateStdLibHeader(): Promise<void> {
 QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env);
 
 #endif // QS_STDLIB`
-  await writeToFile(out, "../libraries/stdlib.hpp")
-}
-
-function typeExpression(tn: string): string {
-  if (tn.endsWith("...")) {
-    let realname = tn.substring(0, tn.length - 3)
-    return `new ScriptArrayType(${typeExpression(realname)})`
-  }
-
-  return `ConstTypes::${tn.toUpperCase()}()`
-}
-
-function makeSignatureConstructor(e: Signature): string {
-  let out = `FunctionSignature::make(`
-  out += typeExpression(e.returnType)
-
-  let variadic = false
-  if (e.params.length != 0 && e.params[e.params.length - 1].tn.endsWith("...")) {
-    variadic = true
-  }
-
-  out += `, ${variadic}, ${e.params.length}`
-
-  for (const p of e.params) {
-    out += `, ${typeExpression(p.tn)}`
-  }
-
-  out += `)`
-  return out
+  await writeToFile(out, "../libraries/stdlib/stdlib.hpp")
 }
 
 async function generateStdLibSource(): Promise<void> {
-  let out = `#include "qs_stdlib.h"`
+  let out = `#include "stdlib.hpp"`
 
   for (const sym of SYMBOLS) {
     if (sym.type != "func") {
       continue
     }
 
-    out += `\n\nstatic void ${getNativeFunctionName(sym)}(NativeCall& call) {`
+    out += `\n\n// export native ${sym.stype} ${sym.name}(${sym.params.map(t => `${t.tn} ${t.pname}`).join(', ')})`
+    out += `\nstatic void ${getNativeFunctionName(sym)}(const QsVirtualMachine vm, const QsNativeCall call) {`
 
     let pIdx = 0
     for (const p of sym.params) {
       let argShorthand: string = ""
       let tn = p.tn
 
-      if (tn.startsWith("uint")) {
+      if (tn == "string" || tn.endsWith("[]") || tn.endsWith("...")) {
+        tn = "QsScriptArray"
+        argShorthand = "Array"
+      } else if (tn.startsWith("uint")) {
         argShorthand = `U${tn.substring(4)}`
       } else if (tn.startsWith("int")) {
         argShorthand = `I${tn.substring(3)}`
       } else if (tn.startsWith("float")) {
         argShorthand = `F${tn.substring(tn.length - 2)}`
-      } else if (tn.endsWith("[]")) {
-        tn = "QsArray"
-        argShorthand = "Array"
+      } else if (tn == "bool") {
+        tn = "boolean"
+        argShorthand = "Bool"
       } else {
         argShorthand = `${tn.substring(0, 1).toUpperCase()}${tn.substring(1)}`
       }
 
-      out += `\n  const ${p.tn} ${p.pname} = call.get${argShorthand}Argument(${pIdx++});`
+      out += `\n  const ${tn} ${p.pname} = qsc_get${argShorthand}Argument(call, ${pIdx++});`
     }
 
-    out += `\n}`
+    out += `\n  // Empty generated function stub\n}`
   }
 
   out += `\n\nvoid qs_onLoadNativeModule(QsEnv env) {`
@@ -379,12 +360,12 @@ async function generateStdLibSource(): Promise<void> {
     const signStr = signatureToString(sym)
     const funcName = getNativeFunctionName(sym)
 
-    out += `\n  qse_registerNative(env, "${sym.name}", ${signStr}, ${funcName});`
+    out += `\n  qse_registerNative(env, "${sym.name}", "${signStr}", ${funcName});`
   }
 
   out += "\n}"
 
-  await writeToFile(out, "..libraries/stdlib/stdlib.cpp")
+  await writeToFile(out, "../libraries/stdlib/stdlib.cpp")
 }
 
 export async function generateStdLib(): Promise<void> {

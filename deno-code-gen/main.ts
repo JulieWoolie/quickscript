@@ -4,7 +4,7 @@ import {generateUnicodeCode} from "./unicode/unicode-gen";
 
 async function main() {
   await opcodeMain()
-  // await generateStdLib()
+  await generateStdLib()
   await generateUnicodeCode()
 }
 
