@@ -8,12 +8,14 @@
 #ifdef _QS_IMPL_
 #define QS_API QS_EXPORT
 #else
-#define QS_FUNC QS_IMPORT
+#define QS_API QS_IMPORT
 #endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// ========= Primitive QS Types =========
 
 typedef long long int64;
 typedef unsigned long long uint64;
@@ -31,7 +33,6 @@ typedef double float64;
 typedef char* cstring;
 typedef const char* conststring;
 
-
 #define TK_UNKNOWN    0
 #define TK_PRIMITIVE  1
 #define TK_STRING     2
@@ -42,35 +43,430 @@ typedef const char* conststring;
 #define TK_CLOSURE    7
 typedef uint8 qstypekind;
 
+// ========= QS Constants =========
+
+#define PROPERTY_NOT_FOUND (-1)
+#define CONST_REF_COUNTER 0xFFFFFFFF
+
+// ========= QS Typedefs =========
+
 typedef const struct ScriptType* QsScriptType;
 typedef struct NativeCall* QsNativeCall;
 typedef struct BytecodeFile* QsBytecodeFile;
 typedef struct VirtualMachine* QsVirtualMachine;
-typedef void* QsEnv;
+typedef struct QsEnvironment* QsEnv;
 typedef void* QsFunction;
+typedef void* QsScriptArray;
+typedef void* QsScriptObject;
 
 typedef void (*QsNativeFunction)(QsVirtualMachine vm, QsNativeCall call);
 
+// ========= QS Script Type Functions =========
 
+/**
+ * Get the kind of a script type.
+ *
+ * Will return one of the following values:
+ * - TK_UNKNOWN, if a null pointer was provided or if the type is the 'ERROR' type
+ * - TK_PRIMITIVE
+ * - TK_STRING
+ * - TK_STRUCT
+ * - TK_ARRAY
+ * - TK_FUNC
+ * - TK_VOID
+ * - TK_CLOSURE
+ *
+ * @param type Type Pointer
+ * @return Type Kind
+ */
 QS_API qstypekind QS_CALL qst_getTypeKind(QsScriptType type);
+
+/**
+ * Get the size of a type.
+ *
+ * The returned value will be a power of 2 no larger than 8.
+ *
+ * @param type Type Pointer
+ * @return Number of bytes needed to store the type on the script's local memory
+ */
 QS_API uint8 QS_CALL qst_getStackSize(QsScriptType type);
+
+/**
+ * Get the name of a type.
+ * @param type Type Pointer
+ * @return Type name
+ */
 QS_API conststring QS_CALL qst_getTypeName(QsScriptType type);
 
-QS_API QsScriptType QS_CALL qsarray_getComponentType(QsScriptType type);
+/**
+ * Assumes the input is a ScriptArrayType and returns the type's component type.
+ *
+ * Before calling this function, ensure the specified type is a TK_ARRAY with
+ * qst_getTypeKind(type)
+ *
+ * @param type Type Pointer
+ * @return Component Type Pointer
+ */
+QS_API QsScriptType QS_CALL qsat_getComponentType(QsScriptType type);
 
-QS_API QsScriptType QS_CALL qstruct_getPropertyType(QsScriptType type, uint32 propertyIndex);
-QS_API conststring QS_CALL qstruct_getPropertyName(QsScriptType type, uint32 propertyIndex);
-QS_API uint64 QS_CALL qstruct_getPropertyOffset(QsScriptType type, uint32 propertyIndex);
-QS_API int32 QS_CALL qstruct_getPropertyIndex(QsScriptType type, conststring propName);
-QS_API uint32 QS_CALL qstruct_getPropertyCount(QsScriptType type);
-QS_API uint64 QS_CALL qstruct_getSize(QsScriptType type);
-QS_API uint8 QS_CALL qstruct_getAlignment(QsScriptType type);
+/**
+ * Get the type of a struct property by its index.
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * @param type Struct Type Pointer
+ * @param propertyIndex Property Index
+ *
+ * @return Property type
+ */
+QS_API QsScriptType QS_CALL qsst_getPropertyType(QsScriptType type, uint32 propertyIndex);
 
+/**
+ * Get the name of a struct property by its index
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * @param type Struct Type Pointer
+ * @param propertyIndex Property Index
+ *
+ * @return Property name
+ */
+QS_API conststring QS_CALL qsst_getPropertyName(QsScriptType type, uint32 propertyIndex);
+
+/**
+ * Get the memory offset of a struct property by its index
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * Note that the returned value is not the offset of a value from the start of a
+ * struct pointer, but rather the offset of the property's value from the start
+ * of a struct's data.
+ *
+ * All structs are prefixed with a 32bit unsigned reference counter integer which
+ * the returned offset does not take into account.
+ *
+ * @param type Struct Type Pointer
+ * @param propertyIndex Property Index
+ *
+ * @return Property memory offset, in bytes.
+ */
+QS_API uint64 QS_CALL qsst_getPropertyOffset(QsScriptType type, uint32 propertyIndex);
+
+/**
+ * Get the index of a struct property by its name
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * @param type Struct Type Pointer
+ * @param propName Property Name
+ *
+ * @return Property index, or PROPERTY_NOT_FOUND, if no property
+ *         with the specified name was found in the struct.
+ */
+QS_API int32 QS_CALL qsst_getPropertyIndex(QsScriptType type, conststring propName);
+
+/**
+ * Get the number of properties in a struct type
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * @param type Struct type pointer
+ * @return Property count
+ */
+QS_API uint32 QS_CALL qsst_getPropertyCount(QsScriptType type);
+
+/**
+ * Get the size of a struct type's data.
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * Note that this is different from the stack size of a struct. The stack size
+ * function returns the bytes needed to store a pointer to a struct, while this
+ * function returns the amount of bytes needed to store the struct's data.
+ *
+ * This function's return value does not include the 32bit unsigned reference counter
+ * integer struct data is prefixed with.
+ *
+ * @param type Struct type pointer
+ *
+ * @return Struct data size
+ */
+QS_API uint64 QS_CALL qsst_getSize(QsScriptType type);
+
+/**
+ * Get the memory alignment of a struct type
+ *
+ * Before calling this function, ensure the specified type is a TK_STRUCT with
+ * qst_getTypeKind(type) == TK_STRUCT
+ *
+ * The return value will be a power of 2 no larger than 8.
+ *
+ * @param type Struct type pointer
+ * @return Struct alignment
+ */
+QS_API uint8 QS_CALL qsst_getAlignment(QsScriptType type);
+
+/**
+ * Get a function signature's argument counter
+ *
+ * Before calling this function, ensure the specified type is a TK_FUNC with
+ * qst_getTypeKind(type) == TK_FUNC
+ *
+ * @param type Function signature pointer
+ * @return Argument count
+ */
 QS_API uint32 QS_CALL qfs_getArgumentCount(QsScriptType type);
+
+/**
+ * Get the type of a function signature's argument
+ *
+ * Before calling this function, ensure the specified type is a TK_FUNC with
+ * qst_getTypeKind(type) == TK_FUNC
+ *
+ * @param type Function signature
+ * @param argIndex Argument index
+ *
+ * @return Argument's Type pointer
+ */
 QS_API QsScriptType QS_CALL qfs_getArgumentType(QsScriptType type, uint32 argIndex);
+
+/**
+ * Test if a function signature is variadic, meaning the last argument is an array type
+ * which accepts a variadic number of arguments.
+ *
+ * Before calling this function, ensure the specified type is a TK_FUNC with
+ * qst_getTypeKind(type) == TK_FUNC
+ *
+ * @param type Function signature
+ * @return Signature's variadic state, either 0 or 1
+ */
 QS_API boolean QS_CALL qfs_isVariadic(QsScriptType type);
+
+/**
+ * Get the return type of a function signature
+ *
+ * Before calling this function, ensure the specified type is a TK_FUNC with
+ * qst_getTypeKind(type) == TK_FUNC
+ *
+ * @param type Function signature
+ * @return Function signature's return type
+ */
 QS_API QsScriptType QS_CALL qfs_getReturnType(QsScriptType type);
 
+
+// ========= QS Script Array Functions =========
+
+/**
+ * Get the length of a script array
+ *
+ * If the provided array pointer is a null pointer,
+ * then this function will return 0
+ *
+ * @param array Array pointer
+ * @return Script array length
+ */
+QS_API uint64 QS_CALL qsa_getLength(QsScriptArray array);
+
+/**
+ * Get the pointer at which an array's data starts
+ *
+ * If the provided array pointer is a null pointer,
+ * then this function will return a null pointer
+ *
+ * @param array Array pointer
+ * @return Array data pointer
+ */
+QS_API uint8* QS_CALL qsa_getData(QsScriptArray array);
+
+/**
+ * Get the pointer at which an array's data starts.
+ *
+ * This function is virtually identical to qsa_getData, except that it returns
+ * a signed 8bit integer type pointer, instead of an unsigned 8bit integer
+ * pointer.
+ *
+ * If the provided array pointer is a null pointer,
+ * then this function will return a null pointer
+ *
+ * @param array Array pointer
+ * @return Array data pointer
+ *
+ * @see qsa_getData(QsScriptArray)
+ */
+QS_API int8* QS_CALL qsa_getCharData(QsScriptArray array);
+
+/**
+ * Get an array's reference counter.
+ *
+ * If the array is a 'const' array, or null, the return value will be CONST_REF_COUNTER
+ *
+ * @param array Array pointer
+ * @return Reference counter value
+ */
+QS_API uint32 QS_CALL qsa_getRefCounter(QsScriptArray array);
+
+/**
+ * Set an array's reference counter value
+ *
+ * Note that setting this value to 0 will not mean it will be freed, but setting it to
+ * CONST_REF_COUNTER will make the array const, meaning it will never be freed
+ * during regular script execution.
+ *
+ * @param array Array pointer
+ * @param refCounter Reference counter value
+ */
+QS_API void QS_CALL qsa_setRefCounter(QsScriptArray array, uint32 refCounter);
+
+/**
+ * Get a signed 8bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return signed 8bit integer value
+ */
+QS_API int8 QS_CALL qsa_getI8(QsScriptArray array, uint32 idx);
+
+/**
+ * Get an unsigned 8bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return unsigned 8bit integer value
+ */
+QS_API uint8 QS_CALL qsa_getU8(QsScriptArray array, uint32 idx);
+
+/**
+ * Get a signed 16bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return signed 16bit integer value
+ */
+QS_API int16 QS_CALL qsa_getI16(QsScriptArray array, uint32 idx);
+
+/**
+ * Get an unsigned 16bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return unsigned 16bit integer value
+ */
+QS_API uint16 QS_CALL qsa_getU16(QsScriptArray array, uint32 idx);
+
+/**
+ * Get a signed 32bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return signed 32bit integer value
+ */
+QS_API int32 QS_CALL qsa_getI32(QsScriptArray array, uint32 idx);
+
+/**
+ * Get an unsigned 32bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return unsigned 32bit integer value
+ */
+QS_API uint32 QS_CALL qsa_getU32(QsScriptArray array, uint32 idx);
+
+/**
+ * Get a signed 64bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return signed 64bit integer value
+ */
+QS_API int64 QS_CALL qsa_getI64(QsScriptArray array, uint32 idx);
+
+/**
+ * Get an unsigned 64bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return unsigned 64bit integer value
+ */
+QS_API uint64 QS_CALL qsa_getU64(QsScriptArray array, uint32 idx);
+
+/**
+ * Get a 32bit floating point value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return 32bit floating point value
+ */
+QS_API float32 QS_CALL qsa_getF32(QsScriptArray array, uint32 idx);
+
+/**
+ * Get a 64bit floating point value in an array
+ *
+ * @param array Array pointer
+ * @param idx Index
+ *
+ * @return 64bit floating point value
+ */
+QS_API float64 QS_CALL qsa_getF64(QsScriptArray array, uint32 idx);
+
+QS_API QsScriptObject QS_CALL qsa_getObject(QsScriptArray array, uint32 idx);
+QS_API QsScriptArray QS_CALL qsa_getArray(QsScriptArray array, uint32 idx);
+
+QS_API void QS_CALL qsa_setI8(QsScriptArray array, uint32 idx, int8 value);
+QS_API void QS_CALL qsa_setU8(QsScriptArray array, uint32 idx, uint8 value);
+QS_API void QS_CALL qsa_setI16(QsScriptArray array, uint32 idx, int16 value);
+QS_API void QS_CALL qsa_setU16(QsScriptArray array, uint32 idx, uint16 value);
+QS_API void QS_CALL qsa_setI32(QsScriptArray array, uint32 idx, int32 value);
+QS_API void QS_CALL qsa_setU32(QsScriptArray array, uint32 idx, uint32 value);
+QS_API void QS_CALL qsa_setI64(QsScriptArray array, uint32 idx, int64 value);
+QS_API void QS_CALL qsa_setU64(QsScriptArray array, uint32 idx, uint64 value);
+QS_API void QS_CALL qsa_setF32(QsScriptArray array, uint32 idx, float32 value);
+QS_API void QS_CALL qsa_setF64(QsScriptArray array, uint32 idx, float64 value);
+QS_API void QS_CALL qsa_setObject(QsScriptArray array, uint32 idx, QsScriptObject value);
+QS_API void QS_CALL qsa_setArray(QsScriptArray array, uint32 idx, QsScriptArray value);
+
+
+// ========= QS Script Object Functions =========
+
+QS_API uint32 QS_CALL qsobj_getRefCounter(QsScriptObject obj);
+QS_API void QS_CALL qsobj_setRefCounter(QsScriptObject obj, uint32 refCounter);
+QS_API int8 QS_CALL qsobj_getI8Property(QsScriptObject obj, uint64 offset);
+QS_API uint8 QS_CALL qsobj_getU8Property(QsScriptObject obj, uint64 offset);
+QS_API int16 QS_CALL qsobj_getI16Property(QsScriptObject obj, uint64 offset);
+QS_API uint16 QS_CALL qsobj_getU16Property(QsScriptObject obj, uint64 offset);
+QS_API int32 QS_CALL qsobj_getI32Property(QsScriptObject obj, uint64 offset);
+QS_API uint32 QS_CALL qsobj_getU32Property(QsScriptObject obj, uint64 offset);
+QS_API int64 QS_CALL qsobj_getI64Property(QsScriptObject obj, uint64 offset);
+QS_API uint64 QS_CALL qsobj_getU64Property(QsScriptObject obj, uint64 offset);
+QS_API float32 QS_CALL qsobj_getF32Property(QsScriptObject obj, uint64 offset);
+QS_API float64 QS_CALL qsobj_getF64Property(QsScriptObject obj, uint64 offset);
+QS_API void QS_CALL qsobj_setI8Property(QsScriptObject obj, uint64 offset, int8 value);
+QS_API void QS_CALL qsobj_setU8Property(QsScriptObject obj, uint64 offset, uint8 value);
+QS_API void QS_CALL qsobj_setI16Property(QsScriptObject obj, uint64 offset, int16 value);
+QS_API void QS_CALL qsobj_setU16Property(QsScriptObject obj, uint64 offset, uint16 value);
+QS_API void QS_CALL qsobj_setI32Property(QsScriptObject obj, uint64 offset, int32 value);
+QS_API void QS_CALL qsobj_setU32Property(QsScriptObject obj, uint64 offset, uint32 value);
+QS_API void QS_CALL qsobj_setI64Property(QsScriptObject obj, uint64 offset, int64 value);
+QS_API void QS_CALL qsobj_setU64Property(QsScriptObject obj, uint64 offset, uint64 value);
+QS_API void QS_CALL qsobj_setF32Property(QsScriptObject obj, uint64 offset, float32 value);
+QS_API void QS_CALL qsobj_setF64Property(QsScriptObject obj, uint64 offset, float64 value);
+
+
+// ========= QS Native Call Functions =========
 
 QS_API uint64 QS_CALL qsc_getReturnValue(QsNativeCall call);
 QS_API boolean QS_CALL qsc_isFailedCall(QsNativeCall call);
@@ -91,12 +487,18 @@ QS_API int64 QS_CALL qsc_getI64Argument(QsNativeCall call, uint32 idx);
 QS_API uint64 QS_CALL qsc_getU64Argument(QsNativeCall call, uint32 idx);
 QS_API float32 QS_CALL qsc_getF32Argument(QsNativeCall call, uint32 idx);
 QS_API float64 QS_CALL qsc_getF64Argument(QsNativeCall call, uint32 idx);
+QS_API QsScriptArray QS_CALL qsc_getArrayArgument(QsNativeCall call, uint32 idx);
+QS_API QsScriptObject QS_CALL qsc_getObjectArgument(QsNativeCall call, uint32 idx);
 
+
+// ========= QS Bytecode File Functions =========
 
 QS_API uint32 QS_CALL qsbf_loadBytecodeFile(const void* buf, uint64 bufferSize, QsBytecodeFile* fileOut);
 QS_API conststring QS_CALL qsbf_getResultString(uint32 result);
 QS_API void QS_CALL qsbf_freeBytecodeFile(QsBytecodeFile bFile);
 
+
+// ========= QS Env Functions =========
 
 QS_API QsEnv QS_CALL qse_createEnv();
 QS_API void QS_CALL qse_freeEnv(QsEnv env);
@@ -108,6 +510,8 @@ QS_API void QS_CALL qse_setExpressionInlining(QsEnv env, boolean state);
 QS_API void QS_CALL qse_setAssertsCompiled(QsEnv env, boolean state);
 
 
+// ========= QS Virtual Machine Functions =========
+
 QS_API QsVirtualMachine QS_CALL qsvm_createVirtualMachine(QsEnv env);
 QS_API void QS_CALL qsvm_freeVirtualMachine(QsVirtualMachine vm);
 QS_API void QS_CALL qsvm_loadBytecodeFile(QsVirtualMachine vm, QsBytecodeFile bFile, conststring name);
@@ -115,10 +519,19 @@ QS_API int32 QS_CALL qsvm_beginExecution(QsVirtualMachine vm, uint32 argc, cstri
 QS_API uint64 QS_CALL qsvm_callFunction(QsVirtualMachine vm, QsFunction sf);
 QS_API conststring QS_CALL qsvm_toString(QsVirtualMachine vm, uint64 qsValue, QsScriptType type);
 QS_API boolean QS_CALL qsvm_equals(QsVirtualMachine vm, uint64 a, uint64 b, QsScriptType type);
+QS_API QsScriptObject QS_CALL qsvm_makeStruct(QsVirtualMachine vm, QsScriptType structType);
+QS_API void QS_CALL qsvm_freeStruct(QsVirtualMachine vm, QsScriptObject obj);
+QS_API QsScriptArray QS_CALL qsvm_makeArray(QsVirtualMachine vm, QsScriptType arrayType, uint32 capacity);
+QS_API void QS_CALL qsvm_freeArray(QsVirtualMachine vm, QsScriptArray array);
 
 QS_API boolean QS_CALL qsc_compileSourceFile(conststring sourceName, conststring source, QsEnv env, QsBytecodeFile* fileOut);
 
-QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsVirtualMachine vm);
+
+// ========= User Defined Functions =========
+
+#ifndef _QS_IMPL
+QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env);
+#endif
 
 #ifdef __cplusplus
 }
