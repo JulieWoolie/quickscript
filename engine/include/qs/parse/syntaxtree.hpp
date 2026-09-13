@@ -46,6 +46,8 @@ struct StructDecl;
 struct AssertStatement;
 struct ObjectAllocExpr;
 struct GetStackPointer;
+struct ModuleDeclaration;
+struct ImportStatement;
 
 #define DECLFLAG_NATIVE   0x1
 #define DECLFLAG_EXPORTED 0x2
@@ -77,25 +79,29 @@ typedef uint32 declflags;
 #define AST_ObjectLiteral           17
 #define AST_ArrayLiteral            18
 
+// Declarations
+#define AST_LexicalDeclaration      19
+#define AST_FunctionParam           20
+#define AST_FunctionDeclStatement   21
+#define AST_StructPropertyDecl      22
+#define AST_StructDecl              23
+#define AST_ModuleDeclaration       24
+
 // Statements
-#define AST_Block                   19
-#define AST_IfStatement             20
-#define AST_ForStatement            21
-#define AST_LexicalDeclaration      22
-#define AST_WhileStatement          23
-#define AST_ControlFlowStatement    24
-#define AST_ReturnStatement         25
-#define AST_ScriptFileStatement     26
-#define AST_FunctionParam           27
-#define AST_FunctionDeclStatement   28
-#define AST_ExprStatement           29
-#define AST_StructPropertyDecl      30
-#define AST_StructDecl              31
-#define AST_AssertStatement         32
+#define AST_Block                   25
+#define AST_IfStatement             26
+#define AST_ForStatement            27
+#define AST_WhileStatement          28
+#define AST_ControlFlowStatement    29
+#define AST_ReturnStatement         30
+#define AST_ScriptFileStatement     31
+#define AST_ExprStatement           32
+#define AST_AssertStatement         33
+#define AST_ImportStatement         34
 
 // Compiler nodes
-#define AST_ObjectAllocExpr         33
-#define AST_GetStackPointer         34
+#define AST_ObjectAllocExpr         35
+#define AST_GetStackPointer         36
 
 typedef uint8 astnodetype;
 
@@ -135,6 +141,8 @@ struct Visitor {
   virtual void acceptExprStatement(ExprStatement* v) = 0;
   virtual void acceptStructPropertyDecl(StructPropertyDecl* v) = 0;
   virtual void acceptStructDecl(StructDecl* v) = 0;
+  virtual void acceptModuleDeclaration(ModuleDeclaration* v) = 0;
+  virtual void acceptImportStatement(ImportStatement* v) = 0;
 
   virtual void acceptAssertStatement(AssertStatement* v) = 0;
 
@@ -452,6 +460,16 @@ AST_TYPE(ExprStatement, Statement,
 AST_TYPE(AssertStatement, Statement,
   Expr* condition = nullptr;
   Expr* message = nullptr;
+)
+
+AST_TYPE(ModuleDeclaration, Statement,
+  bool nativeModule = false;
+  stringid modulePath = EMPTY_STRING;
+  stringid nativeImportPath = EMPTY_STRING;
+)
+
+AST_TYPE(ImportStatement, Statement,
+  stringid modulePath = EMPTY_STRING;
 )
 
 // =========================
