@@ -3,7 +3,7 @@ project(qsengine)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(qsengine
+add_library(qsengine STATIC
     include/qs/allocator.hpp
     src/analysis/analyzer.cpp
     include/qs/analysis/analyzer.hpp
