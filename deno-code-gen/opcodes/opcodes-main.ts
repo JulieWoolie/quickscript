@@ -12,10 +12,10 @@ import {generatePrinterFunction} from "./printer-gen";
 
 async function createOpCodesHeader(res: OpCodeGenResult): Promise<void> {
   const opcodes = res.codes
-  let out = `#ifndef QUICKSCRIPT_OPCODES_H
-#define QUICKSCRIPT_OPCODES_H
+  let out = `#ifndef QS_OPCODES_H
+#define QS_OPCODES_H
 
-#include "../common.h"
+#include "qs/common.h"
 
 #define LENGTH_OPCODE ${res.opcodeSize}
 #define LENGTH_ARGS ${INSTRUCTION_LENGTH - res.opcodeSize}
@@ -59,11 +59,11 @@ uint8 getInstructionLength(opcode code);
 
 #endif //QUICKSCRIPT_OPCODES_H`
 
-  await writeToFile(out, "../src/interpreter/opcodes.h")
+  await writeToFile(out, "../engine/include/interpreter/opcodes.h")
 }
 
 async function createOpCodesSourceFile(opcodes: Instruction[]): Promise<void> {
-  let out = `#include "opcodes.h"
+  let out = `#include "qs/interpreter/opcodes.h"
 
 ${FILE_HEADER}
 
@@ -114,7 +114,7 @@ uint8 getInstructionLength(const opcode code) {
 
   out += `\n    default:\n      return 0;\n  }\n}`
 
-  await writeToFile(out, "../src/interpreter/opcodes.cc")
+  await writeToFile(out, "../engine/src/interpreter/opcodes.cpp")
 }
 
 async function generateConversionCompileMethod(): Promise<void> {
@@ -123,17 +123,17 @@ async function generateConversionCompileMethod(): Promise<void> {
 
 ${FILE_HEADER}
 
-#include "../interpreter/opcodes.h"
-#include "../types/types.h"
+#include "qs/interpreter/opcodes.h"
+#include "qs/types/types.h"
 
 opcode conversionOpCode(primitivekind from, primitivekind to);
 
 #endif // QUICKSCRIPT_TYPE_CONV_H`
 
-  await writeToFile(out, "../src/codegen/type_conv.h")
+  await writeToFile(out, "../engine/include/codegen/type_conv.hpp")
 
   out = `
-#include "type_conv.h"
+#include "type_conv.hpp"
   
 ${FILE_HEADER}
 
@@ -169,7 +169,7 @@ opcode conversionOpCode(primitivekind from, primitivekind to) {
   }
 }`
 
-  await writeToFile(out, "../src/codegen/type_conv.cc")
+  await writeToFile(out, "../engine/src/codegen/type_conv.cpp")
 }
 
 async function writeOpCodeTxt(codes: Instruction[]): Promise<void> {

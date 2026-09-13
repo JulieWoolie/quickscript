@@ -40,13 +40,13 @@ function getLongestName(codes: Instruction[]) {
 }
 
 export async function generatePrinterFunction(res: OpCodeGenResult) {
-  let out = `#ifndef OPCODE_PRINTER_H
-#define OPCODE_PRINTER_H
+  let out = `#ifndef QS_OPCODE_PRINTER_H
+#define QS_OPCODE_PRINTER_H
 
 #include <cstdio>
 
-#include "opcodes.h"
-#include "../types/types.h"
+#include "qs/interpreteropcodes.h"
+#include "qs/types/types.h"
 
 ${FILE_HEADER}
 
@@ -54,9 +54,9 @@ void printTypeIndex(FILE* out, typeindex idx);
 
 void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
-#endif // OPCODE_PRINTER_H`
+#endif // QS_OPCODE_PRINTER_H`
 
-  await writeToFile(out, "../src/interpreter/opcode_printer.h")
+  await writeToFile(out, "../engine/include/interpreter/opcode_printer.hpp")
 
   out = `#include "opcode_printer.h"
 
@@ -160,5 +160,5 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool) {
 
   out += `\n    default:\n      break;\n  }\n}`
 
-  await writeToFile(out, "../src/interpreter/opcode_printer.cc")
+  await writeToFile(out, "../engine/src/interpreter/opcode_printer.cpp")
 }

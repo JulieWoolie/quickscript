@@ -279,7 +279,7 @@ async function generateStdLibDeclFile(): Promise<void> {
 }
 
 function getNativeFunctionName(sym: Func): string {
-  let str = `qs_${sym.name}`
+  let str = `qs_stdlib_${sym.name}`
   sym.params.forEach((v) => {
     let tn = v.tn
     if (tn.endsWith("...")) {
@@ -296,15 +296,15 @@ function signatureToString(f: Func): string {
 }
 
 async function generateStdLibHeader(): Promise<void> {
-  let out = `#ifndef QS_STDLIB_H_
-#define QS_STDLIB_H_
+  let out = `#ifndef QS_STDLIB
+#define QS_STDLIB
 
-#include "../nativeinterface.h"
+#include "qsni.h"
 
-void defineStandardLibrary(BindingsObject* object);
+QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env);
 
-#endif // QS_STDLIB_H_`
-  await writeToFile(out, "../src/stdlib/qs_stdlib.h")
+#endif // QS_STDLIB`
+  await writeToFile(out, "../libraries/stdlib.hpp")
 }
 
 function typeExpression(tn: string): string {
@@ -336,58 +336,40 @@ function makeSignatureConstructor(e: Signature): string {
 }
 
 async function generateStdLibSource(): Promise<void> {
-  let out = `#include "qs_stdlib.h"
-
-#include "../types/ConstTypes.h"
-#include "../types/ScriptArrayType.h"`
+  let out = `#include "qs_stdlib.h"`
 
   for (const sym of SYMBOLS) {
     if (sym.type != "func") {
       continue
     }
 
-    out += `\n\nstatic void ${getNativeFunctionName(sym)}(NativeCall& call) {
+    out += `\n\nstatic void ${getNativeFunctionName(sym)}(NativeCall& call) {`
 
-}`
-  }
+    let pIdx = 0
+    for (const p of sym.params) {
+      let argShorthand: string = ""
+      let tn = p.tn
 
-  const signMap: SignatureMap = {}
-  let signaturesLength = 0
-
-  for (const sym of SYMBOLS) {
-    if (sym.type != "func") {
-      continue
-    }
-
-    const sStr: string = signatureToString(sym)
-    let entry: SignatureMapEntry = signMap[sStr]
-
-    if (entry == undefined) {
-      entry = {
-        signature: {
-          params: sym.params,
-          returnType: sym.stype
-        },
-        uses: 0,
-        varName: `signature${signaturesLength}`
+      if (tn.startsWith("uint")) {
+        argShorthand = `U${tn.substring(4)}`
+      } else if (tn.startsWith("int")) {
+        argShorthand = `I${tn.substring(3)}`
+      } else if (tn.startsWith("float")) {
+        argShorthand = `F${tn.substring(tn.length - 2)}`
+      } else if (tn.endsWith("[]")) {
+        tn = "QsArray"
+        argShorthand = "Array"
+      } else {
+        argShorthand = `${tn.substring(0, 1).toUpperCase()}${tn.substring(1)}`
       }
 
-      signaturesLength++
-      signMap[sStr] = entry
+      out += `\n  const ${p.tn} ${p.pname} = call.get${argShorthand}Argument(${pIdx++});`
     }
 
-    entry.uses++
+    out += `\n}`
   }
 
-  out += `\n\nvoid defineStandardLibrary(BindingsObject* obj) {
-  // Signature definitions`
-
-  for (const key in signMap) {
-    const entry = signMap[key]
-    out += `\n  const FunctionSignature* ${entry.varName} = ${makeSignatureConstructor(entry.signature)};`
-  }
-
-  out += `\n\n  // Function definitions`
+  out += `\n\nvoid qs_onLoadNativeModule(QsEnv env) {`
 
   for (const sym of SYMBOLS) {
     if (sym.type != "func") {
@@ -395,14 +377,14 @@ async function generateStdLibSource(): Promise<void> {
     }
 
     const signStr = signatureToString(sym)
-    const varName = signMap[signStr].varName
+    const funcName = getNativeFunctionName(sym)
 
-    out += `\n  obj->addFunctionBinding("${sym.name}", ${varName}, ${getNativeFunctionName(sym)});`
+    out += `\n  qse_registerNative(env, "${sym.name}", ${signStr}, ${funcName});`
   }
 
   out += "\n}"
 
-  await writeToFile(out, "../src/stdlib/qs_stdlib.cc")
+  await writeToFile(out, "..libraries/stdlib/stdlib.cpp")
 }
 
 export async function generateStdLib(): Promise<void> {

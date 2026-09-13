@@ -91,8 +91,8 @@ function char(num: number): string {
 type StringMap = {[name: string]: string}
 
 async function generateBinaryPropHeader(binDefs: CodepointProperty[], funcNames: StringMap) {
-  let out = `#ifndef UNICODE_BINARY_PROPS_H
-#define UNICODE_BINARY_PROPS_H
+  let out = `#ifndef QS_UNICODE_BINARY_PROPS_H
+#define QS_UNICODE_BINARY_PROPS_H
 
 #include "../common.h"
 #include "utf8.h"
@@ -114,9 +114,9 @@ typedef const uint8* UnicodeBitSet;
     out += `${funcNames[bd.name]}(utf32char ch);\n\n`
   }
 
-  out += `#endif // UNICODE_BINARY_PROPS_H`
+  out += `#endif // QS_UNICODE_BINARY_PROPS_H`
 
-  await writeToFile(out, "../src/strings/unicode_binary_props.h");
+  await writeToFile(out, "../engine/include/qs/strings/unicode_binary_props.hpp");
 }
 
 function generateNonPagedPropMethods(funcNames: StringMap, ctx: CodepointContext): string {
@@ -241,7 +241,7 @@ static const uint8 PAGES[${pageCount * pageSize}] = {`
     out += `\n}\n`
   }
 
-  await writeToFile(out, "../src/strings/unicode_binary_props.cc");
+  await writeToFile(out, "../engine/src/strings/unicode_binary_props.cpp");
 }
 
 export async function generateBinaryPropertyLookups(ctx: CodepointContext, pages: BinaryPropertyPages) {

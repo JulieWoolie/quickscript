@@ -55,7 +55,7 @@ export async function generateEvaluatorSwitchStatement(res: OpCodeGenResult): Pr
     return ' '.repeat(ident)
   }
 
-  const outPath = "../src/interpreter/interpreter.cc"
+  const outPath = "../engine/src/interpreter/interpreter.cpp"
   // @ts-ignore
   const targetFileContent: string = await Deno.readTextFile(outPath)
 
