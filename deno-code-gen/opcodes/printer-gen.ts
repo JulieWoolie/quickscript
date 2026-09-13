@@ -45,8 +45,8 @@ export async function generatePrinterFunction(res: OpCodeGenResult) {
 
 #include <cstdio>
 
-#include "qs/interpreteropcodes.h"
-#include "qs/types/types.h"
+#include "qs/interpreter/opcodes.hpp"
+#include "qs/types/types.hpp"
 
 ${FILE_HEADER}
 
@@ -56,9 +56,9 @@ void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
 #endif // QS_OPCODE_PRINTER_H`
 
-  await writeToFile(out, "../engine/include/interpreter/opcode_printer.hpp")
+  await writeToFile(out, "../engine/include/qs/interpreter/opcode_printer.hpp")
 
-  out = `#include "opcode_printer.h"
+  out = `#include "qs/interpreter/opcode_printer.hpp"
 
 ${FILE_HEADER}
 

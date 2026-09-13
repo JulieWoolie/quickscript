@@ -15,7 +15,7 @@ async function createOpCodesHeader(res: OpCodeGenResult): Promise<void> {
   let out = `#ifndef QS_OPCODES_H
 #define QS_OPCODES_H
 
-#include "qs/common.h"
+#include "qs/common.hpp"
 
 #define LENGTH_OPCODE ${res.opcodeSize}
 #define LENGTH_ARGS ${INSTRUCTION_LENGTH - res.opcodeSize}
@@ -57,27 +57,40 @@ conststring opcode_name(opcode code);
 
 uint8 getInstructionLength(opcode code);
 
-#endif //QUICKSCRIPT_OPCODES_H`
+#endif //QS_OPCODES_H`
 
-  await writeToFile(out, "../engine/include/interpreter/opcodes.h")
+  await writeToFile(out, "../engine/include/qs/interpreter/opcodes.hpp")
 }
 
 async function createOpCodesSourceFile(opcodes: Instruction[]): Promise<void> {
-  let out = `#include "qs/interpreter/opcodes.h"
+  let out = `#include "qs/interpreter/opcodes.hpp"
 
 ${FILE_HEADER}
 
-conststring opcode_name(opcode code) {
+conststring opcode_name(const opcode code) {
   switch (code) {`
+
+  const longestName = opcodes
+      .map(c => `case OP_${c.opcode}:`)
+      .map(c => c.length)
+      .sort((a, b) => b - a)[0]
 
   for (const code of opcodes) {
     if (code.opcode == "NOP") {
       continue
     }
-    out += `\n    case OP_${code.opcode}: return "${code.opcode}";`
+
+    const caseStr = `case OP_${code.opcode}:`
+    const alignSpace = " ".repeat(longestName - caseStr.length)
+
+    out += `\n    ${caseStr}${alignSpace} return "${code.opcode}";`
   }
+
+  const defaultCase = `default:`
+  const defaultPad = " ".repeat(longestName - defaultCase.length)
+
   out += `
-    default: return "NOP";
+    ${defaultCase}${defaultPad} return "NOP";
   }
 }
 
@@ -108,7 +121,7 @@ uint8 getInstructionLength(const opcode code) {
     if (size == "0") {
       out += `\n      return LENGTH_OPCODE;`
     } else {
-      out += `\n      return ${size} + LENGTH_OPCODE;`
+      out += `\n      return LENGTH_OPCODE + ${size};`
     }
   }
 
@@ -118,22 +131,22 @@ uint8 getInstructionLength(const opcode code) {
 }
 
 async function generateConversionCompileMethod(): Promise<void> {
-  let out = `#ifndef QUICKSCRIPT_TYPE_CONV_H
-#define QUICKSCRIPT_TYPE_CONV_H
+  let out = `#ifndef QS_TYPE_CONV_H
+#define QS_TYPE_CONV_H
 
 ${FILE_HEADER}
 
-#include "qs/interpreter/opcodes.h"
-#include "qs/types/types.h"
+#include "qs/interpreter/opcodes.hpp"
+#include "qs/types/types.hpp"
 
 opcode conversionOpCode(primitivekind from, primitivekind to);
 
-#endif // QUICKSCRIPT_TYPE_CONV_H`
+#endif //QS_TYPE_CONV_H`
 
-  await writeToFile(out, "../engine/include/codegen/type_conv.hpp")
+  await writeToFile(out, "../engine/include/qs/codegen/type_conv.hpp")
 
   out = `
-#include "type_conv.hpp"
+#include "qs/codegen/type_conv.hpp"
   
 ${FILE_HEADER}
 

@@ -94,8 +94,8 @@ async function generateBinaryPropHeader(binDefs: CodepointProperty[], funcNames:
   let out = `#ifndef QS_UNICODE_BINARY_PROPS_H
 #define QS_UNICODE_BINARY_PROPS_H
 
-#include "../common.h"
-#include "utf8.h"
+#include "qs/common.hpp"
+#include "qs/strings/utf8.hpp"
 
 ${FILE_HEADER}
 
@@ -179,7 +179,7 @@ function generateNonPagedPropMethods(funcNames: StringMap, ctx: CodepointContext
 }
 
 async function generateBinaryPropertySourceFile(pages: BinaryPropertyPages, funcNames: StringMap, ctx: CodepointContext) {
-  let out = `#include "unicode_binary_props.h"
+  let out = `#include "qs/strings/unicode_binary_props.hpp"
 
 ${FILE_HEADER}
 
