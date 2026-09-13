@@ -465,7 +465,7 @@ AST_TYPE(AssertStatement, Statement,
 AST_TYPE(ModuleDeclaration, Statement,
   bool nativeModule = false;
   stringid modulePath = EMPTY_STRING;
-  stringid nativeImportPath = EMPTY_STRING;
+  StringLiteral* nativeImportPath = nullptr;
 )
 
 AST_TYPE(ImportStatement, Statement,

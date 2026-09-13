@@ -392,9 +392,12 @@ struct PrintingVisitor: Visitor {
         v->nativeModule ? "true" : "false",
         v->modulePath->len, v->modulePath->data
       );
-      if (v->nativeImportPath != EMPTY_STRING) {
-        printf(" native_path='%.*s'", v->nativeImportPath->len, v->nativeImportPath->data);
+
+      if (v->nativeImportPath) {
+        const stringid npath = v->nativeImportPath->value;
+        printf(" native_path='%.*s'", npath->len, npath->data);
       }
+
       printf(")");
     }
 

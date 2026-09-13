@@ -259,14 +259,9 @@ void JsonPrinter::acceptStructDecl(StructDecl* v) {
 }
 void JsonPrinter::acceptModuleDeclaration(ModuleDeclaration* v) {
   START_NODE
-
   PROP("path", v->modulePath->view())
   PROP("is_native", v->nativeModule ? "true" : "false")
-
-  if (v->nativeImportPath != EMPTY_STRING) {
-    PROP("native_path", v->nativeImportPath->view())
-  }
-
+  AST_PROPO(nativeImportPath)
   END_NODE
 }
 void JsonPrinter::acceptImportStatement(ImportStatement* v) {
