@@ -1,5 +1,5 @@
 %{
-#include "keyw_lookup.h"
+#include "qs/parse/keyw_lookup.hpp"
 #include <cstring>
 
 struct keyword {
