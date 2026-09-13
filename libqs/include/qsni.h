@@ -15,7 +15,9 @@
 extern "C" {
 #endif
 
+// ======================================
 // ========= Primitive QS Types =========
+// ======================================
 
 typedef long long int64;
 typedef unsigned long long uint64;
@@ -43,12 +45,16 @@ typedef const char* conststring;
 #define TK_CLOSURE    7
 typedef uint8 qstypekind;
 
-// ========= QS Constants =========
+// ======================================
+// ============ QS Constants ============
+// ======================================
 
 #define PROPERTY_NOT_FOUND (-1)
 #define CONST_REF_COUNTER 0xFFFFFFFF
 
-// ========= QS Typedefs =========
+// ======================================
+// ============= QS Typedefs ============
+// ======================================
 
 typedef const struct ScriptType* QsScriptType;
 typedef struct NativeCall* QsNativeCall;
@@ -60,6 +66,10 @@ typedef void* QsScriptArray;
 typedef void* QsScriptObject;
 
 typedef void (*QsNativeFunction)(QsVirtualMachine vm, QsNativeCall call);
+
+// ======================================
+// ========== QS API Functions ==========
+// ======================================
 
 // ========= QS Script Type Functions =========
 
@@ -327,7 +337,7 @@ QS_API void QS_CALL qsa_setRefCounter(QsScriptArray array, uint32 refCounter);
  * Get a signed 8bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return signed 8bit integer value
  */
@@ -337,7 +347,7 @@ QS_API int8 QS_CALL qsa_getI8(QsScriptArray array, uint32 idx);
  * Get an unsigned 8bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return unsigned 8bit integer value
  */
@@ -347,7 +357,7 @@ QS_API uint8 QS_CALL qsa_getU8(QsScriptArray array, uint32 idx);
  * Get a signed 16bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return signed 16bit integer value
  */
@@ -357,7 +367,7 @@ QS_API int16 QS_CALL qsa_getI16(QsScriptArray array, uint32 idx);
  * Get an unsigned 16bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return unsigned 16bit integer value
  */
@@ -367,7 +377,7 @@ QS_API uint16 QS_CALL qsa_getU16(QsScriptArray array, uint32 idx);
  * Get a signed 32bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return signed 32bit integer value
  */
@@ -377,7 +387,7 @@ QS_API int32 QS_CALL qsa_getI32(QsScriptArray array, uint32 idx);
  * Get an unsigned 32bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return unsigned 32bit integer value
  */
@@ -387,7 +397,7 @@ QS_API uint32 QS_CALL qsa_getU32(QsScriptArray array, uint32 idx);
  * Get a signed 64bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return signed 64bit integer value
  */
@@ -397,7 +407,7 @@ QS_API int64 QS_CALL qsa_getI64(QsScriptArray array, uint32 idx);
  * Get an unsigned 64bit integer value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return unsigned 64bit integer value
  */
@@ -407,7 +417,7 @@ QS_API uint64 QS_CALL qsa_getU64(QsScriptArray array, uint32 idx);
  * Get a 32bit floating point value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return 32bit floating point value
  */
@@ -417,53 +427,393 @@ QS_API float32 QS_CALL qsa_getF32(QsScriptArray array, uint32 idx);
  * Get a 64bit floating point value in an array
  *
  * @param array Array pointer
- * @param idx Index
+ * @param idx Element index
  *
  * @return 64bit floating point value
  */
 QS_API float64 QS_CALL qsa_getF64(QsScriptArray array, uint32 idx);
 
+/**
+ * Get a script object pointer in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ *
+ * @return script object pointer
+ */
 QS_API QsScriptObject QS_CALL qsa_getObject(QsScriptArray array, uint32 idx);
+
+/**
+ * Get a script array pointer in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ *
+ * @return script array pointer
+ */
 QS_API QsScriptArray QS_CALL qsa_getArray(QsScriptArray array, uint32 idx);
 
+/**
+ * Set a signed 8bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value signed 8bit integer value
+ */
 QS_API void QS_CALL qsa_setI8(QsScriptArray array, uint32 idx, int8 value);
+
+/**
+ * Set an unsigned 8bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value unsigned 8bit integer value
+ */
 QS_API void QS_CALL qsa_setU8(QsScriptArray array, uint32 idx, uint8 value);
+
+/**
+ * Set a signed 16bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value signed 16bit integer value
+ */
 QS_API void QS_CALL qsa_setI16(QsScriptArray array, uint32 idx, int16 value);
+
+/**
+ * Set an unsigned 16bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value unsigned 16bit integer value
+ */
 QS_API void QS_CALL qsa_setU16(QsScriptArray array, uint32 idx, uint16 value);
+
+/**
+ * Set a signed 32bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value signed 32bit integer value
+ */
 QS_API void QS_CALL qsa_setI32(QsScriptArray array, uint32 idx, int32 value);
+
+/**
+ * Set an unsigned 32bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value unsigned 32bit integer value
+ */
 QS_API void QS_CALL qsa_setU32(QsScriptArray array, uint32 idx, uint32 value);
+
+/**
+ * Set a signed 64bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value signed 64bit integer value
+ */
 QS_API void QS_CALL qsa_setI64(QsScriptArray array, uint32 idx, int64 value);
+
+/**
+ * Set an unsigned 64bit integer value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value unsigned 64bit integer value
+ */
 QS_API void QS_CALL qsa_setU64(QsScriptArray array, uint32 idx, uint64 value);
+
+/**
+ * Set a 32bit floating point value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value 32bit floating point value
+ */
 QS_API void QS_CALL qsa_setF32(QsScriptArray array, uint32 idx, float32 value);
+
+/**
+ * Set a 64bit floating point value in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value 64bit floating point value
+ */
 QS_API void QS_CALL qsa_setF64(QsScriptArray array, uint32 idx, float64 value);
+
+/**
+ * Set a script object pointer in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value script object pointer
+ */
 QS_API void QS_CALL qsa_setObject(QsScriptArray array, uint32 idx, QsScriptObject value);
+
+/**
+ * Set a script array pointer in an array
+ *
+ * @param array Array pointer
+ * @param idx Element index
+ * @param value script array pointer
+ */
 QS_API void QS_CALL qsa_setArray(QsScriptArray array, uint32 idx, QsScriptArray value);
 
 
 // ========= QS Script Object Functions =========
 
+/**
+ * Get a struct's reference counter.
+ *
+ * If the struct is null, the return value will be CONST_REF_COUNTER
+ *
+ * @param obj Struct pointer
+ *
+ * @return Reference counter value
+ */
 QS_API uint32 QS_CALL qsobj_getRefCounter(QsScriptObject obj);
+
+/**
+ * Set a struct's reference counter value
+ *
+ * Note that setting this value to 0 will not mean it will be freed, but setting it to
+ * CONST_REF_COUNTER will make the struct const, meaning it will never be freed
+ * during regular script execution.
+ *
+ * @param obj Struct pointer
+ * @param refCounter Reference counter value
+ */
 QS_API void QS_CALL qsobj_setRefCounter(QsScriptObject obj, uint32 refCounter);
+
+/**
+ * Get a signed 8bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return signed 8bit integer value
+ */
 QS_API int8 QS_CALL qsobj_getI8Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get an unsigned 8bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return unsigned 8bit integer value
+ */
 QS_API uint8 QS_CALL qsobj_getU8Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a signed 16bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return signed 16bit integer value
+ */
 QS_API int16 QS_CALL qsobj_getI16Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get an unsigned 16bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return unsigned 16bit integer value
+ */
 QS_API uint16 QS_CALL qsobj_getU16Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a signed 32bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return signed 32bit integer value
+ */
 QS_API int32 QS_CALL qsobj_getI32Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get an unsigned 32bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return unsigned 32bit integer value
+ */
 QS_API uint32 QS_CALL qsobj_getU32Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a signed 64bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return signed 64bit integer value
+ */
 QS_API int64 QS_CALL qsobj_getI64Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get an unsigned 64bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return unsigned 64bit integer value
+ */
 QS_API uint64 QS_CALL qsobj_getU64Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a 32bit floating point value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return 32bit floating point value
+ */
 QS_API float32 QS_CALL qsobj_getF32Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a 64bit floating point value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return 64bit floating point value
+ */
 QS_API float64 QS_CALL qsobj_getF64Property(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a script object pointer in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return script object pointer
+ */
+QS_API QsScriptObject QS_CALL qsobj_getObjectProperty(QsScriptObject obj, uint64 offset);
+
+/**
+ * Get a script array pointer in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ *
+ * @return script array pointer
+ */
+QS_API QsScriptArray QS_CALL qsobj_getArrayProperty(QsScriptObject obj, uint64 offset);
+
+/**
+ * Set a signed 8bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value signed 8bit integer value
+ */
 QS_API void QS_CALL qsobj_setI8Property(QsScriptObject obj, uint64 offset, int8 value);
+
+/**
+ * Set an unsigned 8bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value unsigned 8bit integer value
+ */
 QS_API void QS_CALL qsobj_setU8Property(QsScriptObject obj, uint64 offset, uint8 value);
+
+/**
+ * Set a signed 16bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value signed 16bit integer value
+ */
 QS_API void QS_CALL qsobj_setI16Property(QsScriptObject obj, uint64 offset, int16 value);
+
+/**
+ * Set an unsigned 16bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value unsigned 16bit integer value
+ */
 QS_API void QS_CALL qsobj_setU16Property(QsScriptObject obj, uint64 offset, uint16 value);
+
+/**
+ * Set a signed 32bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value signed 32bit integer value
+ */
 QS_API void QS_CALL qsobj_setI32Property(QsScriptObject obj, uint64 offset, int32 value);
+
+/**
+ * Set an unsigned 32bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value unsigned 32bit integer value
+ */
 QS_API void QS_CALL qsobj_setU32Property(QsScriptObject obj, uint64 offset, uint32 value);
+
+/**
+ * Set a signed 64bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value signed 64bit integer value
+ */
 QS_API void QS_CALL qsobj_setI64Property(QsScriptObject obj, uint64 offset, int64 value);
+
+/**
+ * Set an unsigned 64bit integer value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value unsigned 64bit integer value
+ */
 QS_API void QS_CALL qsobj_setU64Property(QsScriptObject obj, uint64 offset, uint64 value);
+
+/**
+ * Set a 32bit floating point value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value 32bit floating point value
+ */
 QS_API void QS_CALL qsobj_setF32Property(QsScriptObject obj, uint64 offset, float32 value);
+
+/**
+ * Set a 64bit floating point value in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value 64bit floating point value
+ */
 QS_API void QS_CALL qsobj_setF64Property(QsScriptObject obj, uint64 offset, float64 value);
+
+/**
+ * Set a script object pointer in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value script object pointer
+ */
+QS_API void QS_CALL qsobj_setObjectProperty(QsScriptObject obj, uint64 offset, QsScriptObject value);
+
+/**
+ * Set a script array pointer in a struct
+ *
+ * @param obj Struct pointer
+ * @param offset Property offset
+ * @param value script array pointer
+ */
+QS_API void QS_CALL qsobj_setArrayProperty(QsScriptObject obj, uint64 offset, QsScriptArray value);
 
 
 // ========= QS Native Call Functions =========
