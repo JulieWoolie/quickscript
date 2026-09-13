@@ -1,5 +1,5 @@
-#ifndef OPCODE_PRINTER_H
-#define OPCODE_PRINTER_H
+#ifndef QS_OPCODE_PRINTER_H
+#define QS_OPCODE_PRINTER_H
 
 #include <cstdio>
 
@@ -15,4 +15,4 @@ void printTypeIndex(FILE* out, typeindex idx);
 
 void printInstructionToString(uint8* buf, FILE* out, uint8* strPool);
 
-#endif // OPCODE_PRINTER_H
+#endif // QS_OPCODE_PRINTER_H

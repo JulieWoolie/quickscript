@@ -1,5 +1,5 @@
-#ifndef UNICODE_BINARY_PROPS_H
-#define UNICODE_BINARY_PROPS_H
+#ifndef QS_UNICODE_BINARY_PROPS_H
+#define QS_UNICODE_BINARY_PROPS_H
 
 #include "qs/common.hpp"
 #include "qs/strings/utf8.hpp"
@@ -202,4 +202,4 @@ bool ucIsRegionalIndicator(utf32char ch);
 
 bool ucIsWhiteSpace(utf32char ch);
 
-#endif // UNICODE_BINARY_PROPS_H
+#endif // QS_UNICODE_BINARY_PROPS_H
