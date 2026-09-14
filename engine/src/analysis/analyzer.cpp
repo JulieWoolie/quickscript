@@ -1947,6 +1947,16 @@ static void resolveImports(SemanticContext& ctx, const std::vector<ImportStateme
   }
 }
 
+static void handleModuleInfo(SemanticContext& ctx, const ModuleDeclaration* decl) {
+  ctx.setModuleName(decl->modulePath);
+
+  if (!decl->nativeModule) {
+    return;
+  }
+
+  ctx.setNativeModuleName(decl->nativeImportPath->value);
+}
+
 void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   STAT_PUSH
   Scope* scope = ctx.pushScope(SCOPE_MAIN);
@@ -1962,7 +1972,7 @@ void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   std::vector<Statement*>& stats = v->statements;
   if (stats.size() > 0 && stats.at(0)->nodeKind() == AST_ModuleDeclaration) {
     ModuleDeclaration* mDecl = static_cast<ModuleDeclaration*>(stats.at(0));
-    ctx.setModuleName(mDecl->modulePath);
+    handleModuleInfo(ctx, mDecl);
   }
 
   for (Statement* s : stats) {
