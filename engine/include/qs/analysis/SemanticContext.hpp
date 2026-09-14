@@ -5,6 +5,7 @@
 #include "qs/compiler_opts.hpp"
 #include "qs/errors.hpp"
 #include "qs/nativeinterface.hpp"
+#include "qs/qsenv.hpp"
 #include "qs/stringtable.hpp"
 #include "qs/parse/syntaxtree.hpp"
 #include "qs/types/TypeTable.hpp"
@@ -27,7 +28,7 @@ class SemanticContext {
   StringTable& m_strings;
   CompilerErrors& m_errors;
   NoFreeAllocator& m_allocator;
-  const CompilationOptions& m_options;
+  QsEnvironment* m_env;
   const BindingsObject* m_bindings;
 
   std::vector<ScriptType*> m_expectedTypes;
@@ -41,6 +42,10 @@ class SemanticContext {
 
   std::vector<StructDecl*> m_declaredStructs;
   std::unordered_map<ScriptStructType*, LocalFuncSymbol*> m_structConstructors;
+
+  stringid m_moduleName = EMPTY_STRING;
+
+  std::vector<std::string> m_importedPaths;
 
   //
   // Notes on what types of keys map to what types of values:
@@ -66,8 +71,7 @@ class SemanticContext {
       StringTable& strings,
       CompilerErrors& errors,
       NoFreeAllocator& allocator,
-      const CompilationOptions& options,
-      const BindingsObject* bindings
+      QsEnvironment* env
     );
 
     void pushLocalFunction(LocalFunction* func);
@@ -118,9 +122,11 @@ class SemanticContext {
 
     NoFreeAllocator& getAllocator();
 
-    const CompilationOptions& getOptions() const;
+    CompilationOptions& getOptions() const;
 
-    const BindingsObject* getBindings() const;
+    QsEnvironment* getEnv() const;
+
+    std::vector<std::string>& getImportedPaths();
 
     std::unordered_map<Node*, Symbol*>& getSymbolLookup();
 
@@ -137,6 +143,10 @@ class SemanticContext {
     LocalFuncSymbol* getEntryPoint() const;
 
     void setEntryPoint(LocalFuncSymbol* sym);
+
+    stringid getModuleName() const;
+
+    void setModuleName(stringid name);
 };
 
 

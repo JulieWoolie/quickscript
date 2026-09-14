@@ -39,15 +39,13 @@ SemanticContext::SemanticContext(
   StringTable& strings,
   CompilerErrors& errors,
   NoFreeAllocator& allocator,
-  const CompilationOptions& options,
-  const BindingsObject* bindings
+  QsEnvironment* env
 )
   : m_types(types),
     m_strings(strings),
     m_errors(errors),
     m_allocator(allocator),
-    m_options(options),
-    m_bindings(bindings)
+    m_env(env)
 {
 
 }
@@ -181,12 +179,15 @@ NoFreeAllocator& SemanticContext::getAllocator() {
   return m_allocator;
 }
 
-const CompilationOptions& SemanticContext::getOptions() const {
-  return m_options;
+CompilationOptions& SemanticContext::getOptions() const {
+  return m_env->getOptions();
 }
 
-const BindingsObject* SemanticContext::getBindings() const {
-  return m_bindings;
+QsEnvironment* SemanticContext::getEnv() const {
+  return m_env;
+}
+std::vector<std::string>& SemanticContext::getImportedPaths() {
+  return m_importedPaths;
 }
 
 std::unordered_map<Node*, Symbol*>& SemanticContext::getSymbolLookup() {
@@ -219,4 +220,12 @@ LocalFuncSymbol* SemanticContext::getEntryPoint() const {
 
 void SemanticContext::setEntryPoint(LocalFuncSymbol* sym) {
   m_entryPoint = sym;
+}
+
+stringid SemanticContext::getModuleName() const {
+  return m_moduleName;
+}
+
+void SemanticContext::setModuleName(const stringid name) {
+  m_moduleName = name;
 }
