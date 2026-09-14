@@ -23,15 +23,16 @@ struct ReportedError {
 };
 
 class CompilerErrors {
-  std::string* m_fileContent;
-  conststring m_fileName;
+  const std::string& m_fileContent;
+  const conststring m_fileName;
+
   bool m_silent = false;
   loglevel m_logLevel = LOGL_INFO;
 
   std::vector<ReportedError> m_errors;
 
   public:
-    CompilerErrors(std::string* fileContent, conststring fName);
+    CompilerErrors(const std::string& fileContent, conststring fName);
 
     void setSilent(bool silent);
 

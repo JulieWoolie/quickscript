@@ -7,9 +7,10 @@
 #define CREATE_LOG_METHOD(name, level) void CompilerErrors::name(Location& loc, conststring msg, ...) {va_list l; va_start(l, msg); log(level, &loc, msg, l); va_end(l);}
 #define CREATE_LOG_METHOD_NL(name, level) void CompilerErrors::name(conststring msg, ...) {va_list l; va_start(l, msg); log(level, nullptr, msg, l); va_end(l);}
 
-CompilerErrors::CompilerErrors(std::string *fileContent, conststring fName) {
-  m_fileContent = fileContent;
-  m_fileName = fName;
+CompilerErrors::CompilerErrors(const std::string& fileContent, conststring fName)
+  : m_fileContent(fileContent), m_fileName(fName)
+{
+
 }
 
 void CompilerErrors::setSilent(const bool silent) {
@@ -53,9 +54,9 @@ CREATE_LOG_METHOD_NL(warn, LOGL_WARN)
 CREATE_LOG_METHOD(info, LOGL_INFO)
 CREATE_LOG_METHOD_NL(info, LOGL_INFO)
 
-static uint32 findLineBoundary(const std::string* str, const int32 pos, const int32 direction) {
+static uint32 findLineBoundary(const std::string& str, const int32 pos, const int32 direction) {
   int32 p = pos;
-  const int32 len = str->length();
+  const int32 len = str.length();
 
   while (true) {
     if (p >= len) {
@@ -65,7 +66,7 @@ static uint32 findLineBoundary(const std::string* str, const int32 pos, const in
       return 0;
     }
 
-    const char ch = str->at(p);
+    const char ch = str[p];
 
     if (ch == '\n' || ch == '\r') {
       if (direction == -1) {
@@ -136,7 +137,7 @@ void CompilerErrors::printError(const ReportedError& err) const {
   const uint32 lineend = findLineBoundary(m_fileContent, index, 1);
   const uint32 linelen = lineend - linestart;
 
-  std::string line = m_fileContent->substr(linestart, linelen);
+  std::string line = m_fileContent.substr(linestart, linelen);
 
   const uint32 lineno = err.location.line;
   const uint32 col = err.location.column;
