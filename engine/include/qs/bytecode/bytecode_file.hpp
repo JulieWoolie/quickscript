@@ -13,13 +13,6 @@
 #define IR_RESULT_MALFORMED_INSTRUCTIONS 6
 typedef uint32 BytecodeReadResult;
 
-#define FILE_PREFIX "quickscript"
-#define PREFIX_LEN 11
-#define HEADER_SECTION_SIZE 8
-#define HEADER_VERSION_SIZE 2
-#define HEADER_SECTIONS 11
-#define HEADER_LEN (PREFIX_LEN + HEADER_VERSION_SIZE + (HEADER_SECTION_SIZE * HEADER_SECTIONS))
-
 #define HSECT_STRPOOL_OFF 0
 #define HSECT_STRPOOL_SIZE 1
 #define HSECT_TYPES_OFF 2
@@ -31,6 +24,25 @@ typedef uint32 BytecodeReadResult;
 #define HSECT_INSTR_COUNT 8
 #define HSECT_GLOBAL_SCOPE_SIZE 9
 #define HSECT_ENTRYPOINT_FUNC_IDX 10
+#define HSECT_MODULE_TYPE 11
+#define HSECT_MODULE_NAME_OFF 12
+#define HSECT_MODULE_NAME_SIZE 13
+#define HSECT_NATIVE_LIBRARY_NAME_OFF 14
+#define HSECT_NATIVE_LIBRARY_NAME_SIZE 15
+#define HSECT_LAST HSECT_NATIVE_LIBRARY_NAME_SIZE
+#define HSECT_COUNT (HSECT_LAST + 1)
+typedef uint32 headersection;
+
+#define FILE_PREFIX "quickscript"
+#define PREFIX_LEN 11
+#define HEADER_SECTION_SIZE 4
+#define HEADER_VERSION_SIZE 2
+#define HEADER_LEN (PREFIX_LEN + HEADER_VERSION_SIZE + (HEADER_SECTION_SIZE * HSECT_COUNT))
+
+#define BF_MODTYPE_NONE 0
+#define BF_MODTYPE_REGULAR 1
+#define BF_MODTYPE_NATIVE 2
+typedef uint8 bytecodemoduletype;
 
 #define CURRENT_FILE_VERSION 0
 
@@ -50,6 +62,10 @@ struct BytecodeFile {
   uint64 instructionCount = 0;
 
   uint64 globalScopeSize = 0;
+
+  std::string moduleName = "";
+  std::string nativeModuleName = "";
+  bytecodemoduletype moduleType = BF_MODTYPE_NONE;
 
   BytecodeFile();
   ~BytecodeFile();

@@ -53,10 +53,22 @@ struct BinaryWriter {
   CREATE_WRITE_METHOD(writeU16, uint16)
   CREATE_WRITE_METHOD(writeU8, uint8)
 
-  void copyDataFrom(const void* from, uint64 bytes) {
+  uint64 writeString(const std::string& str) {
+    return copyDataFrom(str.data(), str.length());
+  }
+
+  uint64 copyDataFrom(const void* from, const uint64 bytes) {
+    if (bytes == 0) {
+      return 0;
+    }
+
     ensureHasSpace(bytes);
     memcpy(buf + len, from, bytes);
+
+    const uint64 c = len;
     len += bytes;
+
+    return c;
   }
 };
 
@@ -77,6 +89,17 @@ struct BinaryReader {
 
   BinaryReader subReader(const uint64 start, const uint64 size) {
     return BinaryReader(buffer + start, size, 0);
+  }
+
+  void readString(std::string& out, const uint64 start, const uint64 size) const {
+    out.clear();
+
+    if (start == 0 || size == 0) {
+      return;
+    }
+
+    conststring dataPtr = reinterpret_cast<conststring>(buffer + start);
+    out.append(dataPtr, size);
   }
 };
 
@@ -204,7 +227,14 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   BinaryWriter writer;
   writer.len = 0;
 
-  const uint64 initialCap = HEADER_LEN + file.instructionsSize + file.stringPoolSize + 1024;
+  const uint64 initialCap
+      = HEADER_LEN
+      + file.moduleName.length()
+      + file.nativeModuleName.length()
+      + file.instructionsSize
+      + file.stringPoolSize
+      + 1024;
+
   writer.buf = static_cast<uint8*>(malloc(initialCap));
   writer.cap = initialCap;
 
@@ -216,35 +246,39 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   // First write the entire file, then write the header
   writer.len = HEADER_LEN;
 
-  const uint64 strPoolStart = writer.len;
-  const uint64 strPoolSize = file.stringPoolSize;
+  const headersection modNameStart = writer.writeString(file.moduleName);;
+  const headersection modNameSize = file.moduleName.length();
+
+  const headersection nativeModNameStart = writer.writeString(file.nativeModuleName);
+  const headersection nativeModNameSize = file.nativeModuleName.length();
 
   // Const String Pool
-  writer.copyDataFrom(file.constStringPool, strPoolSize);
+  const headersection strPoolSize = file.stringPoolSize;
+  const headersection strPoolStart = writer.copyDataFrom(file.constStringPool, strPoolSize);
 
   // Type Table
-  const uint64 typeTableStart = writer.len;
+  const headersection typeTableStart = writer.len;
   writeTypeTable(file, writer);
-  const uint64 typeTableSize = writer.len - typeTableStart;
+  const headersection typeTableSize = writer.len - typeTableStart;
 
   // Func Table
-  const uint64 fTableStart = writer.len;
+  const headersection fTableStart = writer.len;
   writeFunctionTable(file, writer);
-  const uint64 fTableSize = writer.len - fTableStart;
+  const headersection fTableSize = writer.len - fTableStart;
 
   // Instructions Buffer
-  const uint64 instrStart = writer.len;
+  const headersection instrStart = writer.len;
   writeInstructions(file, writer);
-  const uint64 instrSize = writer.len - instrStart;
+  const headersection instrSize = writer.len - instrStart;
 
-  const uint64 finalLength = writer.len;
+  const headersection finalLength = writer.len;
 
   // Header
   writer.len = 0;
   writer.copyDataFrom(FILE_PREFIX, PREFIX_LEN);
   writer.writeU16(CURRENT_FILE_VERSION);
 
-  uint64* sections = reinterpret_cast<uint64*>(writer.buf + writer.len);
+  headersection* sections = reinterpret_cast<headersection*>(writer.buf + writer.len);
   sections[HSECT_STRPOOL_OFF] = strPoolStart;
   sections[HSECT_STRPOOL_SIZE] = strPoolSize;
   sections[HSECT_TYPES_OFF] = typeTableStart;
@@ -256,6 +290,11 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   sections[HSECT_INSTR_COUNT] = file.instructionCount;
   sections[HSECT_GLOBAL_SCOPE_SIZE] = file.globalScopeSize;
   sections[HSECT_ENTRYPOINT_FUNC_IDX] = file.entryPointIndex;
+  sections[HSECT_MODULE_TYPE] = file.moduleType;
+  sections[HSECT_MODULE_NAME_OFF] = modNameStart;
+  sections[HSECT_MODULE_NAME_SIZE] = modNameSize;
+  sections[HSECT_NATIVE_LIBRARY_NAME_OFF] = nativeModNameStart;
+  sections[HSECT_NATIVE_LIBRARY_NAME_SIZE] = nativeModNameSize;
 
   *sizeOut = finalLength;
   return writer.buf;
@@ -473,21 +512,30 @@ BytecodeReadResult deserializeBytecodeFile(const uint8* buf, const uint64 bufSiz
     return IR_RESULT_FILE_VERSION_NEWER;
   }
 
-  const uint64* sections = reinterpret_cast<const uint64*>(reader.buffer + PREFIX_LEN + HEADER_VERSION_SIZE);
-  const uint64 strPoolStart = sections[HSECT_STRPOOL_OFF];
-  const uint64 strPoolSize = sections[HSECT_STRPOOL_SIZE];
-  const uint64 typeTableStart = sections[HSECT_TYPES_OFF];
-  const uint64 typeTableSize = sections[HSECT_TYPES_SIZE];
-  const uint64 fTableStart = sections[HSECT_FTABLE_OFF];
-  const uint64 fTableSize = sections[HSECT_FTABLE_SIZE];
-  const uint64 instrStart = sections[HSECT_INSTR_OFF];
-  const uint64 instrSize = sections[HSECT_INSTR_SIZE];
-  const uint64 instructionCount = sections[HSECT_INSTR_COUNT];
-  const uint64 globalScopeSize = sections[HSECT_GLOBAL_SCOPE_SIZE];
-  const uint64 entryPointIndex = sections[HSECT_ENTRYPOINT_FUNC_IDX];
+  const headersection* sections = reinterpret_cast<const headersection*>(reader.buffer + PREFIX_LEN + HEADER_VERSION_SIZE);
+  const headersection strPoolStart = sections[HSECT_STRPOOL_OFF];
+  const headersection strPoolSize = sections[HSECT_STRPOOL_SIZE];
+  const headersection typeTableStart = sections[HSECT_TYPES_OFF];
+  const headersection typeTableSize = sections[HSECT_TYPES_SIZE];
+  const headersection fTableStart = sections[HSECT_FTABLE_OFF];
+  const headersection fTableSize = sections[HSECT_FTABLE_SIZE];
+  const headersection instrStart = sections[HSECT_INSTR_OFF];
+  const headersection instrSize = sections[HSECT_INSTR_SIZE];
+  const headersection instructionCount = sections[HSECT_INSTR_COUNT];
+  const headersection globalScopeSize = sections[HSECT_GLOBAL_SCOPE_SIZE];
+  const headersection entryPointIndex = sections[HSECT_ENTRYPOINT_FUNC_IDX];
+  const headersection moduleType = sections[HSECT_MODULE_TYPE];
+  const headersection modNameStart = sections[HSECT_MODULE_NAME_OFF];
+  const headersection modNameSize = sections[HSECT_MODULE_NAME_SIZE];
+  const headersection nativeModNameStart = sections[HSECT_NATIVE_LIBRARY_NAME_OFF];
+  const headersection nativeModNameSize = sections[HSECT_NATIVE_LIBRARY_NAME_SIZE];
 
   out.entryPointIndex = entryPointIndex;
   out.globalScopeSize = globalScopeSize;
+  out.moduleType = moduleType;
+
+  reader.readString(out.moduleName, modNameStart, modNameSize);
+  reader.readString(out.nativeModuleName, nativeModNameStart, nativeModNameSize);
 
   // Read string pool
   BinaryReader strPoolReader = reader.subReader(strPoolStart, strPoolSize);
