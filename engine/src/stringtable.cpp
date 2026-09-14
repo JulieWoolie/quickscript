@@ -13,6 +13,21 @@ std::string_view StringRef::view() const {
   return std::string_view(data, len);
 }
 
+bool StringRef::equals(const conststring str) const {
+  const uint32 strSize = strlen(str);
+  if (strSize != len) {
+    return false;
+  }
+
+  for (uint32 i = 0; i < len; i++) {
+    if (data[i] != str[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 StringTable::StringTable() {
   // Create the 'empty string' entry
   m_lengths = static_cast<StringEntry*>(malloc(sizeof(StringEntry) * 100));

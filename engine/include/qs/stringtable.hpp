@@ -16,6 +16,8 @@ struct StringRef {
   StringRef(uint32 idx, int32 len, int8* data);
 
   std::string_view view() const;
+
+  bool equals(conststring str) const;
 };
 
 typedef StringRef* stringid;
