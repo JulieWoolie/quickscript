@@ -6,6 +6,8 @@
 
 #include "qs/types/ConstTypes.hpp"
 
+#define STD_NAME "std"
+
 #define STAT_PUSH ctx.pushStatement(v);
 #define STAT_POP ctx.popStatement();
 
@@ -1886,25 +1888,62 @@ static void checkForInvalidDependencies(SemanticContext& ctx) {
   }
 }
 
-static void addNativeSymbols(SemanticContext& ctx, Scope* scope) {
-  const std::vector<NativeBinding*>& bindings = ctx.getBindings()->getBindings();
+static bool importFromPath(SemanticContext& ctx, const std::string_view& path) {
+  QsEnvironment* env = ctx.getEnv();
+  std::vector<BytecodeFile*> loadedFiles;
+  std::vector<std::string>& importedPaths = ctx.getImportedPaths();
 
-  NoFreeAllocator& alloc = ctx.getAllocator();
-  StringTable& strings = ctx.getStrings();
-  TypeTable& types = ctx.getTypes();
-
-  for (NativeBinding* bind : bindings) {
-    if (bind->btype() != BINDTYPE_FUNCTION) {
+  // Don't import again
+  for (const std::string& alreadyImported: importedPaths) {
+    if (alreadyImported != path) {
       continue;
     }
+    return true;
+  }
 
-    NativeFunctionBinding* nfunc = static_cast<NativeFunctionBinding*>(bind);
-    stringid id = strings.allocate(nfunc->getName());
+  const bool foundLibs = env->findLibrary(path, loadedFiles);
+  if (!foundLibs) {
+    return false;
+  }
 
-    FunctionSignature* sign = types.copySignatureIntoTable(nfunc->getSignature());
-    NativeFunctionSymbol* sym = alloc.make<NativeFunctionSymbol>(id, sign);
+  importedPaths.emplace_back(path);
 
-    scope->pushSymbol(sym);
+  for (BytecodeFile* bf : loadedFiles) {
+
+  }
+
+  return true;
+}
+
+static void resolveImport(SemanticContext& ctx, ImportStatement* importStat) {
+  const stringid modulePath = importStat->modulePath;
+  const std::string_view pathView = modulePath->view();
+
+  const bool foundLibs = importFromPath(ctx, pathView);
+
+  if (foundLibs) {
+    return;
+  }
+
+  ctx.getErrors().error(importStat->location, "Found no modules matching %.*s to import",
+    modulePath->len,
+    modulePath->data
+  );
+}
+
+static void resolveImports(SemanticContext& ctx, const std::vector<ImportStatement*>& imports) {
+  for (ImportStatement* importStat : imports) {
+    resolveImport(ctx, importStat);
+  }
+
+  QsEnvironment* env = ctx.getEnv();
+  std::vector<std::string>& implicitImports = env->getOptions().implicitImports;
+
+  for (std::string& importPath : implicitImports) {
+    if (importFromPath(ctx, importPath)) {
+      continue;
+    }
+    ctx.getErrors().error("Failed to import implicit import '%s'", importPath.c_str());
   }
 }
 
@@ -1914,16 +1953,24 @@ void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
   ctx.setGlobalScope(scope);
   ctx.getAstScopeLookup()[v] = scope;
 
-  addNativeSymbols(ctx, scope);
-
   scope->setExpectedReturnType(nullptr);
 
   std::vector<StructDecl*> structDeclarations;
   std::vector<FunctionDeclStatement*> functionDecls;
+  std::vector<ImportStatement*> imports;
 
-  for (Statement* s : v->statements) {
+  std::vector<Statement*>& stats = v->statements;
+  if (stats.size() > 0 && stats.at(0)->nodeKind() == AST_ModuleDeclaration) {
+    ModuleDeclaration* mDecl = static_cast<ModuleDeclaration*>(stats.at(0));
+    ctx.setModuleName(mDecl->modulePath);
+  }
+
+  for (Statement* s : stats) {
     astnodetype kind = s->nodeKind();
     switch (kind) {
+      case AST_ImportStatement:
+        imports.push_back(static_cast<ImportStatement*>(s));
+        break;
       case AST_StructDecl:
         structDeclarations.push_back(static_cast<StructDecl*>(s));
         break;
@@ -1934,6 +1981,8 @@ void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
         break;
     }
   }
+
+  resolveImports(ctx, imports);
 
   for (StructDecl* decl : structDeclarations) {
     createStructType(ctx, decl);
@@ -1946,7 +1995,7 @@ void runSemanticAnalysis(ScriptFileStatement* v, SemanticContext& ctx) {
     createFuncSignature(ctx, decl);
   }
 
-  for (Statement* s : v->statements) {
+  for (Statement* s : stats) {
     acceptStatement(ctx, s);
   }
 
