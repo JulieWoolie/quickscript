@@ -44,6 +44,7 @@ class SemanticContext {
   std::unordered_map<ScriptStructType*, LocalFuncSymbol*> m_structConstructors;
 
   stringid m_moduleName = EMPTY_STRING;
+  stringid m_nativeModuleName = EMPTY_STRING;
 
   std::vector<std::string> m_importedPaths;
 
@@ -147,6 +148,10 @@ class SemanticContext {
     stringid getModuleName() const;
 
     void setModuleName(stringid name);
+
+    stringid getNativeModuleName() const;
+
+    void setNativeModuleName(stringid name);
 };
 
 

@@ -229,3 +229,11 @@ stringid SemanticContext::getModuleName() const {
 void SemanticContext::setModuleName(const stringid name) {
   m_moduleName = name;
 }
+
+stringid SemanticContext::getNativeModuleName() const {
+  return m_nativeModuleName;
+}
+
+void SemanticContext::setNativeModuleName(const stringid name) {
+  m_nativeModuleName = name;
+}
