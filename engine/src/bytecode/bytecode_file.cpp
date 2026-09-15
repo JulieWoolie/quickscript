@@ -603,6 +603,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   const uint64 stringPoolSize = file.stringPoolSize;
   uint64 strPoolOff = 0;
 
+  // Const string pool
   fprintf(printFile, "\nCONST_STRING_POOL = {");
   while (strPoolOff < stringPoolSize) {
     const uint32 strSize = *reinterpret_cast<uint32*>(stringPool + strPoolOff);
@@ -612,6 +613,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   }
   fprintf(printFile, "\n}");
 
+  // Module info
   if (!file.moduleName.empty()) {
     fprintf(printFile, "\nMODULE_NAME = %s", file.moduleName.c_str());
   }
@@ -623,12 +625,13 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
       fprintf(printFile, "\nMODULE_TYPE = regular");
       break;
     case BF_MODTYPE_NATIVE:
-      fprintf(printFile, "\nMODULE_TYPE = regular");
+      fprintf(printFile, "\nMODULE_TYPE = native");
       break;
     default:
       break;
   }
-  
+
+  // Imports
   if (!file.importedModules.empty()) {
     fprintf(printFile, "\nIMPORTS = [");
     bool first = false;
@@ -646,6 +649,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
     fprintf(printFile, "\n]");
   }
 
+  // Type table
   const uint64 typeTableSize = file.typeTableSize;
   TypeTableEntry** typeTable = file.typeTable;
 
@@ -719,6 +723,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   }
   fprintf(printFile, "\n}");
 
+  // Function table
   const uint32 funcTableSize = file.funcTableEntries;
   FunctionTableEntry* funcTable = file.funcTable;
 
@@ -736,6 +741,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   }
   fprintf(printFile, "\n}");
 
+  // IR Instructions
   fprintf(printFile, "\nINSTRUCTIONS = {");
 
   uint8* instrBuf = file.instructionBuf;
