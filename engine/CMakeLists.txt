@@ -100,6 +100,8 @@ add_library(qsengine STATIC
         include/qs/types/VoidScriptType.hpp
         include/qs/qsenv.hpp
         src/qsenv.cpp
-        include/qs/types/NullableType.hpp)
+        include/qs/types/NullableType.hpp
+        include/qs/bytecode/bytecode_symbol.hpp
+        src/bytecode/bytecode_symbol.cpp)
 
 target_include_directories(qsengine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
