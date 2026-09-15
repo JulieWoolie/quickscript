@@ -1,6 +1,10 @@
 #ifndef QS_IR_FILE_H
 #define QS_IR_FILE_H
 
+#include <vector>
+#include <string>
+
+#include "bytecode_symbol.hpp"
 #include "qs/bytecode/bytecode_functable.hpp"
 #include "qs/bytecode/bytecode_typetable.hpp"
 
@@ -66,6 +70,9 @@ struct BytecodeFile {
   std::string moduleName = "";
   std::string nativeModuleName = "";
   bytecodemoduletype moduleType = BF_MODTYPE_NONE;
+
+  std::vector<std::string> importedModules;
+  std::vector<BytecodeSymbol> exportedSymbols;
 
   BytecodeFile();
   ~BytecodeFile();
