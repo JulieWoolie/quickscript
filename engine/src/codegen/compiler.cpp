@@ -1750,5 +1750,18 @@ BytecodeFile& compile(SemanticContext& ctx) {
   file.stringPoolSize = cctx.getStringPool().getLength();
   file.globalScopeSize = ctx.getGlobalScope()->getVariableSpace();
 
+  StringTable& table = ctx.getStrings();
+
+  file.moduleName = table.getstring(ctx.getModuleName());
+  file.nativeModuleName = table.getstring(ctx.getNativeModuleName());
+
+  if (file.moduleName.empty()) {
+    file.moduleType = BF_MODTYPE_NONE;
+  } else if (file.nativeModuleName.empty()) {
+    file.moduleType = BF_MODTYPE_REGULAR;
+  } else {
+    file.moduleType = BF_MODTYPE_NATIVE;
+  }
+
   return file;
 }
