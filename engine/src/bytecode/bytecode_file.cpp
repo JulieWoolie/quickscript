@@ -612,6 +612,23 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   }
   fprintf(printFile, "\n}");
 
+  if (!file.moduleName.empty()) {
+    fprintf(printFile, "\nMODULE_NAME = '%s'", file.moduleName.c_str());
+  }
+  if (file.nativeModuleName.empty()) {
+    fprintf(printFile, "\nNATIVE_MODULE_NAME = '%s'", file.nativeModuleName.c_str());
+  }
+  switch (file.moduleType) {
+    case BF_MODTYPE_REGULAR:
+      fprintf(printFile, "\nMODULE_TYPE = regular");
+      break;
+    case BF_MODTYPE_NATIVE:
+      fprintf(printFile, "\nMODULE_TYPE = regular");
+      break;
+    default:
+      break;
+  }
+
   const uint64 typeTableSize = file.typeTableSize;
   TypeTableEntry** typeTable = file.typeTable;
 
