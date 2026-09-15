@@ -617,6 +617,47 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
     fprintf(printFile, "\n]");
   }
 
+  // Exports
+  if (!file.exportedSymbols.empty()) {
+    fprintf(printFile, "\nEXPORTS = [");
+
+    const std::vector<BytecodeSymbol>& symbols = file.exportedSymbols;
+    const uint32 size = symbols.size();
+
+    for (uint32 i = 0; i < size; i++) {
+      const BytecodeSymbol& sym = symbols[i];
+
+      if (i != 0) {
+        fprintf(printFile, ",");
+      }
+
+      fprintf(printFile, "\n  [%d] = {", i);
+
+      switch (sym.type) {
+        case BFSYM_FUNC:
+          fprintf(printFile, "\n    type = FUNC\n    function_index = %d", sym.funcTableIndex);
+          break;
+        case BFSYM_STRUCT:
+          fprintf(printFile, "\n    type = STRUCT\n    type_index = %d", sym.typeTableIndex);
+          break;
+        case BFSYM_VARIABLE:
+          fprintf(printFile, "\n    type = VARIABLE");
+          fprintf(printFile, "\n    name_offset = %llu # ", sym.variable.nameOffset);
+          writePooledString(printFile, sym.variable.nameOffset, stringPool);
+          fprintf(printFile, "\n    mem_offset = %llu", sym.variable.memOffset);
+          fprintf(printFile, "\n    type_index = %llu", sym.variable.typeIndex);
+          break;
+        default:
+          fprintf(printFile, "\n    type = UNKNOWN");
+          break;
+      }
+
+      fprintf(printFile, "\n  }");
+    }
+
+    fprintf(printFile, "\n]");
+  }
+
   // Type table
   const uint64 typeTableSize = file.typeTableSize;
   TypeTableEntry** typeTable = file.typeTable;
