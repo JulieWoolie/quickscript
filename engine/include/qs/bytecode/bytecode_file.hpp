@@ -33,7 +33,11 @@ typedef uint32 BytecodeReadResult;
 #define HSECT_MODULE_NAME_SIZE 13
 #define HSECT_NATIVE_LIBRARY_NAME_OFF 14
 #define HSECT_NATIVE_LIBRARY_NAME_SIZE 15
-#define HSECT_LAST HSECT_NATIVE_LIBRARY_NAME_SIZE
+#define HSECT_IMPORT_LIST_OFF 16
+#define HSECT_IMPORT_LIST_SIZE 17
+#define HSECT_EXPORT_LIST_OFF 18
+#define HSECT_EXPORT_LIST_SIZE 19
+#define HSECT_LAST HSECT_EXPORT_LIST_SIZE
 #define HSECT_COUNT (HSECT_LAST + 1)
 typedef uint32 headersection;
 
@@ -51,26 +55,25 @@ typedef uint8 bytecodemoduletype;
 #define CURRENT_FILE_VERSION 0
 
 struct BytecodeFile {
+  uint16 fileVersion = CURRENT_FILE_VERSION;
+  uint64 entryPointIndex = 0;
+  uint64 globalScopeSize = 0;
+
   uint8* constStringPool = nullptr;
   uint64 stringPoolSize = 0;
 
   TypeTableEntry** typeTable = nullptr;
   uint64 typeTableSize = 0;
 
-  FunctionTableEntry* funcTable = nullptr;
-  uint32 funcTableEntries = 0;
-  uint64 entryPointIndex = 0;
-
   uint8* instructionBuf = nullptr;
   uint64 instructionsSize = 0;
   uint64 instructionCount = 0;
-
-  uint64 globalScopeSize = 0;
 
   std::string moduleName = "";
   std::string nativeModuleName = "";
   bytecodemoduletype moduleType = BF_MODTYPE_NONE;
 
+  std::vector<FunctionTableEntry> functionTable;
   std::vector<std::string> importedModules;
   std::vector<BytecodeSymbol> exportedSymbols;
 

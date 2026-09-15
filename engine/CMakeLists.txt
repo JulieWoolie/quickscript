@@ -5,103 +5,102 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(qsengine STATIC
         include/qs/allocator.hpp
-        src/analysis/analyzer.cpp
         include/qs/analysis/analyzer.hpp
-        src/analysis/SemanticContext.cpp
         include/qs/analysis/SemanticContext.hpp
-        src/analysis/semantictree.cpp
         include/qs/analysis/semantictree.hpp
-        src/analysis/transformer.cpp
         include/qs/analysis/transformer.hpp
-        src/bytecode/bytecode_file.cpp
         include/qs/bytecode/bytecode_file.hpp
-        src/bytecode/bytecode_functable.cpp
         include/qs/bytecode/bytecode_functable.hpp
-        src/bytecode/bytecode_typetable.cpp
+        include/qs/bytecode/bytecode_symbol.hpp
         include/qs/bytecode/bytecode_typetable.hpp
-        src/codegen/compiler.cpp
         include/qs/codegen/compiler.hpp
-        src/codegen/CompilerContext.cpp
         include/qs/codegen/CompilerContext.hpp
-        src/codegen/type_conv.cpp
         include/qs/codegen/type_conv.hpp
         include/qs/common.hpp
         include/qs/compiler_opts.hpp
-        src/errors.cpp
         include/qs/errors.hpp
-        src/interpreter/heap_mem.cpp
         include/qs/interpreter/heap_mem.hpp
-        src/interpreter/interpreter.cpp
         include/qs/interpreter/interpreter.hpp
-        src/interpreter/opcodes.cpp
-        include/qs/interpreter/opcodes.hpp
-        src/interpreter/opcode_printer.cpp
         include/qs/interpreter/opcode_printer.hpp
+        include/qs/interpreter/opcodes.hpp
         include/qs/interpreter/registers.hpp
-        src/interpreter/script_error.cpp
         include/qs/interpreter/script_error.hpp
-        src/interpreter/StackMemory.cpp
         include/qs/interpreter/StackMemory.hpp
-        src/interpreter/StringPool.cpp
         include/qs/interpreter/StringPool.hpp
-        src/nativeinterface.cpp
         include/qs/nativeinterface.hpp
-        src/objects.cpp
         include/qs/objects.hpp
-        src/parse/JsonPrinter.cpp
         include/qs/parse/JsonPrinter.hpp
-        src/parse/keyw_lookup.cpp
         include/qs/parse/keyw_lookup.hpp
-        src/parse/lexer.cpp
         include/qs/parse/lexer.hpp
-        src/parse/parser.cpp
         include/qs/parse/parser.hpp
         include/qs/parse/print-visitor.hpp
-        src/parse/syntaxtree.cpp
         include/qs/parse/syntaxtree.hpp
-        src/parse/token.cpp
         include/qs/parse/token.hpp
         include/qs/qs_math.hpp
-        src/stdlib/qs_stdlib.cpp
-        include/qs/stdlib/qs_stdlib.hpp
-        src/strings/stringreader.cpp
-        include/qs/strings/stringreader.hpp
-        src/strings/strings.cpp
-        include/qs/strings/strings.hpp
-        src/strings/unicode_binary_props.cpp
-        include/qs/strings/unicode_binary_props.hpp
-        src/strings/utf8.cpp
-        include/qs/strings/utf8.hpp
-        src/stringtable.cpp
-        include/qs/stringtable.hpp
-        src/types/ConstTypes.cpp
-        include/qs/types/ConstTypes.hpp
-        src/types/FunctionSignature.cpp
-        include/qs/types/FunctionSignature.hpp
-        src/types/PrimitiveScriptType.cpp
-        include/qs/types/PrimitiveScriptType.hpp
-        src/types/ScriptArrayType.cpp
-        include/qs/types/ScriptArrayType.hpp
-        src/types/ScriptClosureType.cpp
-        include/qs/types/ScriptClosureType.hpp
-        src/types/ScriptErroneousType.cpp
-        include/qs/types/ScriptErroneousType.hpp
-        src/types/ScriptStringType.cpp
-        include/qs/types/ScriptStringType.hpp
-        src/types/ScriptStructType.cpp
-        include/qs/types/ScriptStructType.hpp
-        src/types/ScriptType.cpp
-        include/qs/types/ScriptType.hpp
-        src/types/types.cpp
-        include/qs/types/types.hpp
-        src/types/TypeTable.cpp
-        include/qs/types/TypeTable.hpp
-        src/types/VoidScriptType.cpp
-        include/qs/types/VoidScriptType.hpp
         include/qs/qsenv.hpp
-        src/qsenv.cpp
+        include/qs/stdlib/qs_stdlib.hpp
+        include/qs/strings/stringreader.hpp
+        include/qs/strings/strings.hpp
+        include/qs/strings/unicode_binary_props.hpp
+        include/qs/strings/utf8.hpp
+        include/qs/stringtable.hpp
+        include/qs/types/ConstTypes.hpp
+        include/qs/types/FunctionSignature.hpp
         include/qs/types/NullableType.hpp
-        include/qs/bytecode/bytecode_symbol.hpp
-        src/bytecode/bytecode_symbol.cpp)
+        include/qs/types/PrimitiveScriptType.hpp
+        include/qs/types/ScriptArrayType.hpp
+        include/qs/types/ScriptClosureType.hpp
+        include/qs/types/ScriptErroneousType.hpp
+        include/qs/types/ScriptStringType.hpp
+        include/qs/types/ScriptStructType.hpp
+        include/qs/types/ScriptType.hpp
+        include/qs/types/types.hpp
+        include/qs/types/TypeTable.hpp
+        include/qs/types/VoidScriptType.hpp
+        src/analysis/analyzer.cpp
+        src/analysis/SemanticContext.cpp
+        src/analysis/semantictree.cpp
+        src/analysis/transformer.cpp
+        src/bytecode/bytecode_file.cpp
+        src/bytecode/bytecode_typetable.cpp
+        src/codegen/compiler.cpp
+        src/codegen/CompilerContext.cpp
+        src/codegen/type_conv.cpp
+        src/errors.cpp
+        src/interpreter/heap_mem.cpp
+        src/interpreter/interpreter.cpp
+        src/interpreter/opcode_printer.cpp
+        src/interpreter/opcodes.cpp
+        src/interpreter/script_error.cpp
+        src/interpreter/StackMemory.cpp
+        src/interpreter/StringPool.cpp
+        src/nativeinterface.cpp
+        src/objects.cpp
+        src/parse/JsonPrinter.cpp
+        src/parse/keyw_lookup.cpp
+        src/parse/lexer.cpp
+        src/parse/parser.cpp
+        src/parse/syntaxtree.cpp
+        src/parse/token.cpp
+        src/qsenv.cpp
+        src/stdlib/qs_stdlib.cpp
+        src/strings/stringreader.cpp
+        src/strings/strings.cpp
+        src/strings/unicode_binary_props.cpp
+        src/strings/utf8.cpp
+        src/stringtable.cpp
+        src/types/ConstTypes.cpp
+        src/types/FunctionSignature.cpp
+        src/types/PrimitiveScriptType.cpp
+        src/types/ScriptArrayType.cpp
+        src/types/ScriptClosureType.cpp
+        src/types/ScriptErroneousType.cpp
+        src/types/ScriptStringType.cpp
+        src/types/ScriptStructType.cpp
+        src/types/ScriptType.cpp
+        src/types/types.cpp
+        src/types/TypeTable.cpp
+        src/types/VoidScriptType.cpp
+)
 
 target_include_directories(qsengine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

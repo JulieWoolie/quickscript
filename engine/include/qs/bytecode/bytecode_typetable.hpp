@@ -1,6 +1,8 @@
 #ifndef QS_BYTECODE_TYPETABLE_H
 #define QS_BYTECODE_TYPETABLE_H
 
+#include <vector>
+
 #include "qs/common.hpp"
 #include "qs/types/TypeTable.hpp"
 

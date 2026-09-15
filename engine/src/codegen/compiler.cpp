@@ -1681,9 +1681,12 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
 
 static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
   std::vector<CompiledFunction>& compiledFuncs = ctx.getCompiledFunctions();
-  FunctionTableEntry* table = createFunctionTableArray(compiledFuncs.size());
+  std::vector<FunctionTableEntry>& table = out.functionTable;
 
-  for (uint32 i = 0; i < compiledFuncs.size(); i++) {
+  const uint32 size = compiledFuncs.size();
+  table.reserve(size);
+
+  for (uint32 i = 0; i < size; i++) {
     CompiledFunction& cfunc = compiledFuncs[i];
     const uint64 tIndex = ctx.getLocalTypeIndex(cfunc.functionSymbol->getFunction()->getSignature());
 
@@ -1694,9 +1697,6 @@ static void createFunctionTable(BytecodeFile& out, CompilerContext& ctx) {
       .stackSize = cfunc.functionSymbol->getFunction()->getScope()->getTotalStackSize()
     };
   }
-
-  out.funcTable = table;
-  out.funcTableEntries = compiledFuncs.size();
 }
 
 static void setEntryPointIndex(BytecodeFile& file, CompilerContext& cctx) {

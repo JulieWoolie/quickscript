@@ -149,15 +149,15 @@ static void writeTypeTable(const BytecodeFile& file, BinaryWriter& writer) {
 }
 
 static void writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
-  const uint32 funcTableSize = file.funcTableEntries;
-  FunctionTableEntry* table = file.funcTable;
+  const std::vector<FunctionTableEntry>& funcTable = file.functionTable;
+  const uint32 funcTableSize = funcTable.size();
 
   for (uint32 i = 0; i < funcTableSize; i++) {
-    FunctionTableEntry* te = &table[i];
-    writer.writeU64(te->nameOffset);
-    writer.writeU64(te->stackSize);
-    writer.writeU32(te->startingInstruction);
-    writer.writeU32(te->signatureIndex);
+    const FunctionTableEntry& te = funcTable[i];
+    writer.writeU64(te.nameOffset);
+    writer.writeU64(te.stackSize);
+    writer.writeU32(te.startingInstruction);
+    writer.writeU32(te.signatureIndex);
   }
 }
 
@@ -182,23 +182,6 @@ BytecodeFile::~BytecodeFile() {
     free(constStringPool);
     constStringPool = nullptr;
     stringPoolSize = 0;
-  }
-
-  if (typeTable) {
-    for (uint32 i = 0; i < typeTableSize; i++) {
-      TypeTableEntry* e = typeTable[i];
-      freeTypeTableEntry(e);
-    }
-
-    freeTypeTable(typeTable);
-    typeTable = nullptr;
-    typeTableSize = 0;
-  }
-
-  if (funcTable) {
-    freeFunctionTableArray(funcTable);
-    funcTable = nullptr;
-    funcTableEntries = 0;
   }
 
   if (instructionBuf) {
@@ -271,7 +254,7 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   writeInstructions(file, writer);
   const headersection instrSize = writer.len - instrStart;
 
-  const headersection finalLength = writer.len;
+  const uint64 finalLength = writer.len;
 
   // Header
   writer.len = 0;
@@ -295,6 +278,10 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   sections[HSECT_MODULE_NAME_SIZE] = modNameSize;
   sections[HSECT_NATIVE_LIBRARY_NAME_OFF] = nativeModNameStart;
   sections[HSECT_NATIVE_LIBRARY_NAME_SIZE] = nativeModNameSize;
+  sections[HSECT_IMPORT_LIST_OFF] = 0;
+  sections[HSECT_IMPORT_LIST_SIZE] = 0;
+  sections[HSECT_EXPORT_LIST_OFF] = 0;
+  sections[HSECT_EXPORT_LIST_SIZE] = 0;
 
   *sizeOut = finalLength;
   return writer.buf;
@@ -416,23 +403,9 @@ static BytecodeReadResult readTypeTable(BinaryReader& reader, BytecodeFile& out)
         break;
       }
       default:
-        // Free the entries so we don't create a memory leak
-        for (TypeTableEntry* e : entries) {
-          freeTypeTableEntry(e);
-        }
         return IR_RESULT_MALFORMED_TYPETABLE;
     }
   }
-
-  const uint32 entryCount = entries.size();
-  TypeTableEntry** typeTable = createTypeTable(entryCount);
-
-  for (uint32 i = 0; i < entryCount; i++) {
-    typeTable[i] = entries[i];
-  }
-
-  out.typeTable = typeTable;
-  out.typeTableSize = entryCount;
 
   return IR_RESULT_OK;
 }
@@ -441,24 +414,19 @@ static BytecodeReadResult readFunctionTable(BinaryReader& reader, BytecodeFile& 
   constexpr uint64 funcTableEntrySize = 8 + 8 + 4 + 4;
   const uint32 entryCount = reader.capacity / funcTableEntrySize;
 
-  FunctionTableEntry* table = createFunctionTableArray(entryCount);
-
   for (uint32 i = 0; i < entryCount; i++) {
     const uint64 nameOff = reader.readU64();
     const uint64 stackSize = reader.readU64();
     const uint32 firstInstr = reader.readU32();
     const uint32 signatureIdx = reader.readU32();
 
-    table[i] = {
+    out.functionTable.push_back({
       .nameOffset = nameOff,
       .signatureIndex = signatureIdx,
       .startingInstruction = firstInstr,
       .stackSize = stackSize
-    };
+    });
   }
-
-  out.funcTable = table;
-  out.funcTableEntries = entryCount;
 
   return IR_RESULT_OK;
 }
@@ -724,19 +692,20 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   fprintf(printFile, "\n}");
 
   // Function table
-  const uint32 funcTableSize = file.funcTableEntries;
-  FunctionTableEntry* funcTable = file.funcTable;
+  const std::vector<FunctionTableEntry>& funcTable = file.functionTable;
+  const uint32 funcTableSize = funcTable.size();
 
   fprintf(printFile, "\nFUNCTION_TABLE = {");
   for (uint32 i = 0; i < funcTableSize; i++) {
-    FunctionTableEntry* entry = &funcTable[i];
+    const FunctionTableEntry& entry = funcTable[i];
     fprintf(printFile, "\n  [%d] {", i);
-    fprintf(printFile, "\n    name_offset = %llu # ", entry->nameOffset);
-    writePooledString(printFile, entry->nameOffset, stringPool);
 
-    fprintf(printFile, "\n    signature_index = %llu", entry->signatureIndex);
-    fprintf(printFile, "\n    first_instruction = %llu", entry->startingInstruction);
-    fprintf(printFile, "\n    stack_size = %llu", entry->stackSize);
+    fprintf(printFile, "\n    name_offset = %llu # ", entry.nameOffset);
+    writePooledString(printFile, entry.nameOffset, stringPool);
+
+    fprintf(printFile, "\n    signature_index = %llu", entry.signatureIndex);
+    fprintf(printFile, "\n    first_instruction = %llu", entry.startingInstruction);
+    fprintf(printFile, "\n    stack_size = %llu", entry.stackSize);
     fprintf(printFile, "\n  }");
   }
   fprintf(printFile, "\n}");

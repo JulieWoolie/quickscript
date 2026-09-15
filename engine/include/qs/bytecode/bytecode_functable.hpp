@@ -11,8 +11,4 @@ struct FunctionTableEntry {
   uint64 stackSize = 0;
 };
 
-FunctionTableEntry* createFunctionTableArray(uint32 entries);
-
-void freeFunctionTableArray(FunctionTableEntry* arr);
-
 #endif //QS_BYTECODE_FUNCTABLE_H
