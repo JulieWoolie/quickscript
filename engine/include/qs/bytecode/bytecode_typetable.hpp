@@ -10,8 +10,10 @@
 typedef uint8 TypeTableType;
 
 struct TypeTableEntry {
-  TypeTableType type = 0;
   typeindex index = 0;
+
+  virtual ~TypeTableEntry() = default;
+  virtual TypeTableType type() const = 0;
 };
 
 struct TypeTableArray: TypeTableEntry {
@@ -20,6 +22,8 @@ struct TypeTableArray: TypeTableEntry {
   static TypeTableArray* create();
 
   static void destroy(const TypeTableArray* tt);
+
+  TypeTableType type() const override;
 };
 
 struct TypeTableFuncSign: TypeTableEntry {
@@ -31,6 +35,8 @@ struct TypeTableFuncSign: TypeTableEntry {
   static TypeTableFuncSign* create(uint32 argCount);
 
   static void destroy(TypeTableFuncSign* sign);
+
+  TypeTableType type() const override;
 };
 
 struct TypeTableStructProperty {
@@ -50,6 +56,8 @@ struct TypeTableStruct: TypeTableEntry {
   static TypeTableStruct* create(uint32 propertyCount);
 
   static void destroy(TypeTableStruct* tt);
+
+  TypeTableType type() const override;
 };
 
 void freeTypeTableEntry(TypeTableEntry* entry);

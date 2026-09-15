@@ -2,12 +2,15 @@
 
 TypeTableArray* TypeTableArray::create() {
   TypeTableArray* array = new TypeTableArray();
-  array->type = TYPE_TABLE_ARRAY;
   return array;
 }
 
 void TypeTableArray::destroy(const TypeTableArray* tt) {
   delete tt;
+}
+
+TypeTableType TypeTableArray::type() const {
+  return TYPE_TABLE_ARRAY;
 }
 
 TypeTableFuncSign* TypeTableFuncSign::create(const uint32 argCount) {
@@ -17,8 +20,6 @@ TypeTableFuncSign* TypeTableFuncSign::create(const uint32 argCount) {
 
   TypeTableFuncSign* sign = static_cast<TypeTableFuncSign*>(malloc(memSize));
   new (sign) TypeTableFuncSign();
-
-  sign->type = TYPE_TABLE_SIGNATURE;
 
   if (argCount != 0) {
     sign->argumentCount = argCount;
@@ -32,6 +33,10 @@ void TypeTableFuncSign::destroy(TypeTableFuncSign* sign) {
   free(sign);
 }
 
+TypeTableType TypeTableFuncSign::type() const {
+  return TYPE_TABLE_SIGNATURE;
+}
+
 TypeTableStruct* TypeTableStruct::create(const uint32 propertyCount) {
   constexpr uint64 ttSize = sizeof(TypeTableStruct);
   const uint64 propsMemSize = propertyCount * sizeof(TypeTableStructProperty);
@@ -39,8 +44,6 @@ TypeTableStruct* TypeTableStruct::create(const uint32 propertyCount) {
 
   TypeTableStruct* data = static_cast<TypeTableStruct*>(malloc(memSize));
   new (data) TypeTableStruct();
-
-  data->type = TYPE_TABLE_STRUCT;
 
   if (propertyCount != 0) {
     data->propertyCount = propertyCount;
@@ -54,8 +57,12 @@ void TypeTableStruct::destroy(TypeTableStruct* tt) {
   free(tt);
 }
 
+TypeTableType TypeTableStruct::type() const {
+  return TYPE_TABLE_STRUCT;
+}
+
 void freeTypeTableEntry(TypeTableEntry* entry)  {
-  switch (entry->type) {
+  switch (entry->type()) {
     case TYPE_TABLE_ARRAY:
       TypeTableArray::destroy(static_cast<const TypeTableArray*>(entry));
       break;
