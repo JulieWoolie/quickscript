@@ -613,10 +613,10 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   fprintf(printFile, "\n}");
 
   if (!file.moduleName.empty()) {
-    fprintf(printFile, "\nMODULE_NAME = '%s'", file.moduleName.c_str());
+    fprintf(printFile, "\nMODULE_NAME = %s", file.moduleName.c_str());
   }
-  if (file.nativeModuleName.empty()) {
-    fprintf(printFile, "\nNATIVE_MODULE_NAME = '%s'", file.nativeModuleName.c_str());
+  if (!file.nativeModuleName.empty()) {
+    fprintf(printFile, "\nNATIVE_MODULE_NAME = %s", file.nativeModuleName.c_str());
   }
   switch (file.moduleType) {
     case BF_MODTYPE_REGULAR:
@@ -627,6 +627,23 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
       break;
     default:
       break;
+  }
+  
+  if (!file.importedModules.empty()) {
+    fprintf(printFile, "\nIMPORTS = [");
+    bool first = false;
+
+    for (const std::string& mod : file.importedModules) {
+      if (!first) {
+        fprintf(printFile, ",");
+      } else {
+        first = false;
+      }
+
+      fprintf(printFile, "\n  %s", mod.c_str());
+    }
+
+    fprintf(printFile, "\n]");
   }
 
   const uint64 typeTableSize = file.typeTableSize;
