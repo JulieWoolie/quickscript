@@ -1,5 +1,13 @@
 #include "qs/bytecode/bytecode_typetable.hpp"
 
+TypeTableEntry::TypeTableEntry(const TypeTableType t): type(t) {
+
+}
+
+TypeTableArray::TypeTableArray(): TypeTableEntry(TYPE_TABLE_ARRAY) {
+
+}
+
 TypeTableArray* TypeTableArray::create() {
   TypeTableArray* array = new TypeTableArray();
   return array;
@@ -9,8 +17,8 @@ void TypeTableArray::destroy(const TypeTableArray* tt) {
   delete tt;
 }
 
-TypeTableType TypeTableArray::type() const {
-  return TYPE_TABLE_ARRAY;
+TypeTableFuncSign::TypeTableFuncSign(): TypeTableEntry(TYPE_TABLE_SIGNATURE) {
+
 }
 
 TypeTableFuncSign* TypeTableFuncSign::create(const uint32 argCount) {
@@ -33,8 +41,8 @@ void TypeTableFuncSign::destroy(TypeTableFuncSign* sign) {
   free(sign);
 }
 
-TypeTableType TypeTableFuncSign::type() const {
-  return TYPE_TABLE_SIGNATURE;
+TypeTableStruct::TypeTableStruct(): TypeTableEntry(TYPE_TABLE_STRUCT) {
+
 }
 
 TypeTableStruct* TypeTableStruct::create(const uint32 propertyCount) {
@@ -57,12 +65,8 @@ void TypeTableStruct::destroy(TypeTableStruct* tt) {
   free(tt);
 }
 
-TypeTableType TypeTableStruct::type() const {
-  return TYPE_TABLE_STRUCT;
-}
-
 void freeTypeTableEntry(TypeTableEntry* entry)  {
-  switch (entry->type()) {
+  switch (entry->type) {
     case TYPE_TABLE_ARRAY:
       TypeTableArray::destroy(static_cast<const TypeTableArray*>(entry));
       break;

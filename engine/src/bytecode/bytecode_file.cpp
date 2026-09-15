@@ -109,7 +109,7 @@ static void writeTypeTable(const BytecodeFile& file, BinaryWriter& writer) {
 
   for (uint32 i = 0; i < tableEntries; i++) {
     TypeTableEntry* entry = table[i];
-    const TypeTableType entryType = entry->type();
+    const TypeTableType entryType = entry->type;
 
     writer.writeU32(entry->index);
     writer.writeU8(entryType);
@@ -656,7 +656,7 @@ void printBytecodeFile(const BytecodeFile& file, FILE* printFile) {
   fprintf(printFile, "\nTYPE_TABLE = {");
   for (uint32 i = 0; i < typeTableSize; i++) {
     TypeTableEntry* entry = typeTable[i];
-    const TypeTableType entryType = entry->type();
+    const TypeTableType entryType = entry->type;
 
     fprintf(printFile, "\n  [%llu] {\n    type = %s", entry->index, TypeTableType_name(entryType));
 
