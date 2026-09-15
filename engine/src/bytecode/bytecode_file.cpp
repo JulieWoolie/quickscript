@@ -26,10 +26,36 @@
     return value;\
   }
 
+struct BytecodeSection {
+  const headersection offset = 0;
+  const headersection size = 0;
+};
+
+static constexpr BytecodeSection EMPTY_SECTION = {.offset = 0, .size = 0};
+
 struct BinaryWriter {
   uint8* buf;
   uint64 len = 0;
   uint64 cap = 0;
+
+  headersection sectionStart = 0;
+
+  void startSection() {
+    sectionStart = len;
+  }
+
+  BytecodeSection endSection() {
+    const headersection start = sectionStart;
+    const headersection sectLen = len - start;
+
+    sectionStart = 0;
+
+    if (sectionStart == 0 || len == 0) {
+      return EMPTY_SECTION;
+    }
+
+    return {.offset = start, .size = sectLen};
+  }
 
   void ensureHasSpace(const uint64 bytes) {
     const uint64 reqSize = len + bytes;
@@ -103,9 +129,11 @@ struct BinaryReader {
   }
 };
 
-static void writeTypeTable(const BytecodeFile& file, BinaryWriter& writer) {
+static BytecodeSection writeTypeTable(const BytecodeFile& file, BinaryWriter& writer) {
   TypeTableEntry** table = file.typeTable;
   uint64 tableEntries = file.typeTableSize;
+
+  writer.startSection();
 
   for (uint32 i = 0; i < tableEntries; i++) {
     TypeTableEntry* entry = table[i];
@@ -146,11 +174,15 @@ static void writeTypeTable(const BytecodeFile& file, BinaryWriter& writer) {
       }
     }
   }
+
+  return writer.endSection();
 }
 
-static void writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
+static BytecodeSection writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
   const std::vector<FunctionTableEntry>& funcTable = file.functionTable;
   const uint32 funcTableSize = funcTable.size();
+
+  writer.startSection();
 
   for (uint32 i = 0; i < funcTableSize; i++) {
     const FunctionTableEntry& te = funcTable[i];
@@ -159,9 +191,13 @@ static void writeFunctionTable(const BytecodeFile& file, BinaryWriter& writer) {
     writer.writeU32(te.startingInstruction);
     writer.writeU32(te.signatureIndex);
   }
+
+  return writer.endSection();
 }
 
-static void writeInstructions(const BytecodeFile& file, BinaryWriter& writer) {
+static BytecodeSection writeInstructions(const BytecodeFile& file, BinaryWriter& writer) {
+  writer.startSection();
+
   uint64 off = 0;
   while (off < file.instructionsSize) {
     const opcode code = *reinterpret_cast<opcode*>(file.instructionBuf + off);
@@ -171,6 +207,8 @@ static void writeInstructions(const BytecodeFile& file, BinaryWriter& writer) {
 
     off += LENGTH_INSTRUCTION;
   }
+
+  return writer.endSection();
 }
 
 BytecodeFile::BytecodeFile() {
@@ -206,6 +244,45 @@ void BytecodeFile::destroy(const BytecodeFile& bfile) {
   delete &bfile;
 }
 
+static BytecodeSection writeImportList(const BytecodeFile& file, BinaryWriter& writer) {
+  const std::vector<std::string>& imports = file.importedModules;
+  writer.startSection();
+
+  for (const std::string& importPath : imports) {
+    writer.writeU32(importPath.size());
+    writer.writeString(importPath);
+  }
+
+  return writer.endSection();
+}
+
+static BytecodeSection writeExportList(const BytecodeFile& file, BinaryWriter& writer) {
+  const std::vector<BytecodeSymbol>& exports = file.exportedSymbols;
+  writer.startSection();
+
+  for (const BytecodeSymbol& sym : exports) {
+    writer.writeU8(sym.type);
+
+    switch (sym.type) {
+      case BFSYM_VARIABLE:
+        writer.writeU64(sym.variable.memOffset);
+        writer.writeU64(sym.variable.nameOffset);
+        writer.writeU32(sym.variable.typeIndex);
+        break;
+      case BFSYM_FUNC:
+        writer.writeU32(sym.funcTableIndex);
+        break;
+      case BFSYM_STRUCT:
+        writer.writeU32(sym.typeTableIndex);
+        break;
+      default:
+        break;
+    }
+  }
+
+  return writer.endSection();
+}
+
 uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   BinaryWriter writer;
   writer.len = 0;
@@ -239,20 +316,11 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   const headersection strPoolSize = file.stringPoolSize;
   const headersection strPoolStart = writer.copyDataFrom(file.constStringPool, strPoolSize);
 
-  // Type Table
-  const headersection typeTableStart = writer.len;
-  writeTypeTable(file, writer);
-  const headersection typeTableSize = writer.len - typeTableStart;
-
-  // Func Table
-  const headersection fTableStart = writer.len;
-  writeFunctionTable(file, writer);
-  const headersection fTableSize = writer.len - fTableStart;
-
-  // Instructions Buffer
-  const headersection instrStart = writer.len;
-  writeInstructions(file, writer);
-  const headersection instrSize = writer.len - instrStart;
+  const BytecodeSection importsSect = writeImportList(file, writer);
+  const BytecodeSection typeTableSect = writeTypeTable(file, writer);
+  const BytecodeSection funcTableSect = writeFunctionTable(file, writer);
+  const BytecodeSection exportsSect = writeExportList(file, writer);
+  const BytecodeSection instrSect = writeInstructions(file, writer);
 
   const uint64 finalLength = writer.len;
 
@@ -264,12 +332,12 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   headersection* sections = reinterpret_cast<headersection*>(writer.buf + writer.len);
   sections[HSECT_STRPOOL_OFF] = strPoolStart;
   sections[HSECT_STRPOOL_SIZE] = strPoolSize;
-  sections[HSECT_TYPES_OFF] = typeTableStart;
-  sections[HSECT_TYPES_SIZE] = typeTableSize;
-  sections[HSECT_FTABLE_OFF] = fTableStart;
-  sections[HSECT_FTABLE_SIZE] = fTableSize;
-  sections[HSECT_INSTR_OFF] = instrStart;
-  sections[HSECT_INSTR_SIZE] = instrSize;
+  sections[HSECT_TYPES_OFF] = typeTableSect.offset;
+  sections[HSECT_TYPES_SIZE] = typeTableSect.size;
+  sections[HSECT_FTABLE_OFF] = funcTableSect.offset;
+  sections[HSECT_FTABLE_SIZE] = funcTableSect.size;
+  sections[HSECT_INSTR_OFF] = instrSect.offset;
+  sections[HSECT_INSTR_SIZE] = instrSect.size;
   sections[HSECT_INSTR_COUNT] = file.instructionCount;
   sections[HSECT_GLOBAL_SCOPE_SIZE] = file.globalScopeSize;
   sections[HSECT_ENTRYPOINT_FUNC_IDX] = file.entryPointIndex;
@@ -278,10 +346,10 @@ uint8* serializeBytecodeFile(const BytecodeFile& file, uint64* sizeOut) {
   sections[HSECT_MODULE_NAME_SIZE] = modNameSize;
   sections[HSECT_NATIVE_LIBRARY_NAME_OFF] = nativeModNameStart;
   sections[HSECT_NATIVE_LIBRARY_NAME_SIZE] = nativeModNameSize;
-  sections[HSECT_IMPORT_LIST_OFF] = 0;
-  sections[HSECT_IMPORT_LIST_SIZE] = 0;
-  sections[HSECT_EXPORT_LIST_OFF] = 0;
-  sections[HSECT_EXPORT_LIST_SIZE] = 0;
+  sections[HSECT_IMPORT_LIST_OFF] = importsSect.offset;
+  sections[HSECT_IMPORT_LIST_SIZE] = importsSect.size;
+  sections[HSECT_EXPORT_LIST_OFF] = exportsSect.offset;
+  sections[HSECT_EXPORT_LIST_SIZE] = exportsSect.size;
 
   *sizeOut = finalLength;
   return writer.buf;
