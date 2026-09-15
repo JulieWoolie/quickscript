@@ -1612,7 +1612,6 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         const uint32 propCount = structType->getPropertyCount();
 
         TypeTableStruct* ttStruct = TypeTableStruct::create(propCount);
-        ttStruct->type = TYPE_TABLE_STRUCT;
         ttStruct->index = localIndex;
         ttStruct->nameOffset = stringPool.emplaceString(name.data(), name.length());
         ttStruct->propertyCount = propCount;
@@ -1645,7 +1644,6 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         const typeindex cTypeIdx = ctx.getLocalTypeIndex(componentType);
 
         TypeTableArray* arr = TypeTableArray::create();
-        arr->type = TYPE_TABLE_ARRAY;
         arr->index = localIndex;
         arr->componentType = cTypeIdx;
 
@@ -1657,7 +1655,6 @@ static void createTypeTable(BytecodeFile& out, CompilerContext& ctx) {
         const uint32 argCount = sign->getArgumentsLength();
 
         TypeTableFuncSign* tableSign = TypeTableFuncSign::create(argCount);
-        tableSign->type = TYPE_TABLE_SIGNATURE;
         tableSign->index = localIndex;
 
         const typeindex retType = ctx.getLocalTypeIndex(sign->getReturnType());
