@@ -101,6 +101,8 @@ add_library(qsengine STATIC
         src/types/types.cpp
         src/types/TypeTable.cpp
         src/types/VoidScriptType.cpp
+        include/qs/libloader.hpp
+        src/win_libloader.cpp
 )
 
 target_include_directories(qsengine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
