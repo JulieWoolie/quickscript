@@ -854,7 +854,15 @@ QS_API QsEnv QS_CALL qse_createEnv();
 QS_API void QS_CALL qse_freeEnv(QsEnv env);
 QS_API void QS_CALL qse_addStandardLibraries(QsEnv env);
 QS_API void QS_CALL qse_addLibraryDirectory(QsEnv env, conststring dirPath);
-QS_API void QS_CALL qse_registerNative(QsEnv env, conststring funcName, conststring signature, QsNativeFunction func);
+
+QS_API void QS_CALL qse_registerNative(
+  QsEnv env,
+  conststring ns,
+  conststring funcName,
+  conststring signature,
+  QsNativeFunction func
+);
+
 QS_API void QS_CALL qse_setStatementInlining(QsEnv env, boolean state);
 QS_API void QS_CALL qse_setExpressionInlining(QsEnv env, boolean state);
 QS_API void QS_CALL qse_setAssertsCompiled(QsEnv env, boolean state);
