@@ -403,21 +403,21 @@ static void addFunctionEntries(
   std::vector<LocalScriptFunction>& functions,
   const std::string& filename
 ) {
-  FunctionTableEntry* funcTable = file.funcTable;
-  const uint32 funcCount = file.funcTableEntries;
+  const std::vector<FunctionTableEntry>& funcTable = file.functionTable;
+  const uint32 funcCount = funcTable.size();
 
   for (uint32 i = 0; i < funcCount; i++) {
-    FunctionTableEntry* fte = &funcTable[i];
+    const FunctionTableEntry& fte = funcTable[i];
 
-    const uint32 firstInstr = fte->startingInstruction + rewrites.jumpAddrOffset;
-    const uint64 nameAddr = rewrites.stringRewrites.findReplacement(fte->nameOffset);
+    const uint32 firstInstr = fte.startingInstruction + rewrites.jumpAddrOffset;
+    const uint64 nameAddr = rewrites.stringRewrites.findReplacement(fte.nameOffset);
 
-    FunctionSignature* sign = static_cast<FunctionSignature*>(types.lookupByIndex(rewrites.typeRewrites.findRewritten(fte->signatureIndex)));
+    FunctionSignature* sign = static_cast<FunctionSignature*>(types.lookupByIndex(rewrites.typeRewrites.findRewritten(fte.signatureIndex)));
 
     LocalScriptFunction sf = LocalScriptFunction();
     sf.firstInstrIndex = firstInstr;
     sf.nameOffset = nameAddr;
-    sf.stackSize = fte->stackSize;
+    sf.stackSize = fte.stackSize;
     sf.signature = sign;
 
     toStandardFilename(filename, sf.filename);
