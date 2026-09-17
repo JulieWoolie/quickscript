@@ -58,12 +58,12 @@ void StringReader::skipWhitespace() {
   }
 }
 
-utf32char StringReader::peek() const {
+utf32char StringReader::peek(const uint32 ahead) const {
   if (!hasNext()) {
     return 0;
   }
 
-  const utf8char* buf = m_buf + m_cursor;
+  const utf8char* buf = m_buf + m_cursor + ahead;
   utf32char ch = 0;
   decodeUtf8(buf, &ch, m_len - m_cursor);
   return ch;

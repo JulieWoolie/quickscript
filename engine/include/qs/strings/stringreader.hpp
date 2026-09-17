@@ -35,7 +35,7 @@ class StringReader {
 
     void skipWhitespace();
 
-    utf32char peek() const;
+    utf32char peek(uint32 ahead = 0) const;
 
     utf32char next();
 
