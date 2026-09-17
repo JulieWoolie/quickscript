@@ -9,7 +9,7 @@
 #include "qs/parse/lexer.hpp"
 #include "qs/parse/parser.hpp"
 
-typedef void (*ModuleLoadCallback)(QsEnvironment*);
+typedef void (*ModuleLoadCallback)(QsEnvironment* env, conststring ns);
 
 #define LIBRARY_ENTRYPOINT_NAME "qs_onLoadNativeModule"
 
@@ -122,7 +122,7 @@ bool QsEnvironment::loadNativeSource(conststring name, conststring ns, NativeMod
   m_nativeModules.push_back(mod);
   NativeModule& pushed = m_nativeModules.back();
 
-  cb(this);
+  cb(this, ns);
 
   *out = &pushed;
   return true;

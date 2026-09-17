@@ -863,6 +863,8 @@ QS_API void QS_CALL qse_registerNative(
   QsNativeFunction func
 );
 
+QS_API void QS_CALL qse_registerNatives(QsEnv env, conststring ns, uint32 n, ...);
+
 QS_API void QS_CALL qse_setStatementInlining(QsEnv env, boolean state);
 QS_API void QS_CALL qse_setExpressionInlining(QsEnv env, boolean state);
 QS_API void QS_CALL qse_setAssertsCompiled(QsEnv env, boolean state);
@@ -888,7 +890,7 @@ QS_API boolean QS_CALL qsc_compileSourceFile(conststring sourceName, conststring
 // ========= User Defined Functions =========
 
 #ifndef _QS_IMPL
-QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env);
+QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env, conststring ns);
 #endif
 
 #ifdef __cplusplus
