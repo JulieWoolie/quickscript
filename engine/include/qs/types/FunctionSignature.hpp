@@ -33,6 +33,8 @@ class FunctionSignature: public ScriptType {
 
     static int32 callSignatureMatches(FunctionSignature* callSign, FunctionSignature* funcSign);
 
+    static FunctionSignature* parse(conststring str);
+
     conststring getTypeName() const override;
 
     bool isVariadic() const;

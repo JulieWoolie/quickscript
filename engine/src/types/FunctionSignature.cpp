@@ -2,6 +2,10 @@
 
 #include <__stdarg_va_arg.h>
 
+#include "qs/parse/keyw_lookup.hpp"
+#include "qs/parse/token.hpp"
+#include "qs/strings/stringreader.hpp"
+#include "qs/strings/unicode_binary_props.hpp"
 #include "qs/types/ConstTypes.hpp"
 #include "qs/types/ScriptArrayType.hpp"
 #include "qs/types/types.hpp"
@@ -196,4 +200,364 @@ int32 FunctionSignature::callSignatureMatches(FunctionSignature* callSign, Funct
   }
 
   return score;
+}
+
+#define SIGT_EOF -1
+#define SIGT_UNKNOWN 0
+#define SIGT_RETURN_TYPE_PREFIX 1
+#define SIGT_OPEN_PARENTHESIS 2
+#define SIGT_CLOSE_PARENTHESIS 3
+#define SIGT_COMMA 4
+#define SIGT_ARRAY_BRACKETS 5
+#define SIGT_VARIADIC 6
+#define SIGT_TYPENAME 7
+
+typedef int8 sigtoken;
+
+static sigtoken nextToken(const StringReader& reader) {
+  if (!reader.hasNext()) {
+    return SIGT_EOF;
+  }
+
+  const utf32char ch = reader.peek();
+
+  switch (ch) {
+    case '(':
+      return SIGT_OPEN_PARENTHESIS;
+    case ')':
+      return SIGT_CLOSE_PARENTHESIS;
+    case ',':
+      return SIGT_COMMA;
+    case '-':
+    case '=':
+      if (reader.peek(1) == '>') {
+        return SIGT_RETURN_TYPE_PREFIX;
+      }
+      return SIGT_UNKNOWN;
+    case '[':
+      if (reader.peek(1) == ']') {
+        return SIGT_ARRAY_BRACKETS;
+      }
+      return SIGT_UNKNOWN;
+    case '.':
+      if (reader.peek(1) == '.' && reader.peek(2) == '.') {
+        return SIGT_VARIADIC;
+      }
+      return SIGT_UNKNOWN;
+    default:
+      if (ucIsXidStart(ch)) {
+        return SIGT_TYPENAME;
+      }
+      return SIGT_UNKNOWN;
+  }
+}
+
+static void skipToken(const sigtoken tt, StringReader& reader) {
+  switch (tt) {
+    case SIGT_COMMA:
+    case SIGT_OPEN_PARENTHESIS:
+    case SIGT_CLOSE_PARENTHESIS:
+    case SIGT_UNKNOWN:
+      reader.next();
+      break;
+
+    case SIGT_ARRAY_BRACKETS:
+    case SIGT_RETURN_TYPE_PREFIX:
+      reader.next();
+      reader.next();
+      break;
+
+    case SIGT_VARIADIC:
+      reader.next();
+      reader.next();
+      reader.next();
+      break;
+
+    case SIGT_TYPENAME:
+      while (ucIsXidContinue(reader.peek())) {
+        reader.next();
+      }
+      break;
+
+    default:
+      break;
+  }
+}
+
+static bool isValidTypeIdentifier(const std::string_view& view) {
+  const conststring str = view.data();
+  const tokentype keywType = tokenTypeFromString(str, view.length());
+
+  switch (keywType) {
+    case TT_KEYW_BOOL:
+    case TT_KEYW_UINT8:
+    case TT_KEYW_INT8:
+    case TT_KEYW_UINT16:
+    case TT_KEYW_INT16:
+    case TT_KEYW_UINT32:
+    case TT_KEYW_INT32:
+    case TT_KEYW_UINT64:
+    case TT_KEYW_INT64:
+    case TT_KEYW_FLOAT32:
+    case TT_KEYW_FLOAT64:
+    case TT_KEYW_STRING:
+    case TT_KEYW_VOID:
+      return true;
+    default:
+      return false;
+  }
+}
+
+static bool isValidTypeName(StringReader& reader, bool& variadic) {
+  reader.skipWhitespace();
+
+  const uint32 start = reader.cursor();
+  const sigtoken tt = nextToken(reader);
+
+  if (tt != SIGT_TYPENAME) {
+    return false;
+  }
+
+  skipToken(tt, reader);
+
+  const uint32 end = reader.cursor();
+  const std::string_view sv = reader.substring(start, end);
+
+  if (!isValidTypeIdentifier(sv)) {
+    return false;
+  }
+
+  reader.skipWhitespace();
+
+  while (nextToken(reader) == SIGT_ARRAY_BRACKETS) {
+    skipToken(SIGT_ARRAY_BRACKETS, reader);
+    reader.skipWhitespace();
+  }
+
+  if (nextToken(reader) == SIGT_VARIADIC) {
+    if (variadic) {
+      return false;
+    }
+
+    skipToken(SIGT_VARIADIC, reader);
+    variadic = true;
+
+    return true;
+  }
+
+  return true;
+}
+
+#define INVALID_SIGNATURE (-1)
+
+static int32 isValidSignature(StringReader& reader, bool& variadic) {
+  // Type signature syntax rules:
+  //
+  // type-signature:
+  //      '(' type-name-list ')' '->' type-name
+  //      '(' type-name-list ')' '=>' type-name
+  //      '(' type-name-list ')'
+  //      type-name-list '->' type-name
+  //      type-name-list '=>' type-name
+  //      type-name-list
+  //
+  // type-name-list:
+  //      type-name
+  //      type-name-list type-name
+  //      type-name-list ',' type-name
+  //
+  // type-name:
+  //      array-name
+  //      array-name '...'
+  //
+  // array-name:
+  //      base-name
+  //      array-name '[]'
+  //
+  // base-name:
+  //      REGEXP [a-zA-Z_$0-9]+
+  //
+
+  reader.skipWhitespace();
+  const sigtoken first = nextToken(reader);
+  bool parentheses = false;
+
+  if (first == SIGT_OPEN_PARENTHESIS) {
+    parentheses = true;
+    skipToken(first, reader);
+  }
+
+  int32 argCount = 0;
+
+  while (true) {
+    reader.skipWhitespace();
+    const sigtoken tt = nextToken(reader);
+
+    if (tt == TT_EOF) {
+      return argCount;
+    }
+
+    if (tt == SIGT_CLOSE_PARENTHESIS) {
+      if (!parentheses) {
+        return INVALID_SIGNATURE;
+      }
+
+      skipToken(tt, reader);
+      break;
+    }
+
+    if (tt == SIGT_RETURN_TYPE_PREFIX) {
+      if (parentheses) {
+        return INVALID_SIGNATURE;
+      }
+      break;
+    }
+
+    if (tt == SIGT_COMMA) {
+      skipToken(tt, reader);
+      continue;
+    }
+
+    if (!isValidTypeName(reader, variadic)) {
+      return INVALID_SIGNATURE;
+    }
+
+    argCount++;
+  }
+
+  reader.skipWhitespace();
+  const sigtoken ending = nextToken(reader);
+
+  if (ending == SIGT_RETURN_TYPE_PREFIX) {
+    skipToken(SIGT_RETURN_TYPE_PREFIX, reader);
+
+    bool retVariadic = false;
+    const bool validReturn = isValidTypeName(reader, retVariadic);
+
+    if (!validReturn || retVariadic) {
+      return INVALID_SIGNATURE;
+    }
+
+    return argCount;
+  }
+
+  if (ending != SIGT_EOF) {
+    return INVALID_SIGNATURE;
+  }
+
+  return argCount;
+}
+
+static ScriptType* parseType(StringReader& reader) {
+  const uint32 start = reader.cursor();
+  while (ucIsXidContinue(reader.peek())) {
+    reader.next();
+  }
+  const uint32 end = reader.cursor();
+
+  const std::string_view sv = reader.substring(start, end);
+  const tokentype ttype = tokenTypeFromString(sv.data(), sv.length());
+
+  ScriptType* type = nullptr;
+
+  switch (ttype) {
+    case TT_KEYW_BOOL:
+      type = ConstTypes::BOOL();
+      break;
+    case TT_KEYW_UINT8:
+      type = ConstTypes::UINT8();
+      break;
+    case TT_KEYW_INT8:
+      type = ConstTypes::INT8();
+      break;
+    case TT_KEYW_UINT16:
+      type = ConstTypes::UINT16();
+      break;
+    case TT_KEYW_INT16:
+      type = ConstTypes::INT16();
+      break;
+    case TT_KEYW_UINT32:
+      type = ConstTypes::UINT32();
+      break;
+    case TT_KEYW_INT32:
+      type = ConstTypes::INT32();
+      break;
+    case TT_KEYW_UINT64:
+      type = ConstTypes::UINT64();
+      break;
+    case TT_KEYW_INT64:
+      type = ConstTypes::INT64();
+      break;
+    case TT_KEYW_FLOAT32:
+      type = ConstTypes::FLOAT32();
+      break;
+    case TT_KEYW_FLOAT64:
+      type = ConstTypes::FLOAT64();
+      break;
+    case TT_KEYW_STRING:
+      type = ConstTypes::STRING();
+      break;
+    case TT_KEYW_VOID:
+      type = ConstTypes::VOID();
+      break;
+    default:
+      return nullptr;
+      break;
+  }
+
+  reader.skipWhitespace();
+
+  sigtoken tt = SIGT_UNKNOWN;
+  while ((tt = nextToken(reader)) == SIGT_ARRAY_BRACKETS || tt == SIGT_VARIADIC) {
+    skipToken(SIGT_ARRAY_BRACKETS, reader);
+    reader.skipWhitespace();
+    type = new ScriptArrayType(type);
+  }
+
+  return type;
+}
+
+FunctionSignature* FunctionSignature::parse(const conststring str) {
+  StringReader reader = StringReader(str);
+
+  bool variadic = false;
+  const int32 argCount = isValidSignature(reader, variadic);
+
+  if (argCount == INVALID_SIGNATURE) {
+    return nullptr;
+  }
+
+  reader.cursor() = 0;
+
+  ScriptType* argTypes[argCount];
+  ScriptType* returnType = nullptr;
+
+  uint32 argI = 0;
+
+  while (true) {
+    reader.skipWhitespace();
+    const sigtoken tt = nextToken(reader);
+
+    if (tt == SIGT_EOF || tt == SIGT_RETURN_TYPE_PREFIX) {
+      break;
+    }
+
+    if (tt == SIGT_COMMA || tt == SIGT_CLOSE_PARENTHESIS || tt == SIGT_OPEN_PARENTHESIS) {
+      skipToken(tt, reader);
+      continue;
+    }
+
+    ScriptType* argType = parseType(reader);
+    argTypes[argI++] = argType;
+  }
+
+  if (nextToken(reader) == SIGT_RETURN_TYPE_PREFIX) {
+    skipToken(SIGT_RETURN_TYPE_PREFIX, reader);
+    reader.skipWhitespace();
+    returnType = parseType(reader);
+  } else {
+    returnType = ConstTypes::VOID();
+  }
+
+  return create(returnType, variadic, argCount, argTypes);
 }
