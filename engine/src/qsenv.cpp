@@ -9,6 +9,10 @@
 #include "qs/parse/lexer.hpp"
 #include "qs/parse/parser.hpp"
 
+typedef void (*ModuleLoadCallback)(QsEnvironment*);
+
+#define LIBRARY_ENTRYPOINT_NAME "qs_onLoadNativeModule"
+
 QsEnvironment::QsEnvironment() {
 
 }
@@ -73,4 +77,76 @@ bool QsEnvironment::compileSourceFile(const std::string& content, conststring fi
   *fileOut = &bFile;
 
   return true;
+}
+
+bool QsEnvironment::loadNativeSource(conststring name, conststring ns, NativeModule** out) {
+  std::string path = std::string(name);
+  suffixWithLibraryFormat(path);
+
+  NativeLibraryHandle handle = nullptr;
+  const uint32 resultCode = loadNativeLibrary(path, &handle);
+
+  if (resultCode != 0) {
+    return false;
+  }
+
+  for (NativeModule& mod : m_nativeModules) {
+    if (mod.getHandle() != handle) {
+      continue;
+    }
+
+    // Calling free here decrements the reference
+    // counter from the load we did at the start
+    freeNativeLibrary(handle);
+
+    *out = &mod;
+    return true;
+  }
+
+  NativeModule mod = NativeModule();
+  mod.setHandle(handle);
+  mod.setNamespace(ns);
+
+  BindingsObject* obj = BindingsObject::create();
+  mod.setBindings(obj);
+
+  const ModuleLoadCallback cb = reinterpret_cast<ModuleLoadCallback>(
+    findLibraryFunction(handle, LIBRARY_ENTRYPOINT_NAME)
+  );
+
+  if (!cb) {
+    BindingsObject::destroy(obj);
+    return false;
+  }
+
+  m_nativeModules.push_back(mod);
+  NativeModule& pushed = m_nativeModules.back();
+
+  cb(this);
+
+  *out = &pushed;
+  return true;
+}
+
+void QsEnvironment::registerNative(
+  const conststring ns,
+  const conststring funcName,
+  const conststring signature,
+  const NativeFunction func
+) {
+  FunctionSignature* sign = FunctionSignature::parse(signature);
+  if (!sign) {
+    return;
+  }
+
+  for (NativeModule& mod : m_nativeModules) {
+    if (mod.getNamespace() != ns) {
+      continue;
+    }
+
+    BindingsObject* bindings = mod.getBindings();
+    bindings->addFunctionBinding(funcName, sign, func);
+
+    return;
+  }
 }

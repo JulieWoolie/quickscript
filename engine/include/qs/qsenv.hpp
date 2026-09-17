@@ -4,23 +4,30 @@
 #include <string>
 
 #include "compiler_opts.hpp"
+#include "libloader.hpp"
 #include "nativeinterface.hpp"
 #include "bytecode/bytecode_file.hpp"
 
-typedef void* NativeModuleHandle;
-
 class NativeModule {
   BindingsObject* m_bindings = nullptr;
-  NativeModuleHandle m_handle = nullptr;
+  NativeLibraryHandle m_handle = nullptr;
   std::string m_namespace = "";
 
   public:
     NativeModule();
     ~NativeModule();
 
-    BindingsObject* getBindings();
+    BindingsObject* getBindings() const;
 
     const std::string& getNamespace() const;
+
+    NativeLibraryHandle getHandle() const;
+
+    void setHandle(NativeLibraryHandle handle);
+
+    void setNamespace(const std::string& ns);
+
+    void setBindings(BindingsObject* bindings);
 };
 
 class QsEnvironment {
@@ -42,6 +49,15 @@ class QsEnvironment {
     bool findLibrary(const std::string_view& name, std::vector<BytecodeFile*>& out);
 
     bool compileSourceFile(const std::string& content, conststring fileName, BytecodeFile** fileOut);
+
+    bool loadNativeSource(conststring name, conststring ns, NativeModule** out);
+
+    void registerNative(
+      conststring ns,
+      conststring funcName,
+      conststring signature,
+      NativeFunction func
+    );
 };
 
 
