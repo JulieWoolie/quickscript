@@ -3,6 +3,6 @@
 
 #include "qsni.h"
 
-QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env);
+QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env, conststring ns);
 
 #endif // QS_STDLIB
