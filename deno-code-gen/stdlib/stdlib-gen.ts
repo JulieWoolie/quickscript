@@ -306,7 +306,7 @@ async function generateStdLibHeader(): Promise<void> {
 
 #include "qsni.h"
 
-QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env);
+QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env, conststring ns);
 
 #endif // QS_STDLIB`
   await writeToFile(out, "../libraries/stdlib/stdlib.hpp")
@@ -350,20 +350,38 @@ async function generateStdLibSource(): Promise<void> {
     out += `\n  // Empty generated function stub\n}`
   }
 
-  out += `\n\nvoid qs_onLoadNativeModule(QsEnv env) {`
+  const funcs = SYMBOLS.filter(s => s.type == "func")
 
-  for (const sym of SYMBOLS) {
-    if (sym.type != "func") {
-      continue
-    }
+  out += `\n\nvoid qs_onLoadNativeModule(QsEnv env, conststring ns) {
+  qse_registerNatives(env, ns, ${funcs.length}`
 
+  const args: string[][] = []
+  const biggest: number[] = [0, 0, 0]
+
+  for (const sym of funcs) {
     const signStr = signatureToString(sym)
     const funcName = getNativeFunctionName(sym)
 
-    out += `\n  qse_registerNative(env, "${sym.name}", "${signStr}", ${funcName});`
+    let arr = [`"${sym.name}",`, `"${signStr}",`, funcName]
+    arr.forEach((s, i) => {
+      biggest[i] = Math.max(s.length, biggest[i])
+    })
+
+    args.push(arr)
   }
 
-  out += "\n}"
+  args.forEach(v => {
+    out += `,\n    `
+    v.forEach((str, i) => {
+      if (i != (v.length - 1)) {
+        out += str.padEnd(biggest[i], ' ') + " "
+      } else {
+        out += str
+      }
+    })
+  })
+
+  out += "\n  );\n}"
 
   await writeToFile(out, "../libraries/stdlib/stdlib.cpp")
 }
