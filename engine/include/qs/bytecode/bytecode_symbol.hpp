@@ -2,6 +2,7 @@
 #define QS_BYTECODE_SYMBOL_HPP
 
 #include "qs/common.hpp"
+#include "qs/types/types.hpp"
 
 #define BFSYM_FUNC 0
 #define BFSYM_STRUCT 1
