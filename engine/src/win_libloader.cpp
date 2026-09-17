@@ -1,5 +1,9 @@
 #include "qs/libloader.hpp"
 
+#ifndef UNICODE
+#define UNICODE
+#endif
+
 #include <windows.h>
 
 #include "qs/strings/utf8.hpp"
