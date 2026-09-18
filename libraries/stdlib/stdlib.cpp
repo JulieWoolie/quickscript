@@ -1,22 +1,8 @@
 #include "stdlib.hpp"
 
-// export native void printf(string format, uint64... args)
-static void qs_stdlib_printf_string_uint64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray format = qsc_getArrayArgument(call, 0);
-  const QsScriptArray args = qsc_getArrayArgument(call, 1);
-  // Empty generated function stub
-}
-
 // export native void println(string message)
 static void qs_stdlib_println_string(const QsVirtualMachine vm, const QsNativeCall call) {
   const QsScriptArray message = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native string sformat(string format, uint64... args)
-static void qs_stdlib_sformat_string_uint64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray format = qsc_getArrayArgument(call, 0);
-  const QsScriptArray args = qsc_getArrayArgument(call, 1);
   // Empty generated function stub
 }
 
@@ -43,198 +29,6 @@ static void qs_stdlib_setenv_string_string_bool(const QsVirtualMachine vm, const
   const QsScriptArray name = qsc_getArrayArgument(call, 0);
   const QsScriptArray value = qsc_getArrayArgument(call, 1);
   const boolean overwrite = qsc_getBoolArgument(call, 2);
-  // Empty generated function stub
-}
-
-// export native int8 abs(int8 x)
-static void qs_stdlib_abs_int8(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int8 x = qsc_getI8Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int16 abs(int16 x)
-static void qs_stdlib_abs_int16(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int16 x = qsc_getI16Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int32 abs(int32 x)
-static void qs_stdlib_abs_int32(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int32 x = qsc_getI32Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int64 abs(int64 x)
-static void qs_stdlib_abs_int64(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int64 x = qsc_getI64Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native float32 abs(float32 x)
-static void qs_stdlib_abs_float32(const QsVirtualMachine vm, const QsNativeCall call) {
-  const float32 x = qsc_getF32Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native float64 abs(float64 x)
-static void qs_stdlib_abs_float64(const QsVirtualMachine vm, const QsNativeCall call) {
-  const float64 x = qsc_getF64Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 min(int8... values)
-static void qs_stdlib_min_int8va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint8 min(uint8... values)
-static void qs_stdlib_min_uint8va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int16 min(int16... values)
-static void qs_stdlib_min_int16va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint16 min(uint16... values)
-static void qs_stdlib_min_uint16va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int32 min(int32... values)
-static void qs_stdlib_min_int32va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint32 min(uint32... values)
-static void qs_stdlib_min_uint32va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int64 min(int64... values)
-static void qs_stdlib_min_int64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint64 min(uint64... values)
-static void qs_stdlib_min_uint64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native float32 min(float32... values)
-static void qs_stdlib_min_float32va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native float64 min(float64... values)
-static void qs_stdlib_min_float64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 max(int8... values)
-static void qs_stdlib_max_int8va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint8 max(uint8... values)
-static void qs_stdlib_max_uint8va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int16 max(int16... values)
-static void qs_stdlib_max_int16va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint16 max(uint16... values)
-static void qs_stdlib_max_uint16va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int32 max(int32... values)
-static void qs_stdlib_max_int32va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint32 max(uint32... values)
-static void qs_stdlib_max_uint32va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int64 max(int64... values)
-static void qs_stdlib_max_int64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native uint64 max(uint64... values)
-static void qs_stdlib_max_uint64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native float32 max(float32... values)
-static void qs_stdlib_max_float32va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native float64 max(float64... values)
-static void qs_stdlib_max_float64va(const QsVirtualMachine vm, const QsNativeCall call) {
-  const QsScriptArray values = qsc_getArrayArgument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 sign(int8 x)
-static void qs_stdlib_sign_int8(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int8 x = qsc_getI8Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 sign(int16 x)
-static void qs_stdlib_sign_int16(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int16 x = qsc_getI16Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 sign(int32 x)
-static void qs_stdlib_sign_int32(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int32 x = qsc_getI32Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 sign(int64 x)
-static void qs_stdlib_sign_int64(const QsVirtualMachine vm, const QsNativeCall call) {
-  const int64 x = qsc_getI64Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 sign(float32 x)
-static void qs_stdlib_sign_float32(const QsVirtualMachine vm, const QsNativeCall call) {
-  const float32 x = qsc_getF32Argument(call, 0);
-  // Empty generated function stub
-}
-
-// export native int8 sign(float64 x)
-static void qs_stdlib_sign_float64(const QsVirtualMachine vm, const QsNativeCall call) {
-  const float64 x = qsc_getF64Argument(call, 0);
   // Empty generated function stub
 }
 
@@ -286,14 +80,26 @@ static void qs_stdlib_clz_uint64(const QsVirtualMachine vm, const QsNativeCall c
   // Empty generated function stub
 }
 
-// export native bool isNaN(float32 x)
-static void qs_stdlib_isNaN_float32(const QsVirtualMachine vm, const QsNativeCall call) {
+// export native bool isInf(float32 x)
+static void qs_stdlib_isInf_float32(const QsVirtualMachine vm, const QsNativeCall call) {
   const float32 x = qsc_getF32Argument(call, 0);
   // Empty generated function stub
 }
 
-// export native bool isNaN(float64 x)
-static void qs_stdlib_isNaN_float64(const QsVirtualMachine vm, const QsNativeCall call) {
+// export native bool isInf(float64 x)
+static void qs_stdlib_isInf_float64(const QsVirtualMachine vm, const QsNativeCall call) {
+  const float64 x = qsc_getF64Argument(call, 0);
+  // Empty generated function stub
+}
+
+// export native bool isFinite(float32 x)
+static void qs_stdlib_isFinite_float32(const QsVirtualMachine vm, const QsNativeCall call) {
+  const float32 x = qsc_getF32Argument(call, 0);
+  // Empty generated function stub
+}
+
+// export native bool isFinite(float64 x)
+static void qs_stdlib_isFinite_float64(const QsVirtualMachine vm, const QsNativeCall call) {
   const float64 x = qsc_getF64Argument(call, 0);
   // Empty generated function stub
 }
@@ -579,46 +385,12 @@ static void qs_stdlib_tan_float64(const QsVirtualMachine vm, const QsNativeCall 
 }
 
 void qs_onLoadNativeModule(QsEnv env, conststring ns) {
-  qse_registerNatives(env, ns, 95,
-    "printf",            "(string,uint64...)",         qs_stdlib_printf_string_uint64va,
+  qse_registerNatives(env, ns, 63,
     "println",           "(string)",                   qs_stdlib_println_string,
-    "sformat",           "(string,uint64...)=>string", qs_stdlib_sformat_string_uint64va,
     "currentTimeMillis", "()=>uint64",                 qs_stdlib_currentTimeMillis,
     "getenv",            "(string)=>string",           qs_stdlib_getenv_string,
     "setenv",            "(string,string)=>bool",      qs_stdlib_setenv_string_string,
     "setenv",            "(string,string,bool)=>bool", qs_stdlib_setenv_string_string_bool,
-    "abs",               "(int8)=>int8",               qs_stdlib_abs_int8,
-    "abs",               "(int16)=>int16",             qs_stdlib_abs_int16,
-    "abs",               "(int32)=>int32",             qs_stdlib_abs_int32,
-    "abs",               "(int64)=>int64",             qs_stdlib_abs_int64,
-    "abs",               "(float32)=>float32",         qs_stdlib_abs_float32,
-    "abs",               "(float64)=>float64",         qs_stdlib_abs_float64,
-    "min",               "(int8...)=>int8",            qs_stdlib_min_int8va,
-    "min",               "(uint8...)=>uint8",          qs_stdlib_min_uint8va,
-    "min",               "(int16...)=>int16",          qs_stdlib_min_int16va,
-    "min",               "(uint16...)=>uint16",        qs_stdlib_min_uint16va,
-    "min",               "(int32...)=>int32",          qs_stdlib_min_int32va,
-    "min",               "(uint32...)=>uint32",        qs_stdlib_min_uint32va,
-    "min",               "(int64...)=>int64",          qs_stdlib_min_int64va,
-    "min",               "(uint64...)=>uint64",        qs_stdlib_min_uint64va,
-    "min",               "(float32...)=>float32",      qs_stdlib_min_float32va,
-    "min",               "(float64...)=>float64",      qs_stdlib_min_float64va,
-    "max",               "(int8...)=>int8",            qs_stdlib_max_int8va,
-    "max",               "(uint8...)=>uint8",          qs_stdlib_max_uint8va,
-    "max",               "(int16...)=>int16",          qs_stdlib_max_int16va,
-    "max",               "(uint16...)=>uint16",        qs_stdlib_max_uint16va,
-    "max",               "(int32...)=>int32",          qs_stdlib_max_int32va,
-    "max",               "(uint32...)=>uint32",        qs_stdlib_max_uint32va,
-    "max",               "(int64...)=>int64",          qs_stdlib_max_int64va,
-    "max",               "(uint64...)=>uint64",        qs_stdlib_max_uint64va,
-    "max",               "(float32...)=>float32",      qs_stdlib_max_float32va,
-    "max",               "(float64...)=>float64",      qs_stdlib_max_float64va,
-    "sign",              "(int8)=>int8",               qs_stdlib_sign_int8,
-    "sign",              "(int16)=>int8",              qs_stdlib_sign_int16,
-    "sign",              "(int32)=>int8",              qs_stdlib_sign_int32,
-    "sign",              "(int64)=>int8",              qs_stdlib_sign_int64,
-    "sign",              "(float32)=>int8",            qs_stdlib_sign_float32,
-    "sign",              "(float64)=>int8",            qs_stdlib_sign_float64,
     "clz",               "(int8)=>int8",               qs_stdlib_clz_int8,
     "clz",               "(uint8)=>uint8",             qs_stdlib_clz_uint8,
     "clz",               "(int16)=>int16",             qs_stdlib_clz_int16,
@@ -627,8 +399,10 @@ void qs_onLoadNativeModule(QsEnv env, conststring ns) {
     "clz",               "(uint32)=>uint32",           qs_stdlib_clz_uint32,
     "clz",               "(int64)=>int64",             qs_stdlib_clz_int64,
     "clz",               "(uint64)=>uint64",           qs_stdlib_clz_uint64,
-    "isNaN",             "(float32)=>bool",            qs_stdlib_isNaN_float32,
-    "isNaN",             "(float64)=>bool",            qs_stdlib_isNaN_float64,
+    "isInf",             "(float32)=>bool",            qs_stdlib_isInf_float32,
+    "isInf",             "(float64)=>bool",            qs_stdlib_isInf_float64,
+    "isFinite",          "(float32)=>bool",            qs_stdlib_isFinite_float32,
+    "isFinite",          "(float64)=>bool",            qs_stdlib_isFinite_float64,
     "sqrt",              "(float32)=>float32",         qs_stdlib_sqrt_float32,
     "sqrt",              "(float64)=>float64",         qs_stdlib_sqrt_float64,
     "cbrt",              "(float32)=>float32",         qs_stdlib_cbrt_float32,

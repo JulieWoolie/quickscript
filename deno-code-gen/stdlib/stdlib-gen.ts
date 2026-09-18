@@ -16,34 +16,23 @@ interface ScriptSymbol {
 interface Func extends ScriptSymbol {
   type: "func"
   params: FuncParam[]
+  source?: string[]
 }
 
 interface Var extends ScriptSymbol {
   type: "constant"
+  value?: string
 }
 
 type PrintSymbol = Var | Func
 
-interface Signature {
-  returnType: string
-  params: FuncParam[]
-}
-
-interface SignatureMapEntry {
-  varName: string,
-  uses: number
-  signature: Signature
-}
-
-type SignatureMap = {[sig: string]: SignatureMapEntry}
-
 const SYMBOLS: PrintSymbol[] = []
 
-function f(prio: number, inp: string, comments?: string[]): void {
+function f(prio: number, inp: string, comments?: string[], source?: string[]): void {
   const retTypeEnd = inp.indexOf(' ')
   const stype = inp.substring(0, retTypeEnd)
 
-  if (inp.includes("(")) {
+  if (inp.includes("(") && !inp.includes("=")) {
     const nameEnd = inp.indexOf('(')
     const fname = inp.substring(retTypeEnd + 1, nameEnd)
 
@@ -68,10 +57,20 @@ function f(prio: number, inp: string, comments?: string[]): void {
       params,
       prio,
       stype,
-      comments
+      comments,
+      source
     })
 
     return
+  }
+
+  let value: string | undefined = undefined
+  let name: string = inp.substring(retTypeEnd + 1)
+
+  if (inp.includes("=")) {
+    const vStart = inp.indexOf('=')
+    value = inp.substring(vStart + 1).trim()
+    name = inp.substring(retTypeEnd + 1, vStart - 1)
   }
 
   SYMBOLS.push({
@@ -79,7 +78,8 @@ function f(prio: number, inp: string, comments?: string[]): void {
     comments,
     prio,
     stype,
-    name: inp.substring(retTypeEnd + 1)
+    name,
+    value
   })
 }
 
@@ -115,21 +115,21 @@ function createStdSymbols(): void {
     ""
   ]
 
-  f(0, "void printf(string format, uint64... args)", [
-    "Print a formatted message to the standard output",
-    "",
-    ...formatCodes
-  ])
+  // f(0, "void printf(string format, uint64... args)", [
+  //   "Print a formatted message to the standard output",
+  //   "",
+  //   ...formatCodes
+  // ])
 
   f(1, "void println(string message)", [
     "Print a message to the standard output"
   ])
 
-  f(2, "string sformat(string format, uint64... args)", [
-    "Format a string",
-    "",
-    ...formatCodes
-  ])
+  // f(2, "string sformat(string format, uint64... args)", [
+  //   "Format a string",
+  //   "",
+  //   ...formatCodes
+  // ])
 
   f(3, "uint64 currentTimeMillis()", [
     "Get the current time as a UNIX timestamp"
@@ -160,19 +160,19 @@ function createStdSymbols(): void {
       "spawned by the current process"
   ])
 
-  f(3.1, "float64 NaN", ["Not-A-Number"])
-  f(3.2, "float64 POSITIVE_INFINITY", ["Positive infinity"])
-  f(3.3, "float64 NEGATIVE_INFINITY", ["Negative infinity"])
+  f(3.1, "float64 NaN = -(0.0 / 0.0)", ["Not-A-Number"])
+  f(3.2, "float64 POSITIVE_INFINITY = 1.0 / 0.0", ["Positive infinity"])
+  f(3.3, "float64 NEGATIVE_INFINITY = -(1.0 / 0.0)", ["Negative infinity"])
 
-  f(3.4, "float64 PI", ["Ratio of the circumference of a circle to its diameter"])
-  f(3.5, "float64 E", ["Euler's number", "Base of the natural logarithm"])
-  f(3.6, "float64 TAU", ["Ratio of the circumference of a circle to its radius"])
-  f(3.6, "float64 LN10", ["Natural logarithm of 10"])
-  f(3.7, "float64 LN2", ["Natural logarithm of 2"])
-  f(3.8, "float64 LOG10E", ["Base-10 logarithm of E"])
-  f(3.9, "float64 LOG2E", ["Base-2 logarithm of E"])
-  f(3.11, "float64 SQRT1_2", ["Square root of one divided by two"])
-  f(3.12, "float64 SQRT2", ["Square root of two"])
+  f(3.4, `float64 PI = ${Math.PI}`, ["Ratio of the circumference of a circle to its diameter"])
+  f(3.5, `float64 E = ${Math.E}`, ["Euler's number", "Base of the natural logarithm"])
+  f(3.6, `float64 TAU = ${Math.PI * 2}`, ["Ratio of the circumference of a circle to its radius"])
+  f(3.6, `float64 LN10 = ${Math.LN10}`, ["Natural logarithm of 10"])
+  f(3.7, `float64 LN2 = ${Math.LN2}`, ["Natural logarithm of 2"])
+  f(3.8, `float64 LOG10E = ${Math.LOG10E}`, ["Base-10 logarithm of E"])
+  f(3.9, `float64 LOG2E = ${Math.LOG2E}`, ["Base-2 logarithm of E"])
+  f(3.91, `float64 SQRT1_2 = ${Math.SQRT1_2}`, ["Square root of one divided by two"])
+  f(3.92, `float64 SQRT2 = ${Math.SQRT2}`, ["Square root of two"])
 
   for (const nt of NUMBER_TYPES) {
     const fn = nt.fullname;
@@ -183,6 +183,8 @@ function createStdSymbols(): void {
         "",
         "If the argument is non-negative, the argument is returned",
         "Otherwise the argument is negated and returned.",
+      ], [
+        "return x < 0 ? -x : x"
       ])
 
       f(7, `int8 sign(${fn} x)`, [
@@ -190,15 +192,41 @@ function createStdSymbols(): void {
         "If the argument is 0, 0 is returned",
         "If the argument is negative, -1 is returned",
         "If the argument is positive, 1 is returned"
+      ], [
+        "return x < 0 ? -1 : (x > 0 ? 1 : 0)"
       ])
     }
 
     f(5, `${fn} min(${fn}... values)`, [
       "Get the smallest value"
+    ], [
+      "if values.length == 0 return 0",
+      ``,
+      `${fn} r = values[0]`,
+      `${fn} v = 0`,
+      `const uint32 len = values.length`,
+      ``,
+      `for (uint32 i = 1; i < len; ++i) {`,
+      `  r = (v = values[i]) < r ? v : r`,
+      `}`,
+      ``,
+      `return r`
     ])
 
     f(6, `${fn} max(${fn}... values)`, [
       "Get the largest value"
+    ], [
+      "if values.length == 0 return 0",
+      ``,
+      `${fn} r = values[0]`,
+      `${fn} v = 0`,
+      `const uint32 len = values.length`,
+      ``,
+      `for (uint32 i = 1; i < len; ++i) {`,
+      `  r = (v = values[i]) > r ? v : r`,
+      `}`,
+      ``,
+      `return r`
     ])
 
     if (nt.integral) {
@@ -208,7 +236,9 @@ function createStdSymbols(): void {
       continue
     }
 
-    f(8.5, `bool isNaN(${fn} x)`, ["Test if a value is Not-A-Number"])
+    f(8.5, `bool isNaN(${fn} x)`, ["Test if a value is Not-A-Number"], [`return x != x`])
+    f(8.6, `bool isInf(${fn} x)`, ["Test if a value is infinite"])
+    f(8.7, `bool isFinite(${fn} x)`, ["Test if a value is finite"])
     f(9, `${fn} sqrt(${fn} x)`, ["Square root function"])
     f(10, `${fn} cbrt(${fn} x)`, ["Cube root function"])
     f(11, `${fn} acos(${fn} x)`, ["Get the arc cosine of a value"])
@@ -249,7 +279,9 @@ async function generateStdLibDeclFile(): Promise<void> {
   let out = `#
 # quickscript Standard Library
 # Version 0
-#`
+#
+
+native module std from "stdlib"`
   for (const func of SYMBOLS) {
     out += `\n`
 
@@ -261,17 +293,34 @@ async function generateStdLibDeclFile(): Promise<void> {
       out += `\n */`
     }
 
-    out += `\nexport native `
+    out += `\nexport `
 
-    if (func.type == "constant") {
+    if (func.type == "constant" || (func.source != undefined && func.source.length < 2)) {
       out += `const `
+    } else if (func.source == undefined) {
+      out += "native "
     }
 
     out += `${func.stype} ${func.name}`
 
+    if (func.type == "constant") {
+      if (func.value != undefined) {
+        out += ` = ${func.value}`
+      }
+      continue
+    }
+
     if (func.type == "func") {
       const params = func.params.map(p => `${p.tn} ${p.pname}`).join(", ")
       out += `(${params})`
+
+      if (func.source != undefined) {
+        out += ` {`
+        for (const s of func.source) {
+          out += `\n  ${s}`
+        }
+        out += `\n}`
+      }
     }
   }
 
@@ -314,12 +363,9 @@ QS_EXPORT void QS_CALL qs_onLoadNativeModule(QsEnv env, conststring ns);
 
 async function generateStdLibSource(): Promise<void> {
   let out = `#include "stdlib.hpp"`
+  const funcs = SYMBOLS.filter(s => s.type == "func" && s.source == undefined) as Func[]
 
-  for (const sym of SYMBOLS) {
-    if (sym.type != "func") {
-      continue
-    }
-
+  for (const sym of funcs) {
     out += `\n\n// export native ${sym.stype} ${sym.name}(${sym.params.map(t => `${t.tn} ${t.pname}`).join(', ')})`
     out += `\nstatic void ${getNativeFunctionName(sym)}(const QsVirtualMachine vm, const QsNativeCall call) {`
 
@@ -349,8 +395,6 @@ async function generateStdLibSource(): Promise<void> {
 
     out += `\n  // Empty generated function stub\n}`
   }
-
-  const funcs = SYMBOLS.filter(s => s.type == "func")
 
   out += `\n\nvoid qs_onLoadNativeModule(QsEnv env, conststring ns) {
   qse_registerNatives(env, ns, ${funcs.length}`

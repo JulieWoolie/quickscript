@@ -3,139 +3,73 @@
 # Version 0
 #
 
+native module std from "stdlib"
+
 /**
  * Not-A-Number
  */
-export native const float64 NaN
-
-/**
- * Square root of one divided by two
- */
-export native const float64 SQRT1_2
-
-/**
- * Square root of two
- */
-export native const float64 SQRT2
+export const float64 NaN = -(0.0 / 0.0)
 
 /**
  * Positive infinity
  */
-export native const float64 POSITIVE_INFINITY
+export const float64 POSITIVE_INFINITY = 1.0 / 0.0
 
 /**
  * Negative infinity
  */
-export native const float64 NEGATIVE_INFINITY
+export const float64 NEGATIVE_INFINITY = -(1.0 / 0.0)
 
 /**
  * Ratio of the circumference of a circle to its diameter
  */
-export native const float64 PI
+export const float64 PI = 3.141592653589793
 
 /**
  * Euler's number
  * Base of the natural logarithm
  */
-export native const float64 E
+export const float64 E = 2.718281828459045
 
 /**
  * Ratio of the circumference of a circle to its radius
  */
-export native const float64 TAU
+export const float64 TAU = 6.283185307179586
 
 /**
  * Natural logarithm of 10
  */
-export native const float64 LN10
+export const float64 LN10 = 2.302585092994046
 
 /**
  * Natural logarithm of 2
  */
-export native const float64 LN2
+export const float64 LN2 = 0.6931471805599453
 
 /**
  * Base-10 logarithm of E
  */
-export native const float64 LOG10E
+export const float64 LOG10E = 0.4342944819032518
 
 /**
  * Base-2 logarithm of E
  */
-export native const float64 LOG2E
+export const float64 LOG2E = 1.4426950408889634
 
 /**
- * Print a formatted message to the standard output
- * 
- * FORMAT CODES:
- * - '%d' Decimal number
- * - '%x' Hexadecimal number
- * - '%X' Uppercase hexadecimal number
- * - '%o' Base 8 (octal) number
- * - '%O' Upper case base 8 (octal) number
- * - '%b' Binary base 2 number
- * - '%s' Convert the argument to string
- * - '%c' Convert the argument to a UTF-32 unicode character
- * - '%e' Convert the argument to scientific notation
- * - '%t' Treat the argument as a UNIX timestamp and print the date time
- * 
- * FLAGS:
- * - <number>  Pad the string with spaces to the left or right
- *             (depending on if the number is negative or not)
- *             Example: '%3s'
- * - 0<number> Pad the string with '0' characters to the left or right
- *             (depending on if the number is negative or not)
- *             Example: '%03s'
- * - .<number> Number precision flag
- *             Example: '%.2d'
- * - $<number> Argument index
- *             Example: '%$2s'
- * 
- * EXAMPLES:
- * - printf("Hello world!\n") Prints hello world with a newline character at the end
- * - printf("number: %d", 23) Prints the number
- * 
+ * Square root of one divided by two
  */
-export native void printf(string format, ... args)
+export const float64 SQRT1_2 = 0.7071067811865476
+
+/**
+ * Square root of two
+ */
+export const float64 SQRT2 = 1.4142135623730951
 
 /**
  * Print a message to the standard output
  */
 export native void println(string message)
-
-/**
- * Format a string
- * 
- * FORMAT CODES:
- * - '%d' Decimal number
- * - '%x' Hexadecimal number
- * - '%X' Uppercase hexadecimal number
- * - '%o' Base 8 (octal) number
- * - '%O' Upper case base 8 (octal) number
- * - '%b' Binary base 2 number
- * - '%s' Convert the argument to string
- * - '%c' Convert the argument to a UTF-32 unicode character
- * - '%e' Convert the argument to scientific notation
- * - '%t' Treat the argument as a UNIX timestamp and print the date time
- * 
- * FLAGS:
- * - <number>  Pad the string with spaces to the left or right
- *             (depending on if the number is negative or not)
- *             Example: '%3s'
- * - 0<number> Pad the string with '0' characters to the left or right
- *             (depending on if the number is negative or not)
- *             Example: '%03s'
- * - .<number> Number precision flag
- *             Example: '%.2d'
- * - $<number> Argument index
- *             Example: '%$2s'
- * 
- * EXAMPLES:
- * - printf("Hello world!\n") Prints hello world with a newline character at the end
- * - printf("number: %d", 23) Prints the number
- * 
- */
-export native string sformat(string format, ... args)
 
 /**
  * Get the current time as a UNIX timestamp
@@ -177,7 +111,9 @@ export native bool setenv(string name, string value, bool overwrite)
  * If the argument is non-negative, the argument is returned
  * Otherwise the argument is negated and returned.
  */
-export native int8 abs(int8 x)
+export const int8 abs(int8 x) {
+  return x < 0 ? -x : x
+}
 
 /**
  * Get the absolute value of a number
@@ -185,7 +121,9 @@ export native int8 abs(int8 x)
  * If the argument is non-negative, the argument is returned
  * Otherwise the argument is negated and returned.
  */
-export native int16 abs(int16 x)
+export const int16 abs(int16 x) {
+  return x < 0 ? -x : x
+}
 
 /**
  * Get the absolute value of a number
@@ -193,7 +131,9 @@ export native int16 abs(int16 x)
  * If the argument is non-negative, the argument is returned
  * Otherwise the argument is negated and returned.
  */
-export native int32 abs(int32 x)
+export const int32 abs(int32 x) {
+  return x < 0 ? -x : x
+}
 
 /**
  * Get the absolute value of a number
@@ -201,7 +141,9 @@ export native int32 abs(int32 x)
  * If the argument is non-negative, the argument is returned
  * Otherwise the argument is negated and returned.
  */
-export native int64 abs(int64 x)
+export const int64 abs(int64 x) {
+  return x < 0 ? -x : x
+}
 
 /**
  * Get the absolute value of a number
@@ -209,7 +151,9 @@ export native int64 abs(int64 x)
  * If the argument is non-negative, the argument is returned
  * Otherwise the argument is negated and returned.
  */
-export native float32 abs(float32 x)
+export const float32 abs(float32 x) {
+  return x < 0 ? -x : x
+}
 
 /**
  * Get the absolute value of a number
@@ -217,107 +161,349 @@ export native float32 abs(float32 x)
  * If the argument is non-negative, the argument is returned
  * Otherwise the argument is negated and returned.
  */
-export native float64 abs(float64 x)
+export const float64 abs(float64 x) {
+  return x < 0 ? -x : x
+}
 
 /**
  * Get the smallest value
  */
-export native int8 min(int8... values)
+export int8 min(int8... values) {
+  if values.length == 0 return 0
+  
+  int8 r = values[0]
+  int8 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native uint8 min(uint8... values)
+export uint8 min(uint8... values) {
+  if values.length == 0 return 0
+  
+  uint8 r = values[0]
+  uint8 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native int16 min(int16... values)
+export int16 min(int16... values) {
+  if values.length == 0 return 0
+  
+  int16 r = values[0]
+  int16 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native uint16 min(uint16... values)
+export uint16 min(uint16... values) {
+  if values.length == 0 return 0
+  
+  uint16 r = values[0]
+  uint16 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native int32 min(int32... values)
+export int32 min(int32... values) {
+  if values.length == 0 return 0
+  
+  int32 r = values[0]
+  int32 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native uint32 min(uint32... values)
+export uint32 min(uint32... values) {
+  if values.length == 0 return 0
+  
+  uint32 r = values[0]
+  uint32 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native int64 min(int64... values)
+export int64 min(int64... values) {
+  if values.length == 0 return 0
+  
+  int64 r = values[0]
+  int64 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native uint64 min(uint64... values)
+export uint64 min(uint64... values) {
+  if values.length == 0 return 0
+  
+  uint64 r = values[0]
+  uint64 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native float32 min(float32... values)
+export float32 min(float32... values) {
+  if values.length == 0 return 0
+  
+  float32 r = values[0]
+  float32 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the smallest value
  */
-export native float64 min(float64... values)
+export float64 min(float64... values) {
+  if values.length == 0 return 0
+  
+  float64 r = values[0]
+  float64 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) < r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native int8 max(int8... values)
+export int8 max(int8... values) {
+  if values.length == 0 return 0
+  
+  int8 r = values[0]
+  int8 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native uint8 max(uint8... values)
+export uint8 max(uint8... values) {
+  if values.length == 0 return 0
+  
+  uint8 r = values[0]
+  uint8 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native int16 max(int16... values)
+export int16 max(int16... values) {
+  if values.length == 0 return 0
+  
+  int16 r = values[0]
+  int16 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native uint16 max(uint16... values)
+export uint16 max(uint16... values) {
+  if values.length == 0 return 0
+  
+  uint16 r = values[0]
+  uint16 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native int32 max(int32... values)
+export int32 max(int32... values) {
+  if values.length == 0 return 0
+  
+  int32 r = values[0]
+  int32 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native uint32 max(uint32... values)
+export uint32 max(uint32... values) {
+  if values.length == 0 return 0
+  
+  uint32 r = values[0]
+  uint32 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native int64 max(int64... values)
+export int64 max(int64... values) {
+  if values.length == 0 return 0
+  
+  int64 r = values[0]
+  int64 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native uint64 max(uint64... values)
+export uint64 max(uint64... values) {
+  if values.length == 0 return 0
+  
+  uint64 r = values[0]
+  uint64 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native float32 max(float32... values)
+export float32 max(float32... values) {
+  if values.length == 0 return 0
+  
+  float32 r = values[0]
+  float32 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the largest value
  */
-export native float64 max(float64... values)
+export float64 max(float64... values) {
+  if values.length == 0 return 0
+  
+  float64 r = values[0]
+  float64 v = 0
+  const uint32 len = values.length
+  
+  for (uint32 i = 1; i < len; ++i) {
+    r = (v = values[i]) > r ? v : r
+  }
+  
+  return r
+}
 
 /**
  * Get the sign of a number
@@ -325,7 +511,9 @@ export native float64 max(float64... values)
  * If the argument is negative, -1 is returned
  * If the argument is positive, 1 is returned
  */
-export native int8 sign(int8 x)
+export const int8 sign(int8 x) {
+  return x < 0 ? -1 : (x > 0 ? 1 : 0)
+}
 
 /**
  * Get the sign of a number
@@ -333,7 +521,9 @@ export native int8 sign(int8 x)
  * If the argument is negative, -1 is returned
  * If the argument is positive, 1 is returned
  */
-export native int8 sign(int16 x)
+export const int8 sign(int16 x) {
+  return x < 0 ? -1 : (x > 0 ? 1 : 0)
+}
 
 /**
  * Get the sign of a number
@@ -341,7 +531,9 @@ export native int8 sign(int16 x)
  * If the argument is negative, -1 is returned
  * If the argument is positive, 1 is returned
  */
-export native int8 sign(int32 x)
+export const int8 sign(int32 x) {
+  return x < 0 ? -1 : (x > 0 ? 1 : 0)
+}
 
 /**
  * Get the sign of a number
@@ -349,7 +541,9 @@ export native int8 sign(int32 x)
  * If the argument is negative, -1 is returned
  * If the argument is positive, 1 is returned
  */
-export native int8 sign(int64 x)
+export const int8 sign(int64 x) {
+  return x < 0 ? -1 : (x > 0 ? 1 : 0)
+}
 
 /**
  * Get the sign of a number
@@ -357,7 +551,9 @@ export native int8 sign(int64 x)
  * If the argument is negative, -1 is returned
  * If the argument is positive, 1 is returned
  */
-export native int8 sign(float32 x)
+export const int8 sign(float32 x) {
+  return x < 0 ? -1 : (x > 0 ? 1 : 0)
+}
 
 /**
  * Get the sign of a number
@@ -365,7 +561,9 @@ export native int8 sign(float32 x)
  * If the argument is negative, -1 is returned
  * If the argument is positive, 1 is returned
  */
-export native int8 sign(float64 x)
+export const int8 sign(float64 x) {
+  return x < 0 ? -1 : (x > 0 ? 1 : 0)
+}
 
 /**
  * Get the number of leading zeros
@@ -410,12 +608,36 @@ export native uint64 clz(uint64 x)
 /**
  * Test if a value is Not-A-Number
  */
-export native bool isNaN(float32 x)
+export const bool isNaN(float32 x) {
+  return x != x
+}
 
 /**
  * Test if a value is Not-A-Number
  */
-export native bool isNaN(float64 x)
+export const bool isNaN(float64 x) {
+  return x != x
+}
+
+/**
+ * Test if a value is infinite
+ */
+export native bool isInf(float32 x)
+
+/**
+ * Test if a value is infinite
+ */
+export native bool isInf(float64 x)
+
+/**
+ * Test if a value is finite
+ */
+export native bool isFinite(float32 x)
+
+/**
+ * Test if a value is finite
+ */
+export native bool isFinite(float64 x)
 
 /**
  * Square root function
