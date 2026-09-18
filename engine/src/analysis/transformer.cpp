@@ -119,6 +119,53 @@ Expr* SemanticTransformer::optimizeStringRepeat(StringLiteral* lhs, Expr* rhs) c
   return lhs;
 }
 
+#define ZEROCMP_NONE 0
+#define ZEROCMP_LZERO 1
+#define ZEROCMP_RZERO 2
+
+static uint8 isZeroComparison(
+  const binaryop op,
+  Expr* lhs,
+  Expr* rhs,
+  const astnodetype lkind,
+  const astnodetype rkind
+) {
+  if (op != BOP_EQ && op != BOP_NEQ) {
+    return ZEROCMP_NONE;
+  }
+
+  if (lkind == AST_IntLiteral) {
+    const IntLiteral* il = static_cast<IntLiteral*>(lhs);
+    return il->value == 0 ? ZEROCMP_LZERO : ZEROCMP_NONE;
+  }
+  if (lkind == AST_FloatLiteral) {
+    const FloatLiteral* fl = static_cast<FloatLiteral*>(lhs);
+    return fl->value == 0.0 ? ZEROCMP_LZERO : ZEROCMP_NONE;
+  }
+  if (rkind == AST_IntLiteral) {
+    const IntLiteral* il = static_cast<IntLiteral*>(rhs);
+    return il->value == 0 ? ZEROCMP_RZERO : ZEROCMP_NONE;
+  }
+  if (rkind == AST_FloatLiteral) {
+    const FloatLiteral* fl = static_cast<FloatLiteral*>(rhs);
+    return fl->value == 0.0 ? ZEROCMP_RZERO : ZEROCMP_NONE;
+  }
+
+  return ZEROCMP_NONE;
+}
+
+static Expr* inlineZeroComp(const binaryop op, Expr* expr, NoFreeAllocator& alloc) {
+  if (op == BOP_EQ) {
+    // Create unary invert operator, set expr as target, return
+    UnaryExpr* un = alloc.make<UnaryExpr>();
+    un->op = UOP_LOG_NOT;
+    un->target = expr;
+    un->resultType = ConstTypes::BOOL();
+    return un;
+  }
+  return expr;
+}
+
 Expr* SemanticTransformer::transformBinary(BinaryExpr* e) const {
   const binaryop op = e->op;
 
@@ -336,6 +383,17 @@ Expr* SemanticTransformer::transformBinary(BinaryExpr* e) const {
 
     fr->location = e->location;
     return fr;
+  }
+
+  // Optimize away things like:
+  // "<expr> == 0" => !<expr>
+  // "<expr> != 0" => <expr>
+  const uint8 zerocmp = isZeroComparison(op, lhs, rhs, lkind, rkind);
+  if (zerocmp == ZEROCMP_LZERO) {
+    return inlineZeroComp(op, lhs, ctx.getAllocator());
+  }
+  if (zerocmp == ZEROCMP_RZERO) {
+    return inlineZeroComp(op, rhs, ctx.getAllocator());
   }
 
   return e;
