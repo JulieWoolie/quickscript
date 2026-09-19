@@ -82,4 +82,10 @@ QsObject castToQsObject(void* ptr);
 
 uint32 readQsArrayLength(void* ptr);
 
+uint32 getArrayRefCounter(void* ptr);
+
+void setArrayRefCounter(void* ptr, uint32 rc);
+
+void* getArrayDataStart(void* ptr);
+
 #endif //QS_OBJECTS_H

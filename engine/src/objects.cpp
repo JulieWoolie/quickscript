@@ -118,3 +118,42 @@ uint32 readQsArrayLength(void* ptr) {
 
   return first;
 }
+
+uint32 getArrayRefCounter(void* ptr) {
+  const uint32* intPtr = static_cast<uint32*>(ptr);
+  const uint32 first = *intPtr;
+
+  if (first & REFCOUNT_MASK) {
+    return first & ~REFCOUNT_MASK;
+  }
+
+  return NO_REFCOUNT;
+}
+
+void setArrayRefCounter(void* ptr, const uint32 rc) {
+  if (!ptr) {
+    return;
+  }
+
+  uint32* intPtr = static_cast<uint32*>(ptr);
+  const uint32 first = *intPtr;
+
+  if (first & REFCOUNT_MASK) {
+    intPtr[0] = REFCOUNT_MASK | rc;
+  }
+}
+
+void* getArrayDataStart(void* ptr) {
+  if (!ptr) {
+    return nullptr;
+  }
+
+  uint32* intPtr = static_cast<uint32*>(ptr);
+  const uint32 first = *intPtr;
+
+  if (first & REFCOUNT_MASK) {
+    return intPtr + 2;
+  }
+
+  return intPtr + 1;
+}
