@@ -24,6 +24,14 @@ void Symbol::removeFlags(symflags flags) {
   m_flags &= ~flags;
 }
 
+stringid Symbol::getNamespace() const {
+  return m_namespace;
+}
+
+void Symbol::setNamespace(const stringid ns) {
+  m_namespace = ns;
+}
+
 stringid Symbol::getName() const {
   return m_name;
 }
@@ -321,6 +329,29 @@ NativePropertySymbol::NativePropertySymbol(ScriptType* holderType, stringid name
 
 symboltype NativePropertySymbol::stype() const {
   return SYM_NativeProp;
+}
+
+ForeignFuncSymbol::ForeignFuncSymbol(const stringid name, FunctionSignature* sign) : Symbol(name, sign) {
+
+}
+
+symboltype ForeignFuncSymbol::stype() const {
+  return SYM_ForeignFunc;
+}
+
+ForeignStructSymbol::ForeignStructSymbol(const stringid name, ScriptType* type) : Symbol(name, type) {
+
+}
+
+symboltype ForeignStructSymbol::stype() const {
+  return SYM_ForeignStruct;
+}
+
+ForeignVarSymbol::ForeignVarSymbol(stringid name, ScriptType* type) : Symbol(name, type) {
+
+}
+symboltype ForeignVarSymbol::stype() const {
+  return SYM_ForeignVar;
 }
 
 LocalStructSymbol::LocalStructSymbol(stringid name, ScriptStructType* type, StructDecl* decl)

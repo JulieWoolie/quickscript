@@ -24,6 +24,9 @@ typedef uint8 scopetype;
 #define SYM_LocalStruct   4
 #define SYM_NativeProp    5
 #define SYM_NativeFunc    6
+#define SYM_ForeignFunc   7
+#define SYM_ForeignStruct 8
+#define SYM_ForeignVar    9
 typedef uint8 symboltype;
 
 // Symbol is a native binding
@@ -56,6 +59,7 @@ class Symbol {
   const stringid m_name;
   ScriptType* const m_type;
 
+  stringid m_namespace = EMPTY_STRING;
   symflags m_flags;
 
   public:
@@ -69,6 +73,10 @@ class Symbol {
     void addFlags(symflags flags);
 
     void removeFlags(symflags flags);
+
+    stringid getNamespace() const;
+
+    void setNamespace(stringid ns);
 
     stringid getName() const;
 
@@ -157,6 +165,27 @@ class LocalStructPropSymbol: public PropertySymbol {
 class NativePropertySymbol: public PropertySymbol {
   public:
     explicit NativePropertySymbol(ScriptType* holderType, stringid name, ScriptType* type);
+
+    symboltype stype() const override;
+};
+
+class ForeignFuncSymbol: public Symbol {
+  public:
+    explicit ForeignFuncSymbol(stringid name, FunctionSignature* sign);
+
+    symboltype stype() const override;
+};
+
+class ForeignStructSymbol: public Symbol {
+  public:
+    explicit ForeignStructSymbol(stringid name, ScriptType* type);
+
+    symboltype stype() const override;
+};
+
+class ForeignVarSymbol: public Symbol {
+  public:
+    explicit ForeignVarSymbol(stringid name, ScriptType* type);
 
     symboltype stype() const override;
 };
