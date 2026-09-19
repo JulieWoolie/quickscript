@@ -38,7 +38,6 @@ add_library(qsengine STATIC
         include/qs/parse/token.hpp
         include/qs/qs_math.hpp
         include/qs/qsenv.hpp
-        include/qs/stdlib/qs_stdlib.hpp
         include/qs/strings/stringreader.hpp
         include/qs/strings/strings.hpp
         include/qs/strings/unicode_binary_props.hpp
@@ -83,7 +82,6 @@ add_library(qsengine STATIC
         src/parse/syntaxtree.cpp
         src/parse/token.cpp
         src/qsenv.cpp
-        src/stdlib/qs_stdlib.cpp
         src/strings/stringreader.cpp
         src/strings/strings.cpp
         src/strings/unicode_binary_props.cpp
