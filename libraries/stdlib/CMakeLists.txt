@@ -3,6 +3,6 @@ project(qs_stdlib)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(qs_stdlib SHARED main.cpp stdlib.hpp stdlib.cpp)
+add_library(qs_stdlib SHARED stdlib.hpp stdlib.cpp)
 
 target_link_libraries(qs_stdlib PRIVATE libqs)
