@@ -1888,6 +1888,152 @@ static void checkForInvalidDependencies(SemanticContext& ctx) {
   }
 }
 
+static ScriptType* loadBytecodeType(
+  SemanticContext& ctx,
+  std::unordered_map<typeindex, ScriptType*>& loadedCache,
+  BytecodeFile* bf,
+  const typeindex idx
+) {
+  if (loadedCache.contains(idx)) {
+    return loadedCache[idx];
+  }
+
+  TypeTableEntry** typeTable = bf->typeTable;
+  const uint64 tableSize = bf->typeTableSize;
+
+  for (uint32 i = 0; i < tableSize; i++) {
+    const TypeTableEntry* entry = typeTable[i];
+
+    if (entry->index != idx) {
+      continue;
+    }
+
+    switch (entry->type) {
+      case TYPE_TABLE_ARRAY: {
+        const TypeTableArray* arr = static_cast<const TypeTableArray*>(entry);
+
+        ScriptType* compType = loadBytecodeType(ctx, loadedCache, bf, arr->componentType);
+        ScriptType* arrType = ctx.getTypes().getArrayType(compType);
+
+        loadedCache[idx] = arrType;
+        return arrType;
+      }
+
+      case TYPE_TABLE_SIGNATURE: {
+        const TypeTableFuncSign* signEntry = static_cast<const TypeTableFuncSign*>(entry);
+
+        const uint32 argCount = signEntry->argumentCount;
+        const typeindex* argTypes = signEntry->argTypes;
+        const typeindex retType = signEntry->returnType;
+        const bool variadic = signEntry->varargs;
+
+        ScriptType* args[argCount];
+        ScriptType* returnType = loadBytecodeType(ctx, loadedCache, bf, retType);
+
+        for (uint32 aIdx = 0; aIdx < argCount; aIdx++) {
+          args[aIdx] = loadBytecodeType(ctx, loadedCache, bf, argTypes[aIdx]);
+        }
+
+        FunctionSignature* sign = ctx.getTypes().getSignature(returnType, variadic, argCount, args);
+        loadedCache[idx] = sign;
+
+        return sign;
+      }
+
+      case TYPE_TABLE_STRUCT: {
+        const TypeTableStruct* structEntry = static_cast<const TypeTableStruct*>(entry);
+        const std::string name = bf->getConstString(structEntry->nameOffset);
+
+        const uint32 propCount = structEntry->propertyCount;
+        const TypeTableStructProperty* props = structEntry->properties;
+
+        ScriptStructType* type = ScriptStructType::create(name, nullptr, structEntry->propertyCount);
+        type->setAlignment(structEntry->alignment);
+        type->setHeapSize(structEntry->heapSize);
+
+        loadedCache[idx] = type;
+
+        for (uint32 propIdx = 0; propIdx < propCount; propIdx++) {
+          const TypeTableStructProperty* prop = &props[propIdx];
+          StructProperty* typeProp = type->getProperty(propIdx);
+
+          typeProp->name = bf->getConstString(prop->nameOffset);
+          typeProp->offset = prop->valueOffset;
+          typeProp->type = loadBytecodeType(ctx, loadedCache, bf, prop->type);
+        }
+
+        ctx.getTypes().emplaceType(type);
+        return type;
+      }
+
+      default:
+        return nullptr;
+    }
+  }
+
+  return nullptr;
+}
+
+static void applyImportedSymbol(SemanticContext& ctx, BytecodeFile* bf) {
+  std::unordered_map<typeindex, ScriptType*> loadedCache;
+
+  StringTable& strings = ctx.getStrings();
+  NoFreeAllocator& alloc = ctx.getAllocator();
+  Scope* global = ctx.getGlobalScope();
+
+  for (const BytecodeSymbol& sym : bf->exportedSymbols) {
+    const bfsymtype type = sym.type;
+    const stringid ns = strings.allocate(bf->moduleName);
+
+    switch (type) {
+      case BFSYM_FUNC: {
+        const FunctionTableEntry& func = bf->functionTable[sym.funcTableIndex];
+
+        FunctionSignature* sign = static_cast<FunctionSignature*>(loadBytecodeType(ctx, loadedCache, bf, func.signatureIndex));
+        std::string funcName = bf->getConstString(func.nameOffset);
+        stringid nameId = strings.allocate(funcName);
+
+        if (func.flags & FUNCFLAG_NATIVE) {
+          NativeFunctionSymbol* nfs = alloc.make<NativeFunctionSymbol>(nameId, sign);
+          nfs->setNamespace(ns);
+          global->pushSymbol(nfs);
+        } else {
+          ForeignFuncSymbol* ffs = alloc.make<ForeignFuncSymbol>(nameId, sign);
+          ffs->setNamespace(ns);
+          global->pushSymbol(ffs);
+        }
+
+        break;
+      }
+
+      case BFSYM_STRUCT: {
+        ScriptType* structType = loadBytecodeType(ctx, loadedCache, bf, sym.typeTableIndex);
+        stringid nameId = strings.allocate(structType->getTypeName());
+
+        ForeignStructSymbol* fss = alloc.make<ForeignStructSymbol>(nameId, structType);
+        fss->setNamespace(ns);
+
+        global->pushSymbol(fss);
+        break;
+      }
+
+      case BFSYM_VARIABLE: {
+        stringid name = strings.allocate(bf->getConstString(sym.variable.nameOffset));
+        ScriptType* scriptType = loadBytecodeType(ctx, loadedCache, bf, sym.variable.typeIndex);
+
+        ForeignVarSymbol* fvs = alloc.make<ForeignVarSymbol>(name, scriptType);
+        fvs->setNamespace(ns);
+
+        global->pushSymbol(fvs);
+        break;
+      }
+
+      default:
+        break;
+    }
+  }
+}
+
 static bool importFromPath(SemanticContext& ctx, const std::string_view& path) {
   QsEnvironment* env = ctx.getEnv();
   std::vector<BytecodeFile*> loadedFiles;
@@ -1909,7 +2055,8 @@ static bool importFromPath(SemanticContext& ctx, const std::string_view& path) {
   importedPaths.emplace_back(path);
 
   for (BytecodeFile* bf : loadedFiles) {
-
+    applyImportedSymbol(ctx, bf);
+    BytecodeFile::destroy(*bf);
   }
 
   return true;
