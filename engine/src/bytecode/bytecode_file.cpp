@@ -234,6 +234,27 @@ BytecodeFile::~BytecodeFile() {
   entryPointIndex = 0;
 }
 
+std::string_view BytecodeFile::getConstStringView(const uint64 off) const {
+  if (off >= stringPoolSize) {
+    return std::string_view();
+  }
+
+  const uint32 len = *reinterpret_cast<uint32*>(constStringPool + off);
+  conststring strData = reinterpret_cast<conststring>(constStringPool + off + sizeof(uint32));
+
+  return std::string_view(strData, len);
+}
+
+std::string BytecodeFile::getConstString(const uint64 off) const {
+  if (off >= stringPoolSize) {
+    return std::string();
+  }
+
+  const uint32 len = *reinterpret_cast<uint32*>(constStringPool + off);
+  conststring strData = reinterpret_cast<conststring>(constStringPool + off + sizeof(uint32));
+
+  return std::string(strData, len);
+}
 
 BytecodeFile& BytecodeFile::create() {
   BytecodeFile* bfile = new BytecodeFile();

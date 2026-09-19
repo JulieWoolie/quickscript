@@ -80,6 +80,9 @@ struct BytecodeFile {
   BytecodeFile();
   ~BytecodeFile();
 
+  std::string_view getConstStringView(uint64 off) const;
+  std::string getConstString(uint64 off) const;
+
   static BytecodeFile& create();
 
   static void destroy(const BytecodeFile& bfile);
