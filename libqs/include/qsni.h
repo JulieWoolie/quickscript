@@ -324,9 +324,7 @@ QS_API uint32 QS_CALL qsa_getRefCounter(QsScriptArray array);
 /**
  * Set an array's reference counter value
  *
- * Note that setting this value to 0 will not mean it will be freed, but setting it to
- * CONST_REF_COUNTER will make the array const, meaning it will never be freed
- * during regular script execution.
+ * Note that setting this value to 0 will not mean it will be freed.
  *
  * @param array Array pointer
  * @param refCounter Reference counter value
@@ -578,9 +576,7 @@ QS_API uint32 QS_CALL qsobj_getRefCounter(QsScriptObject obj);
 /**
  * Set a struct's reference counter value
  *
- * Note that setting this value to 0 will not mean it will be freed, but setting it to
- * CONST_REF_COUNTER will make the struct const, meaning it will never be freed
- * during regular script execution.
+ * Note that setting this value to 0 will not mean it will be freed.
  *
  * @param obj Struct pointer
  * @param refCounter Reference counter value
