@@ -99,7 +99,7 @@ struct TestTimings {
 struct TestContext {
   TestTimings timings;
   const ProgramSettings& settings;
-  const BindingsObject* bindings;
+  QsEnvironment* env;
 };
 
 struct TestDirectiveDef {
@@ -578,7 +578,7 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, TestCon
   const std::string pathString = filePath.string();
 
   conststring fileName = pathString.c_str();
-  CompilerErrors errors = CompilerErrors(&file_contents, fileName);
+  CompilerErrors errors = CompilerErrors(file_contents, fileName);
   errors.setSilent(true);
 
   Lexer l = Lexer(file_contents, &tlist, &table, &errors);
@@ -651,7 +651,7 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, TestCon
   if (result->nodeKind() == AST_ScriptFileStatement) {
     int64 analysisStart = getTime();
 
-    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tcase.compilerOpts, tctx.bindings);
+    SemanticContext ctx = SemanticContext(lookup, table, errors, allocator, tctx.env);
     runSemanticAnalysis(static_cast<ScriptFileStatement*>(result), ctx);
 
     int64 analysisEnd = getTime();
@@ -697,7 +697,6 @@ bool runTestCase(TestCase& tcase, const std::filesystem::path& filePath, TestCon
     }
 
     VirtualMachine vm = VirtualMachine();
-    vm.addBindings(tctx.bindings);
 
     uint32 entryPoint = vm.addBytecodeFile(bfile, pathString);
 
@@ -761,7 +760,7 @@ static void collectTests(
   }
 }
 
-void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
+void runTests(const ProgramSettings& settings, QsEnvironment* env) {
   const std::filesystem::path dirpath = settings.inputFile;
   std::vector<std::filesystem::path> testFiles;
 
@@ -773,7 +772,7 @@ void runTests(const ProgramSettings& settings, const BindingsObject* bindings) {
   TestContext ctx = {
     .timings = TestTimings(),
     .settings = settings,
-    .bindings = bindings
+    .env = env
   };
 
   try {

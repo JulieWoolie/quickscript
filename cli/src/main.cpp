@@ -16,7 +16,6 @@
 #include "qs/parse/syntaxtree.hpp"
 #include "qs/parse/parser.hpp"
 #include "qs/parse/print-visitor.hpp"
-#include "qs/stdlib/qs_stdlib.hpp"
 
 #include "args.hpp"
 #include "tester.hpp"
@@ -29,7 +28,7 @@ static qsfiletype getFileType(const std::string& fileName) {
   return fileName.ends_with(".qsir") ? QSFT_BINARY_IR : QSFT_SOURCE;
 }
 
-static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out, const BindingsObject* bindings) {
+static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out, QsEnvironment* env) {
   std::string fname = std::string(settings.inputFile);
   qsfiletype qsft = getFileType(fname);
 
@@ -68,7 +67,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out,
   TokenList tokens = TokenList();
   StringTable table = StringTable();
 
-  CompilerErrors errors = CompilerErrors(&file_contents, fname.c_str());
+  CompilerErrors errors = CompilerErrors(file_contents, fname.c_str());
   errors.setLogLevel(settings.loggerLevel);
 
   Lexer l = Lexer(file_contents, &tokens, &table, &errors);
@@ -89,7 +88,7 @@ static bool compileBytecode(const ProgramSettings& settings, BytecodeFile** out,
 
   TypeTable lookup = TypeTable();
 
-  SemanticContext ctx = SemanticContext(lookup, table, errors, pool, settings.compilationOptions, bindings);
+  SemanticContext ctx = SemanticContext(lookup, table, errors, pool, env);
   runSemanticAnalysis(sfs, ctx);
 
   if (settings.printAst & PRINTAST_AFTER_ANALYSIS) {
@@ -170,16 +169,16 @@ int32 main(int32 argc, cstring argv[]) {
     return EXIT_SUCCESS;
   }
 
+  QsEnvironment env = QsEnvironment();
   BindingsObject* bindings = BindingsObject::create();
-  addStandardLibrary(bindings);
 
   if (settings.command == CMD_TESTS) {
-    runTests(settings, bindings);
+    runTests(settings, &env);
     return EXIT_SUCCESS;
   }
 
   BytecodeFile* bfile;
-  const bool successfullyCompiled = compileBytecode(settings, &bfile, bindings);
+  const bool successfullyCompiled = compileBytecode(settings, &bfile, &env);
 
   if (!successfullyCompiled) {
     return EXIT_FAILURE;
