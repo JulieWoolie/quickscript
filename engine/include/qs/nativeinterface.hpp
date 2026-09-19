@@ -7,7 +7,6 @@
 
 #include <vector>
 
-#include "interpreter/interpreter.hpp"
 #include "qs/types/FunctionSignature.hpp"
 
 #define TYPEDEF_FUNC(returnType, name, ...) typedef returnType (*name)(__VA_ARGS__)
@@ -58,7 +57,7 @@ class NativeCall {
     const ScriptType* getArgumentType(uint32 idx) const;
 };
 
-TYPEDEF_FUNC(void, NativeFunction, VirtualMachine* vm, NativeCall* call);
+typedef void (*NativeFunction)(struct VirtualMachine* vm, NativeCall* call);
 
 #define BINDTYPE_INVALID 0
 #define BINDTYPE_CONSTANT 1
