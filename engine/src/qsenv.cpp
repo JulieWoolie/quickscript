@@ -1,5 +1,9 @@
 #include "qs/qsenv.hpp"
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+
 #include "qs/allocator.hpp"
 #include "qs/errors.hpp"
 #include "qs/analysis/analyzer.hpp"
@@ -12,6 +16,45 @@
 typedef void (*ModuleLoadCallback)(QsEnvironment* env, conststring ns);
 
 #define LIBRARY_ENTRYPOINT_NAME "qs_onLoadNativeModule"
+
+NativeModule::NativeModule() {
+
+}
+
+NativeModule::~NativeModule() {
+  if (m_handle) {
+    freeNativeLibrary(m_handle);
+    m_handle = nullptr;
+  }
+  if (m_bindings) {
+    BindingsObject::destroy(m_bindings);
+    m_bindings = nullptr;
+  }
+}
+
+BindingsObject* NativeModule::getBindings() const {
+  return m_bindings;
+}
+
+const std::string& NativeModule::getNamespace() const {
+  return m_namespace;
+}
+
+NativeLibraryHandle NativeModule::getHandle() const {
+  return m_handle;
+}
+
+void NativeModule::setHandle(NativeLibraryHandle handle) {
+  m_handle = handle;
+}
+
+void NativeModule::setNamespace(const std::string& ns) {
+  m_namespace = ns;
+}
+
+void NativeModule::setBindings(BindingsObject* bindings) {
+  m_bindings = bindings;
+}
 
 QsEnvironment::QsEnvironment() {
 
@@ -34,7 +77,48 @@ std::vector<NativeModule>& QsEnvironment::getNativeModules() {
 }
 
 bool QsEnvironment::findLibrary(const std::string_view& name, std::vector<BytecodeFile*>& out) {
-  return false;
+  bool libFindResult = false;
+
+  for (const std::string& libDir : m_libraryDirectories) {
+    for (const auto& entry: std::filesystem::recursive_directory_iterator(libDir)) {
+      if (!entry.is_regular_file()) {
+        continue;
+      }
+
+      const std::filesystem::path& path = entry.path();
+
+      if (path.extension() != ".qsir") {
+        continue;
+      }
+
+      std::ifstream stream = std::ifstream(path.string(), std::ios::binary | std::ios::ate);
+      std::streamsize size = stream.tellg();
+      stream.seekg(0, std::ios::beg);
+
+      uint8 buf[size];
+      stream.read(reinterpret_cast<int8*>(buf), size);
+
+      BytecodeFile& bf = BytecodeFile::create();
+      BytecodeReadResult result = deserializeBytecodeFile(buf, size, bf);
+
+      if (result != IR_RESULT_OK) {
+        BytecodeFile::destroy(bf);
+        continue;
+      }
+
+      if (bf.moduleType == BF_MODTYPE_NONE
+        || bf.moduleName != name
+        || bf.exportedSymbols.empty()
+      ) {
+        continue;
+      }
+
+      out.push_back(&bf);
+      libFindResult = true;
+    }
+  }
+
+  return libFindResult;
 }
 
 bool QsEnvironment::compileSourceFile(const std::string& content, conststring fileName, BytecodeFile** fileOut) {
@@ -149,4 +233,14 @@ void QsEnvironment::registerNative(
 
     return;
   }
+
+  // Not registered into any existing native modules
+  NativeModule mod = NativeModule();
+  mod.setNamespace(ns);
+
+  BindingsObject* obj = BindingsObject::create();
+  mod.setBindings(obj);
+  obj->addFunctionBinding(funcName, sign, func);
+
+  m_nativeModules.push_back(mod);
 }
