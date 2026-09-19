@@ -2469,7 +2469,7 @@ void Interpreter::callNativeFunction(NativeScriptFunction* nFunc) {
   frame->type = FRAME_TYPE_NATIVE;
 
   NativeCall call = NativeCall(argumentTypes, argumentValues, 0);
-  nFunc->callback(call);
+  nFunc->callback(&m_vm, &call);
 
   if (call.isFailedCall()) {
     throwScriptError(call.getErrorMessage());
